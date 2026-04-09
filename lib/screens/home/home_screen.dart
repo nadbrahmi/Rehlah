@@ -193,7 +193,31 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ),
 
-                // 7. AI Health Insights
+                // 7. 14-Day Journey Progress
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                    child: _FourteenDayCard(app: app),
+                  ),
+                ),
+
+                // 8. Phase Guide — "You are here"
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                    child: _PhaseGuideCard(app: app),
+                  ),
+                ),
+
+                // 9. Community Story snippet
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                    child: _CommunityStoryCard(app: app),
+                  ),
+                ),
+
+                // 10. AI Health Insights
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -226,11 +250,25 @@ class _Header extends StatelessWidget {
     return 'Good Evening';
   }
 
+  String _journeySubtitle() {
+    final start = app.journey?.treatmentStartDate;
+    if (start == null) return 'Your companion between appointments.';
+    final days = DateTime.now().difference(start).inDays;
+    if (days == 0) return 'Today is the beginning of your journey. 💜';
+    if (days < 7) return 'Day ${days + 1} of your journey. You\'re doing great.';
+    if (days < 14) {
+      final weekDay = days - 7 + 1;
+      return 'Week 2, Day $weekDay of your journey. Still here. 💜';
+    }
+    final weeks = (days / 7).floor();
+    return 'Week $weeks of your journey. You\'re not alone.';
+  }
+
   @override
   Widget build(BuildContext context) {
     final name = app.journey?.name.split(' ').first ?? 'there';
     return SliverAppBar(
-      expandedHeight: 130,
+      expandedHeight: 140,
       collapsedHeight: 62,
       pinned: true,
       floating: false,
@@ -256,18 +294,13 @@ class _Header extends StatelessWidget {
                 const SizedBox(height: 4),
                 // Greeting
                 Text(
-                  '$_greeting, $name',
-                  style: _t(
-                    s: 28,
-                    w: FontWeight.w600,
-                    c: _C.textDark,
-                    h: 1.2,
-                  ),
+                  '$_greeting, $name 💜',
+                  style: _t(s: 26, w: FontWeight.w600, c: _C.textDark, h: 1.2),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 5),
                 Text(
-                  'Let\'s track your health journey today',
-                  style: _t(s: 14, c: _C.textSoft),
+                  _journeySubtitle(),
+                  style: _t(s: 13, c: _C.textSoft),
                 ),
               ],
             ),
@@ -344,47 +377,142 @@ class _SmartStatusCard extends StatelessWidget {
   final LabProvider lab;
   const _SmartStatusCard({required this.app, required this.lab});
 
+  // Day-aware greeting that changes with time
+  String _timeGreeting() {
+    final h = DateTime.now().hour;
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
+  // How many days since journey start
+  int _daysSinceJourney() {
+    final start = app.journey?.treatmentStartDate;
+    if (start == null) return 0;
+    return DateTime.now().difference(start).inDays;
+  }
+
+  String _weekLabel(int days) {
+    if (days == 0) return 'Today is the beginning of your journey.';
+    if (days < 7) return 'Today is day ${days + 1} of your journey.';
+    if (days < 14) return 'Today is the beginning of week 2 of your journey.';
+    final weeks = (days / 7).floor();
+    return 'Week $weeks of your journey. Still here. 💜';
+  }
+
   ({IconData icon, String label, String title, String cta, VoidCallback? action}) _status(BuildContext ctx) {
+    final name = app.journey?.name.split(' ').first ?? '';
+    final greeting = _timeGreeting();
+    final nameStr = name.isNotEmpty ? '$greeting, $name 💜' : '$greeting 💜';
+    final days = _daysSinceJourney();
+
+    // 1. Critical lab — highest priority
     if (lab.overallStatus == OverallLabStatus.critical) {
       return (
         icon: Icons.science_outlined,
         label: 'Lab Alert',
-        title: 'Critical lab result — contact your care team today',
+        title: 'A lab result needs attention.\nPlease contact your care team today.',
         cta: 'View Lab Results',
         action: () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => const LabTrackerScreen())),
       );
     }
+
+    // 2. Upcoming appointment within 2 days
     final appt = app.nextAppointment;
     if (appt != null) {
       final d = appt.dateTime.difference(DateTime.now()).inDays;
-      if (d <= 7) {
+      if (d <= 2) {
         return (
           icon: Icons.calendar_today_outlined,
-          label: 'Smart Status',
-          title: 'Next: ${appt.title} · ${appt.doctorName}\n${d == 0 ? 'Today!' : d == 1 ? 'Tomorrow' : 'in $d Days'}',
+          label: 'Upcoming Appointment',
+          title: '${appt.title} — ${d == 0 ? 'Today!' : d == 1 ? 'Tomorrow' : 'in $d days'}\n"Rehlah has your data ready to share."',
           cta: 'View Doctor-Ready Report',
           action: () => Navigator.push(ctx,
               MaterialPageRoute(builder: (_) => const AppointmentTrackerScreen())),
         );
       }
     }
+
+    // 3. No check-in today — primary nudge
     if (!app.hasCheckedInToday) {
+      // Day 1 variant — first ever check-in
+      if (app.recentCheckIns.isEmpty) {
+        return (
+          icon: Icons.favorite_border_rounded,
+          label: 'Day 1 — Welcome',
+          title: '$nameStr\n${_weekLabel(days)}\n\nHow are you feeling today?\nYour first check-in takes 2 minutes.',
+          cta: 'Do my first check-in →',
+          action: () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => const DailyCheckInScreen())),
+        );
+      }
+      // Day 5+ missed check-in — compassionate variant
+      if (days >= 5 && app.recentCheckIns.length < days - 2) {
+        return (
+          icon: Icons.favorite_border_rounded,
+          label: 'No pressure',
+          title: 'Treatment weeks are tough.\nWe\'re still here, whenever you\'re ready. 💜',
+          cta: 'Check in for today →',
+          action: () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => const DailyCheckInScreen())),
+        );
+      }
+      // Normal nudge
       return (
         icon: Icons.favorite_border_rounded,
         label: 'Daily Check-In',
-        title: 'How are you feeling today?\nTake 60 seconds to log your symptoms',
-        cta: 'Start Check-In',
+        title: '$nameStr\n${_weekLabel(days)}\n\nHow are you doing today?',
+        cta: 'Check in for today →',
         action: () => Navigator.push(ctx, MaterialPageRoute(builder: (_) => const DailyCheckInScreen())),
       );
     }
+
+    // 4. Day 7 milestone
+    if (days == 7 && app.recentCheckIns.length >= 4) {
+      return (
+        icon: Icons.auto_awesome_rounded,
+        label: 'One week in 🔥',
+        title: 'One week in, ${name.isNotEmpty ? name : 'friend'}. 💜\nYou\'ve checked in ${app.recentCheckIns.take(7).length} times.\n"That\'s data your doctor can actually use."',
+        cta: 'See my week summary →',
+        action: () => _showWeekSheet(ctx, app),
+      );
+    }
+
+    // 5. Day 14 milestone
+    if (days == 14) {
+      return (
+        icon: Icons.celebration_rounded,
+        label: 'Two weeks in 💜',
+        title: 'Two weeks in, ${name.isNotEmpty ? name : 'friend'}. 💜\n"You are not the same person you were two weeks ago.\nYou\'re more informed, more prepared, and still here."',
+        cta: 'See my 2-week summary →',
+        action: () => _showWeekSheet(ctx, app),
+      );
+    }
+
+    // 6. Checked in today — summary with yesterday mood chip on Day 2+
     final ci = app.todayCheckIn!;
-    final moods = ['', 'Overwhelmed', 'Anxious', 'Okay', 'Hopeful', 'Strong'];
-    final m = (ci.moodScore >= 1 && ci.moodScore <= 5) ? moods[ci.moodScore] : 'Okay';
+    final moodEmojis = ['', '😫', '😔', '😐', '🙂', '😊'];
+    final moodEmoji = (ci.moodScore >= 1 && ci.moodScore <= 5) ? moodEmojis[ci.moodScore] : '😐';
+
+    // Yesterday mood chip for Day 2+ return visits
+    String yesterdayNote = '';
+    if (days >= 1 && app.recentCheckIns.length >= 2) {
+      final yesterday = app.recentCheckIns
+          .where((c) {
+            final diff = DateTime.now().difference(c.date).inDays;
+            return diff == 1;
+          })
+          .toList();
+      if (yesterday.isNotEmpty) {
+        final yMood = yesterday.first.moodScore;
+        final yEmoji = (yMood >= 1 && yMood <= 5) ? moodEmojis[yMood] : '😐';
+        yesterdayNote = '\nYesterday you felt $yEmoji — ${yMood >= 4 ? 'keeping that energy!' : yMood <= 2 ? 'glad you\'re back today.' : 'every day is different.'}';
+      }
+    }
+
     return (
       icon: Icons.check_circle_outline_rounded,
-      label: 'Today\'s Status',
-      title: 'All logged for today ✓\nMood: $m · Pain: ${ci.painScore}/5',
-      cta: 'View This Week',
+      label: 'Today logged ✓',
+      title: 'All logged, ${name.isNotEmpty ? name : 'friend'} 💜\nMood: $moodEmoji · ${_weekLabel(days)}$yesterdayNote',
+      cta: 'View this week →',
       action: () => _showWeekSheet(ctx, app),
     );
   }
@@ -472,7 +600,78 @@ class _SmartStatusCard extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 3. QUICK ACTIONS — 4 tiles
+// 3. NEXT APPOINTMENT BANNER — compact card shown when appt within 7 days
+// ═══════════════════════════════════════════════════════════════════════════════
+class _NextAppointmentBanner extends StatelessWidget {
+  final AppProvider app;
+  final LabProvider lab;
+  const _NextAppointmentBanner({required this.app, required this.lab});
+
+  @override
+  Widget build(BuildContext context) {
+    final appt = app.nextAppointment;
+    if (appt == null) return const SizedBox.shrink();
+    final days = appt.dateTime.difference(DateTime.now()).inDays;
+    final daysLabel = days == 0
+        ? 'Today!'
+        : days == 1
+            ? 'Tomorrow'
+            : 'in $days days';
+    final accent = days <= 1 ? _C.peachFg : _C.heroB;
+
+    return GestureDetector(
+      onTap: () => Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const AppointmentTrackerScreen())),
+      child: Container(
+        decoration: BoxDecoration(
+          color: _C.card,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: accent.withValues(alpha: 0.30)),
+          boxShadow: [
+            BoxShadow(
+              color: accent.withValues(alpha: 0.12),
+              blurRadius: 14,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(children: [
+          Container(
+            width: 46, height: 46,
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: accent.withValues(alpha: 0.25)),
+            ),
+            child: Icon(Icons.calendar_today_rounded, color: accent, size: 22),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(appt.title,
+                  style: _t(s: 14, w: FontWeight.w700, c: _C.textDark)),
+              Text('${appt.doctorName} · $daysLabel',
+                  style: _t(s: 12, c: _C.textSoft)),
+            ]),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text('Prep →',
+                style: _t(s: 12, w: FontWeight.w700, c: accent)),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 4. QUICK ACTIONS — 4 tiles
 // ═══════════════════════════════════════════════════════════════════════════════
 class _QuickActions extends StatelessWidget {
   final AppProvider app;
@@ -1476,3 +1675,502 @@ class _Avg extends StatelessWidget {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// 14-DAY JOURNEY PROGRESS CARD
+// "Your first 14 days — visualised"
+// Each dot = one day. Filled = checked in. Empty = missed. Today = pulsing.
+// ═══════════════════════════════════════════════════════════════════════════════
+class _FourteenDayCard extends StatelessWidget {
+  final AppProvider app;
+  const _FourteenDayCard({required this.app});
+
+  @override
+  Widget build(BuildContext context) {
+    final today = DateTime.now();
+    final startDate = app.journey?.treatmentStartDate ?? today.subtract(const Duration(days: 13));
+    final daysSinceStart = today.difference(startDate).inDays;
+    final displayDays = daysSinceStart.clamp(0, 13) + 1; // Show up to 14 days
+
+    // Build 14-day check-in status
+    final days = List.generate(14, (i) {
+      final day = startDate.add(Duration(days: i));
+      final isToday = day.year == today.year && day.month == today.month && day.day == today.day;
+      final isFuture = day.isAfter(today);
+      final hasCheckIn = app.checkIns.any((c) =>
+          c.date.year == day.year && c.date.month == day.month && c.date.day == day.day);
+      return (day: day, isToday: isToday, isFuture: isFuture, hasCheckIn: hasCheckIn);
+    });
+
+    final checkedInCount = days.where((d) => d.hasCheckIn && !d.isFuture).length;
+    final totalPastDays = days.where((d) => !d.isFuture).length;
+    final streak = app.checkInStreak;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: _cardDeco(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(children: [
+            Container(
+              width: 36, height: 36,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [_C.heroA, _C.heroC]),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.calendar_month_rounded, color: Colors.white, size: 18),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('14-Day Journey', style: _t(s: 15, w: FontWeight.w700)),
+                Text('Your check-in history', style: _t(s: 12, c: _C.textSoft)),
+              ]),
+            ),
+            if (streak > 0)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFFFFA040), Color(0xFFFF7A00)]),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  const Text('🔥', style: TextStyle(fontSize: 12)),
+                  const SizedBox(width: 4),
+                  Text('$streak day streak', style: _t(s: 11, w: FontWeight.w700, c: Colors.white)),
+                ]),
+              ),
+          ]),
+
+          const SizedBox(height: 16),
+
+          // Dot grid — 14 dots in 2 rows of 7
+          Row(
+            children: List.generate(7, (col) {
+              return Expanded(
+                child: Column(
+                  children: [0, 7].map((rowStart) {
+                    final i = rowStart + col;
+                    if (i >= 14) return const SizedBox(height: 28);
+                    final d = days[i];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 6),
+                      child: _DayDot(
+                        day: d.day,
+                        isToday: d.isToday,
+                        isFuture: d.isFuture,
+                        hasCheckIn: d.hasCheckIn,
+                        dayNumber: i + 1,
+                      ),
+                    );
+                  }).toList(),
+                ),
+              );
+            }),
+          ),
+
+          // Legend + stats
+          const SizedBox(height: 14),
+          Row(children: [
+            _LegendDot(color: _C.heroB, label: 'Checked in'),
+            const SizedBox(width: 14),
+            _LegendDot(color: const Color(0xFFEDD8F0), label: 'Missed'),
+            const SizedBox(width: 14),
+            _LegendDot(color: const Color(0xFFEEEEEE), label: 'Upcoming'),
+          ]),
+
+          const SizedBox(height: 14),
+
+          // Summary row
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: _C.heroA.withValues(alpha: 0.07),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              _MiniStat(label: 'Check-ins', value: '$checkedInCount/$totalPastDays'),
+              _StatDiv(),
+              _MiniStat(label: 'Streak', value: '$streak days'),
+              _StatDiv(),
+              _MiniStat(
+                label: 'Completion',
+                value: totalPastDays > 0
+                    ? '${((checkedInCount / totalPastDays) * 100).round()}%'
+                    : '0%',
+              ),
+            ]),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DayDot extends StatelessWidget {
+  final DateTime day;
+  final bool isToday, isFuture, hasCheckIn;
+  final int dayNumber;
+
+  const _DayDot({
+    required this.day,
+    required this.isToday,
+    required this.isFuture,
+    required this.hasCheckIn,
+    required this.dayNumber,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    Color bg;
+    Color border;
+    Widget? child;
+
+    if (isToday && hasCheckIn) {
+      bg = _C.heroB;
+      border = _C.heroB;
+      child = const Icon(Icons.check_rounded, size: 12, color: Colors.white);
+    } else if (isToday) {
+      bg = _C.heroA.withValues(alpha: 0.20);
+      border = _C.heroB;
+      child = const Icon(Icons.add_rounded, size: 12, color: _C.heroB);
+    } else if (isFuture) {
+      bg = const Color(0xFFF5F5F5);
+      border = const Color(0xFFEEEEEE);
+      child = Text(
+        '$dayNumber',
+        style: _t(s: 9, c: const Color(0xFFCCCCCC), w: FontWeight.w500),
+      );
+    } else if (hasCheckIn) {
+      bg = _C.heroA.withValues(alpha: 0.85);
+      border = _C.heroA;
+      child = const Icon(Icons.check_rounded, size: 11, color: Colors.white);
+    } else {
+      bg = const Color(0xFFFEF2F2);
+      border = const Color(0xFFEDD8F0);
+      child = Text(
+        '$dayNumber',
+        style: _t(s: 9, c: _C.textFaint, w: FontWeight.w500),
+      );
+    }
+
+    return Container(
+      width: 36, height: 36,
+      decoration: BoxDecoration(
+        color: bg,
+        shape: BoxShape.circle,
+        border: Border.all(color: border, width: isToday ? 2 : 1),
+      ),
+      child: Center(child: child),
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  final Color color;
+  final String label;
+  const _LegendDot({required this.color, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+      const SizedBox(width: 4),
+      Text(label, style: _t(s: 10.5, c: _C.textSoft)),
+    ]);
+  }
+}
+
+class _MiniStat extends StatelessWidget {
+  final String label, value;
+  const _MiniStat({required this.label, required this.value});
+  @override
+  Widget build(BuildContext context) => Column(children: [
+    Text(value, style: _t(s: 15, w: FontWeight.w800, c: _C.heroB)),
+    const SizedBox(height: 2),
+    Text(label, style: _t(s: 10, c: _C.textSoft)),
+  ]);
+}
+
+class _StatDiv extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 1, height: 28,
+    color: _C.divider,
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PHASE GUIDE CARD — "You are here: Diagnosis & Planning"
+// Shows what to expect in the current phase
+// ═══════════════════════════════════════════════════════════════════════════════
+class _PhaseGuideCard extends StatelessWidget {
+  final AppProvider app;
+  const _PhaseGuideCard({required this.app});
+
+  @override
+  Widget build(BuildContext context) {
+    final phase = app.journey?.treatmentPhase ?? 'Diagnosis & Planning';
+    final (emoji, title, desc, bullets) = _phaseContent(phase);
+
+    return GestureDetector(
+      onTap: () => app.setNavIndex(1),
+      child: Container(
+        decoration: _cardDeco(border: _C.purpleLight),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: _C.purpleLight,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(emoji, style: const TextStyle(fontSize: 22)),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '📍 You are here',
+                        style: _t(s: 11, c: _C.textSoft, w: FontWeight.w600),
+                      ),
+                      Text(
+                        title,
+                        style: _t(s: 15, w: FontWeight.w700, c: _C.textDark),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded, color: _C.textSoft),
+              ]),
+              const SizedBox(height: 12),
+              Text(desc, style: _t(s: 13, c: _C.textMid, h: 1.5)),
+              const SizedBox(height: 12),
+              Text(
+                'What to expect this phase:',
+                style: _t(s: 12, w: FontWeight.w600, c: _C.textDark),
+              ),
+              const SizedBox(height: 8),
+              ...bullets.map((b) => Padding(
+                    padding: const EdgeInsets.only(bottom: 5),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('•  ', style: TextStyle(color: _C.purple, fontWeight: FontWeight.w700)),
+                        Expanded(child: Text(b, style: _t(s: 13, c: _C.textMid, h: 1.4))),
+                      ],
+                    ),
+                  )),
+              const SizedBox(height: 10),
+              Text(
+                'Read your phase guide →',
+                style: _t(s: 13, w: FontWeight.w600, c: _C.heroB),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  (String, String, String, List<String>) _phaseContent(String phase) {
+    switch (phase) {
+      case 'Chemotherapy':
+        return (
+          '💊',
+          'Chemotherapy',
+          'Your body is working hard. Treatment sessions destroy fast-growing cells — including cancer cells.',
+          ['Your blood counts may drop — this is expected', 'Nausea peaks 24–48 hours after sessions', 'Rest is medicine — your energy will return', 'Keep tracking so your oncologist can adjust doses'],
+        );
+      case 'Radiation':
+        return (
+          '☢️',
+          'Radiation Therapy',
+          'Daily radiation targets the tumour with precision. Sessions are short, but effects build over time.',
+          ['Skin changes in the treated area are normal', 'Fatigue often increases toward week 3–4', 'Stay hydrated — it helps your tissue recover', 'Short walks between sessions can reduce fatigue'],
+        );
+      case 'Surgery':
+        return (
+          '🏥',
+          'Surgery',
+          'You are preparing for or recovering from surgery. Your care team will guide each step.',
+          ['Rest is the most important thing right now', 'Watch for signs of infection at the surgical site', 'Pain is manageable — tell your team if it changes', 'Light movement helps circulation and healing'],
+        );
+      case 'Recovery':
+        return (
+          '🌱',
+          'Recovery',
+          'Active treatment is complete. Your body is healing and rebuilding — one day at a time.',
+          ['Follow-up scans are a normal part of monitoring', 'Energy returns slowly — be patient with yourself', 'Emotional support matters as much as physical now', 'Your Rehlah data is ready to share at follow-ups'],
+        );
+      case 'Immunotherapy':
+        return (
+          '💉',
+          'Immunotherapy',
+          'Your immune system is being trained to recognise and fight cancer cells.',
+          ['Immune reactions can feel like flu symptoms — this is normal', 'Log every new symptom so your team can monitor', 'Infusions are usually every 2–3 weeks', 'Fatigue and joint aches are common side effects'],
+        );
+      default:
+        return (
+          '🔬',
+          'Diagnosis & Planning',
+          'You have just received your diagnosis. This phase is about understanding and preparing.',
+          ['Specialist appointments and consultations', 'Biopsy review and imaging results', 'Treatment planning meeting with your care team', 'Your questions matter — write them down in Rehlah'],
+        );
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMMUNITY STORY CARD — one survivor story snippet
+// "You are not alone on this journey 💜"
+// ═══════════════════════════════════════════════════════════════════════════════
+class _CommunityStoryCard extends StatelessWidget {
+  final AppProvider app;
+  const _CommunityStoryCard({required this.app});
+
+  @override
+  Widget build(BuildContext context) {
+    final phase = app.journey?.treatmentPhase ?? '';
+    final (initials, color, quote, detail) = _storyForPhase(phase);
+
+    return GestureDetector(
+      onTap: () => app.setNavIndex(4),
+      child: Container(
+        decoration: BoxDecoration(
+          color: _C.card,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF9B5DC4).withValues(alpha: 0.08),
+              blurRadius: 20,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: _C.purpleLight,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.people_rounded, color: _C.purple, size: 18),
+                ),
+                const SizedBox(width: 10),
+                Text('Community', style: _t(s: 13, w: FontWeight.w600, c: _C.textSoft)),
+                const Spacer(),
+                Text('Read more stories →', style: _t(s: 12, w: FontWeight.w600, c: _C.heroB)),
+              ]),
+              const SizedBox(height: 14),
+              // Story
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        initials,
+                        style: _t(s: 13, w: FontWeight.w700, c: Colors.white),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '"$quote"',
+                          style: _t(s: 14, w: FontWeight.w500, c: _C.textDark, h: 1.55),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          detail,
+                          style: _t(s: 11, c: _C.textSoft),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: _C.purpleLight,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Center(
+                  child: Text(
+                    'You are not alone on this journey 💜',
+                    style: _t(s: 13, w: FontWeight.w600, c: _C.purple),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  (String, Color, String, String) _storyForPhase(String phase) {
+    switch (phase) {
+      case 'Chemotherapy':
+        return (
+          'NR',
+          const Color(0xFF9B5DC4),
+          'The nausea passes. The hair grows back. But the strength you find — that stays with you.',
+          'Nora · Breast Cancer · Stage II · Week 8 of chemo',
+        );
+      case 'Radiation':
+        return (
+          'KA',
+          const Color(0xFF2563EB),
+          '30 sessions felt like forever. Session 30 felt like a miracle. You will get there too.',
+          'Khalid · Prostate Cancer · Stage III · Radiation complete',
+        );
+      case 'Surgery':
+        return (
+          'AS',
+          const Color(0xFFDC2626),
+          'I was terrified going in. I was grateful coming out. Surgery gave me a chance I didn\'t expect.',
+          'Aisha · Ovarian Cancer · Stage II · 3 months post-surgery',
+        );
+      case 'Recovery':
+        return (
+          'LM',
+          const Color(0xFF22C55E),
+          'Recovery is not a straight line. Some days you go backwards. But you always find your way.',
+          'Laila · Lymphoma · Year 2 of survivorship',
+        );
+      default:
+        return (
+          'SR',
+          const Color(0xFFF75B9A),
+          'Six months in and I\'m still here. One day at a time — that\'s all it takes.',
+          'Sara · Breast Cancer · Stage II · 6 months into treatment',
+        );
+    }
+  }
+}

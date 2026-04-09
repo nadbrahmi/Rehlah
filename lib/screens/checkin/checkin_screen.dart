@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -16,6 +17,7 @@ class DailyCheckInScreen extends StatefulWidget {
 
 class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
   bool _isQuickMode = true;
+  bool _showInterstitial = true; // UX flow: pre-check-in interstitial
 
   // Physical scores
   int _moodScore = 3;
@@ -66,10 +68,17 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
       return _CompletionView(
         moodScore: _moodScore,
         emotionalScore: _emotionalScore,
+        isFirstCheckIn: context.read<AppProvider>().recentCheckIns.isEmpty,
         onGoHome: () {
           context.read<AppProvider>().setNavIndex(0);
-          setState(() => _isComplete = false);
+          Navigator.of(context).pop();
         },
+      );
+    }
+    // UX flow: show pre-check-in interstitial on first open
+    if (_showInterstitial) {
+      return _CheckInInterstitial(
+        onContinue: () => setState(() => _showInterstitial = false),
       );
     }
     return _isQuickMode ? _buildQuick() : _buildFull();
@@ -897,83 +906,290 @@ class _WaterBtn extends StatelessWidget {
 }
 
 // ─── Completion View ──────────────────────────────────────────────────────────
-class _CompletionView extends StatelessWidget {
-  final int moodScore;
-  final int emotionalScore;
-  final VoidCallback onGoHome;
-  const _CompletionView({required this.moodScore, required this.emotionalScore, required this.onGoHome});
+// ─── Pre-Check-In Interstitial (UX flow: 2-second pause, "no wrong answers") ──
+class _CheckInInterstitial extends StatefulWidget {
+  final VoidCallback onContinue;
+  const _CheckInInterstitial({required this.onContinue});
+
+  @override
+  State<_CheckInInterstitial> createState() => _CheckInInterstitialState();
+}
+
+class _CheckInInterstitialState extends State<_CheckInInterstitial>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _fade;
+  Timer? _autoTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _ctrl.forward();
+    // Auto-advance after 2.5 seconds
+    _autoTimer = Timer(const Duration(milliseconds: 2500), widget.onContinue);
+  }
+
+  @override
+  void dispose() {
+    _autoTimer?.cancel();
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final moodEmoji = ['', '😞', '😔', '😐', '🙂', '😊'][moodScore.clamp(1, 5)];
-    final showSupport = emotionalScore <= 2;
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: FadeTransition(
+          opacity: _fade,
+          child: GestureDetector(
+            onTap: widget.onContinue,
+            behavior: HitTestBehavior.opaque,
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 36),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 80, height: 80,
+                      decoration: BoxDecoration(
+                        gradient: AppColors.heroGradient,
+                        shape: BoxShape.circle,
+                        boxShadow: [BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.28),
+                          blurRadius: 24, offset: const Offset(0, 8),
+                        )],
+                      ),
+                      child: const Icon(Icons.favorite_rounded, color: Colors.white, size: 38),
+                    ),
+                    const SizedBox(height: 28),
+                    Text(
+                      'Just a few questions\nabout today.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 24, fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary, height: 1.3,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'There are no wrong answers.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 16, fontWeight: FontWeight.w500,
+                        color: AppColors.textSecondary, height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Takes about 2 minutes.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted),
+                    ),
+                    const SizedBox(height: 48),
+                    Text(
+                      'Tap anywhere to begin',
+                      style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted, letterSpacing: 0.3),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Completion View (UX flow: celebration + "that matters more than you know") ─
+class _CompletionView extends StatefulWidget {
+  final int moodScore;
+  final int emotionalScore;
+  final bool isFirstCheckIn;
+  final VoidCallback onGoHome;
+  const _CompletionView({
+    required this.moodScore,
+    required this.emotionalScore,
+    required this.onGoHome,
+    this.isFirstCheckIn = false,
+  });
+
+  @override
+  State<_CompletionView> createState() => _CompletionViewState();
+}
+
+class _CompletionViewState extends State<_CompletionView>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _scale;
+  late final Animation<double> _fade;
+  Timer? _autoTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
+    _scale = Tween<double>(begin: 0.6, end: 1.0)
+        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut));
+    _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _ctrl.forward();
+    // Auto-return to home after 4 seconds
+    _autoTimer = Timer(const Duration(seconds: 4), widget.onGoHome);
+  }
+
+  @override
+  void dispose() {
+    _autoTimer?.cancel();
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final moodEmoji = ['', '😞', '😔', '😐', '🙂', '😊'][widget.moodScore.clamp(1, 5)];
+    final showSupport = widget.emotionalScore <= 2;
+    final name = context.read<AppProvider>().journey?.name.split(' ').first ?? '';
+    final nameStr = name.isNotEmpty ? name : 'friend';
+
+    final String celebrationMsg;
+    final String subMsg;
+    if (widget.isFirstCheckIn) {
+      celebrationMsg = 'Check-In saved, $nameStr 💜';
+      subMsg = 'Your first one. That matters more than you know.';
+    } else if (widget.moodScore >= 4) {
+      celebrationMsg = 'Check-In saved, $nameStr 💜';
+      subMsg = 'Great mood today. Your resilience is a real strength.';
+    } else if (widget.moodScore <= 2) {
+      celebrationMsg = 'Tough day noted, $nameStr 💜';
+      subMsg = 'Tracking it — even on hard days — helps your team support you better.';
+    } else {
+      celebrationMsg = 'Check-In saved, $nameStr 💜';
+      subMsg = 'Consistent tracking helps your care team make better decisions for you.';
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(28),
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            Container(
-              width: 120, height: 120,
-              decoration: BoxDecoration(
-                gradient: AppColors.accentGradient,
-                shape: BoxShape.circle,
-                boxShadow: [BoxShadow(color: AppColors.accent.withValues(alpha: 0.35), blurRadius: 30, offset: const Offset(0, 10))],
-              ),
-              child: const Icon(Icons.check_rounded, color: Colors.white, size: 56),
-            ),
-            const SizedBox(height: 24),
-            Text('Check-In Complete! $moodEmoji',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(fontSize: 26, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-            const SizedBox(height: 10),
-            const Text('Your data has been saved. Your care team can see this.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 14, color: AppColors.textSecondary, height: 1.5)),
-            const SizedBox(height: 24),
-            // AI message
-            RehlaCard(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFF3E8FA), Color(0xFFEDD8F7)],
-                begin: Alignment.topLeft, end: Alignment.bottomRight,
-              ),
-              padding: const EdgeInsets.all(16),
-              child: Row(children: [
-                const Icon(Icons.auto_awesome_rounded, color: AppColors.primary, size: 22),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    moodScore >= 4
-                        ? 'Great mood today! Your resilience is a real strength. 💜'
-                        : moodScore <= 2
-                            ? 'Tough day noted. Tracking it helps your team support you better. You\'re not alone.'
-                            : 'Thanks for checking in. Consistent tracking helps your team make better decisions.',
-                    style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+          child: FadeTransition(
+            opacity: _fade,
+            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+              ScaleTransition(
+                scale: _scale,
+                child: Container(
+                  width: 120, height: 120,
+                  decoration: BoxDecoration(
+                    gradient: AppColors.accentGradient,
+                    shape: BoxShape.circle,
+                    boxShadow: [BoxShadow(
+                      color: AppColors.accent.withValues(alpha: 0.35),
+                      blurRadius: 30, offset: const Offset(0, 10),
+                    )],
                   ),
+                  child: const Icon(Icons.check_rounded, color: Colors.white, size: 56),
                 ),
-              ]),
-            ),
-            if (showSupport) ...[
-              const SizedBox(height: 12),
-              RehlaCard(
-                padding: const EdgeInsets.all(14),
-                child: Row(children: [
-                  Container(
-                    width: 38, height: 38,
-                    decoration: BoxDecoration(color: AppColors.infoLight, borderRadius: BorderRadius.circular(10)),
-                    child: const Icon(Icons.support_agent_rounded, color: AppColors.info, size: 20),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                '$celebrationMsg $moodEmoji',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 22, fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary, height: 1.3,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                subMsg,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 15, color: AppColors.textSecondary,
+                  height: 1.5, fontWeight: FontWeight.w400,
+                ),
+              ),
+              if (widget.isFirstCheckIn) ...[
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFF75B9A), Color(0xFFD43F82)],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [BoxShadow(
+                      color: const Color(0xFFF75B9A).withValues(alpha: 0.35),
+                      blurRadius: 12, offset: const Offset(0, 4),
+                    )],
                   ),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    const Text('🔥', style: TextStyle(fontSize: 18)),
+                    const SizedBox(width: 8),
+                    Text('Day 1 Streak',
+                        style: GoogleFonts.inter(
+                          fontSize: 14, fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        )),
+                  ]),
+                ),
+              ],
+              const SizedBox(height: 24),
+              RehlaCard(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFF3E8FA), Color(0xFFEDD8F7)],
+                  begin: Alignment.topLeft, end: Alignment.bottomRight,
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Row(children: [
+                  const Icon(Icons.auto_awesome_rounded, color: AppColors.primary, size: 22),
                   const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text('Your emotional wellbeing matters. Talk to your counsellor or call a support line.',
-                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.4)),
+                  Expanded(
+                    child: Text(
+                      widget.moodScore >= 4
+                          ? 'You showed up for yourself today. That is the most important thing. 💜'
+                          : widget.moodScore <= 2
+                              ? 'Hard days are part of the journey. You are not alone in this. We are here.'
+                              : 'Every check-in builds a picture your doctor can actually use. Well done.',
+                      style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.5),
+                    ),
                   ),
                 ]),
               ),
-            ],
-            const SizedBox(height: 28),
-            PurpleGradientButton(label: 'Back to Home', icon: Icons.home_rounded, onTap: onGoHome),
-          ]),
+              if (showSupport) ...[
+                const SizedBox(height: 12),
+                RehlaCard(
+                  padding: const EdgeInsets.all(14),
+                  child: Row(children: [
+                    Container(
+                      width: 38, height: 38,
+                      decoration: BoxDecoration(
+                          color: AppColors.infoLight,
+                          borderRadius: BorderRadius.circular(10)),
+                      child: const Icon(Icons.support_agent_rounded, color: AppColors.info, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'Your emotional wellbeing matters. Reach out to your counsellor or a support line today.',
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.4)),
+                    ),
+                  ]),
+                ),
+              ],
+              const SizedBox(height: 28),
+              PurpleGradientButton(label: 'Back to Home', icon: Icons.home_rounded, onTap: widget.onGoHome),
+              const SizedBox(height: 12),
+              Text(
+                'Returning automatically in a moment...',
+                style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
+              ),
+            ]),
+          ),
         ),
       ),
     );

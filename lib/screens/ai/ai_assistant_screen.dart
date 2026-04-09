@@ -95,7 +95,10 @@ class _AIAssistantScreenState extends State<AIAssistantScreen>
   String _buildGreeting() {
     final hour = DateTime.now().hour;
     final greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-    return "👋 $greeting! I'm your AI Health Assistant.\n\nI'm here to help you understand your treatment, lab values, manage side effects, and answer any health questions — anytime, day or night.\n\nI can explain your blood counts, give evidence-based tips for symptoms, tell you when to contact your care team, and more.\n\n**What would you like to know?** You can type a question or tap a suggestion below.";
+    final app = context.read<AppProvider>();
+    final name = app.journey?.name.split(' ').first ?? '';
+    final nameStr = name.isNotEmpty ? ', $name' : '';
+    return "$greeting$nameStr 💜\n\nI'm here with you. Whatever you're going through right now — the fear, the side effects, the hard questions — you don't have to face it alone.\n\nI can help you understand your labs, manage symptoms, know when to call your care team, and more. I'm not a replacement for your doctor, but I'm here anytime you need to talk.\n\nWhat's on your mind today?";
   }
 
   void _addAIMessage(String text) {
@@ -158,16 +161,34 @@ class _AIAssistantScreenState extends State<AIAssistantScreen>
       return "Sleep disruption during cancer treatment is extremely common. Here's what helps:\n\n**Sleep hygiene:**\n• Keep a consistent sleep and wake time — even on weekends\n• Cool, dark, quiet room is ideal\n• Avoid screens 1 hour before bed (blue light disrupts melatonin)\n\n**If steroids are causing insomnia:**\n• Take them earlier in the day if your regimen allows\n• Talk to your oncology team — adjusting timing can help significantly\n\n**Natural aids:**\n• Melatonin (0.5–3mg) is generally safe — ask your team first\n• Chamomile tea, magnesium (glycinate form), and lavender aromatherapy\n• Progressive muscle relaxation before bed\n\n**When to ask for help:**\n• If insomnia lasts more than 2 weeks\n• If it's significantly affecting your quality of life\n• Cognitive Behavioral Therapy for Insomnia (CBT-I) is the most effective long-term treatment";
     }
 
+    if (t.contains('nausea') || t.contains('sick') || t.contains('vomit') || t.contains('throwing up')) {
+      return "That sounds really uncomfortable — I'm sorry you're dealing with this right now. Nausea is one of the most common and draining side effects, and what you're feeling is completely valid.\n\nHere are some things that often help:\n\n**Right now:**\n• Try cold or room-temperature foods — hot food smells can make nausea worse\n• Small sips of ginger tea or ginger ale\n• Stay as still as possible, fresh air can help\n• If you have ondansetron (Zofran) prescribed, now is the time to take it\n\n**Today:**\n• Eat small amounts frequently rather than large meals\n• Bland foods: crackers, toast, plain rice, banana\n• Avoid greasy, spicy, or strong-smelling foods\n\n**Contact your care team today if:**\n• You haven't been able to keep any food or liquid down for 24 hours\n• You're feeling dizzy or very weak\n• Nausea is severe and your prescribed medication isn't helping\n\nYou're handling something really hard. Is the nausea linked to a recent treatment, or has it been going on for a while? 💜\n\n*This is not medical advice. Always follow your care team's guidance.*";
+    }
+
     if (t.contains('hello') || t.contains('hi') || t.contains('hey')) {
-      return "Hello! 👋 Great to hear from you. I'm here and ready to help with any questions about your treatment, symptoms, lab values, or anything related to your cancer journey.\n\nYou can ask me about side effects, what your blood counts mean, when to call your doctor, nutrition tips, managing anxiety — anything at all.\n\nWhat's on your mind today?";
+      final app = context.read<AppProvider>();
+      final name = app.journey?.name.split(' ').first ?? '';
+      final nameStr = name.isNotEmpty ? ', $name' : '';
+      return "Hello$nameStr 💜 I'm so glad you reached out. I'm here and ready to listen — whether you have a medical question, a worry, or just need someone to talk things through with.\n\nWhat's on your mind today?";
     }
 
     if (t.contains('thank') || t.contains('thanks')) {
-      return "You're so welcome! 💜 It's my honor to support you through this journey. Please don't hesitate to come back anytime — day or night — with questions, concerns, or just to talk through what you're experiencing.\n\nYou're not alone in this. Keep going — you're doing amazing.";
+      return "Of course — that's what I'm here for. 💜\n\nPlease know that you can come back any time, day or night. Whether it's 2am and you can't sleep, or you just had a hard appointment — I'm here.\n\nYou are not alone in this. Keep going.";
     }
 
-    // Default intelligent response
-    return "Thank you for your question. While I want to give you the most helpful answer, I want to make sure I understand correctly.\n\nCould you share a bit more detail about:\n• What specific symptom or topic you're asking about?\n• How long you've been experiencing it (if symptom-related)?\n• Is this something new or ongoing?\n\nAlternatively, here are some topics I can help with right now:\n• Lab values and blood counts\n• Side effect management (nausea, fatigue, pain, etc.)\n• When to contact your care team\n• Nutrition during treatment\n• Managing anxiety and emotional wellbeing\n\nYou can also tap one of the suggestion chips below to get started!";
+    if (t.contains('scared') || t.contains('afraid') || t.contains('fear') || t.contains('terrified') || t.contains('worried')) {
+      return "Of course you're scared — what you're going through is genuinely frightening, and your fear makes complete sense. Fear doesn't mean weakness. It means you're human.\n\nA lot of people find that the fear is loudest at night, or just before appointments, or when they have too much time to think. That's the hardest part of the waiting.\n\n**What might help right now:**\n• Tell someone how you're feeling — a friend, family member, or counsellor\n• Write down what specifically you're afraid of — it helps to name it\n• Ask your oncology team your hardest questions — not knowing is often scarier than knowing\n\n**If fear is overwhelming you:**\n• Talk to your oncology team about a referral to an oncology psychologist\n• Look for a cancer support group — in person or online\n• Many cancer centers have dedicated social workers — they exist for exactly this\n\nYou don't have to be brave all the time. You just have to keep going. And you are. 💜\n\nIs there something specific you're afraid of that we could talk through?";
+    }
+
+    if (t.contains('hard day') || t.contains('bad day') || t.contains('struggling') || t.contains('can\'t do this')) {
+      final app = context.read<AppProvider>();
+      final name = app.journey?.name.split(' ').first ?? '';
+      final nameStr = name.isNotEmpty ? '$name' : 'friend';
+      return "I hear you, $nameStr. I really do.\n\nHard days are part of this — not a sign that something is wrong with you, not a sign that you're failing. Treatment is brutal, and it's okay to say that out loud.\n\nYou don't have to feel okay right now. You don't have to be positive. You just have to get through today — and today is enough.\n\nIs there anything specific happening — physically or emotionally — that you want to talk through? I'm right here. 💜";
+    }
+
+    // Default — validate first, then ask clarifying question
+    return "Thank you for sharing that with me. 💜\n\nI want to make sure I give you the most useful response. Could you tell me a little more?\n\n• How long has this been going on?\n• Is this something new or has it been building?\n• On a scale of 1-10, how much is it affecting your day?\n\nOr if you'd rather, here are some things I can help with right now:\n• What your lab results mean\n• Managing nausea, fatigue, or pain\n• When to contact your care team\n• Handling anxiety and scanxiety\n• Nutrition during treatment\n\n*Not medical advice — always check with your care team for personal guidance.*";
   }
 
   void _scrollToBottom() {
