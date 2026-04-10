@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -748,6 +747,7 @@ class _AddMedSheetState extends State<_AddMedSheet> {
         DropdownButtonFormField<String>(
           value: _freq,
           decoration: const InputDecoration(labelText: 'Frequency'),
+          // ignore: deprecated_member_use
           items: _freqs.map((f) => DropdownMenuItem(value: f, child: Text(f, style: GoogleFonts.inter(fontSize: 14)))).toList(),
           onChanged: (v) => setState(() => _freq = v!),
         ),
