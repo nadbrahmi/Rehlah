@@ -24,6 +24,7 @@
 | 11 | Real User Testing Plan | UX Research | Design, Product, Research |
 | 12 | Prototype Access Guide | Operations | Moderators, Stakeholders |
 | 13 | Session Observation Notes (Printable) | Research Tool | Moderators |
+| 14 | Operational Requirements, Costs & Infrastructure | Engineering/Product | Founders, Dev, Investors |
 
 ---
 
@@ -34,7 +35,8 @@
 | **Phase 1 — Foundation** | ✅ Complete | Docs 01–08 |
 | **Phase 2 — UX Detail** | ✅ Complete | Docs 09–10 |
 | **Phase 3 — User Testing** | 🔄 Ready to Execute | Docs 11–13 |
-| **Phase 4 — Build** | ⏳ Pending test results | — |
+| **Phase 4 — Infrastructure & Launch** | 🔄 Costed & Planned | Doc 14 |
+| **Phase 5 — Build** | ⏳ Pending test results | — |
 
 ---
 
