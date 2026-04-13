@@ -360,6 +360,8 @@ class LabProvider extends ChangeNotifier {
   /// Seeds 6 realistic reports spanning 8 weeks of chemo treatment
   Future<void> seedDemoData() async {
     if (_reports.isNotEmpty) return;
+    // rng seeded for reproducible demo data (unused directly — values are hardcoded for clarity)
+    // ignore: unused_local_variable
     final rng = Random(42);
     final now = DateTime.now();
 

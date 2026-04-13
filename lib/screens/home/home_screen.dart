@@ -1689,7 +1689,7 @@ class _FourteenDayCard extends StatelessWidget {
     final today = DateTime.now();
     final startDate = app.journey?.treatmentStartDate ?? today.subtract(const Duration(days: 13));
     final daysSinceStart = today.difference(startDate).inDays;
-    final displayDays = daysSinceStart.clamp(0, 13) + 1; // Show up to 14 days
+    // daysSinceStart clamped to 0–13 for 14-day grid
 
     // Build 14-day check-in status
     final days = List.generate(14, (i) {

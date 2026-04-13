@@ -856,7 +856,7 @@ class _MedTapCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final col = taken ? AppColors.accent : AppColors.danger;
-    final bgCol = taken ? AppColors.accentLight : AppColors.dangerLight;
+    // bgCol intentionally unused — card uses `col` directly for selected state
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(

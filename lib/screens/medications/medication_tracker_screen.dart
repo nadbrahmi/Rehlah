@@ -745,9 +745,8 @@ class _AddMedSheetState extends State<_AddMedSheet> {
           style: GoogleFonts.inter(fontSize: 15)),
         const SizedBox(height: 12),
         DropdownButtonFormField<String>(
-          value: _freq,
+          initialValue: _freq,
           decoration: const InputDecoration(labelText: 'Frequency'),
-          // ignore: deprecated_member_use
           items: _freqs.map((f) => DropdownMenuItem(value: f, child: Text(f, style: GoogleFonts.inter(fontSize: 14)))).toList(),
           onChanged: (v) => setState(() => _freq = v!),
         ),

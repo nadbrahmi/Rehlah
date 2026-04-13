@@ -6,7 +6,6 @@ import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../models/models.dart';
-import '../../widgets/common_widgets.dart';
 
 // ─── AI Voice Check-In Screen ─────────────────────────────────────────────────
 class VoiceCheckInScreen extends StatefulWidget {
@@ -31,7 +30,7 @@ class _VoiceCheckInScreenState extends State<VoiceCheckInScreen>
 
   late final AnimationController _waveController;
   late final AnimationController _fadeController;
-  late final Animation<double> _fadeAnim;
+  late final Animation<double> _fadeAnim; // used in initState for fade-in timing
 
   // ── Extracted symptom scores (AI fills these) ───────────────────
   int _mood = 3, _pain = 1, _fatigue = 2, _nausea = 1, _appetite = 3, _sleep = 3;
@@ -328,8 +327,10 @@ class _VoiceCheckInScreenState extends State<VoiceCheckInScreen>
 
     await provider.saveCheckIn(checkIn);
     if (!mounted) return;
-    Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+    final nav = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    nav.pop();
+    messenger.showSnackBar(const SnackBar(
       content: Text('AI check-in saved! Great job taking care of yourself 💜'),
       backgroundColor: AppColors.accent,
       behavior: SnackBarBehavior.floating,
