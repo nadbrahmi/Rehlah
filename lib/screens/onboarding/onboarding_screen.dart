@@ -169,14 +169,28 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               child: AnimatedOpacity(
                 opacity: _canContinue ? 1.0 : 0.45,
                 duration: const Duration(milliseconds: 200),
-                child: PurpleGradientButton(
-                  label: _currentPage < 4 ? 'Continue' : 'Begin My Journey',
-                  icon: _currentPage < 4
-                      ? Icons.arrow_forward_rounded
-                      : Icons.auto_awesome_rounded,
-                  onTap: _canContinue ? _nextPage : () {},
-                  isLoading: _isLoading,
+                child: SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: ElevatedButton(
+                  onPressed: _canContinue ? _nextPage : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF7C3AED),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(width: 22, height: 22,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
+                      : Text(
+                          _currentPage < 4 ? 'Continue →' : 'Begin My Journey →',
+                          style: GoogleFonts.inter(
+                              fontSize: 18, fontWeight: FontWeight.w600)),
                 ),
+              ),
               ),
             ),
           ],
@@ -246,8 +260,8 @@ class _TopBar extends StatelessWidget {
               child: Text(
                 'Skip',
                 style: GoogleFonts.inter(
-                  fontSize: 13,
-                  color: AppColors.textMuted,
+                  fontSize: 15,
+                  color: const Color(0xFF78716C),
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -277,19 +291,20 @@ class _WhoPage extends StatelessWidget {
           Text(
             "Let's make\nRehlah yours.",
             style: GoogleFonts.inter(
-              fontSize: 28,
+              fontSize: 26,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
-              height: 1.25,
-              letterSpacing: -0.3,
+              color: const Color(0xFF1C1917),
+              height: 1.3,
+              letterSpacing: -0.2,
             ),
           ),
           const SizedBox(height: 10),
           Text(
             'Who will be using the app?',
             style: GoogleFonts.inter(
-              fontSize: 15,
-              color: AppColors.textSecondary,
+              fontSize: 18,
+              color: const Color(0xFF78716C),
+              height: 1.7,
             ),
           ),
           const SizedBox(height: 32),
@@ -485,11 +500,11 @@ class _NamePageState extends State<_NamePage> with SingleTickerProviderStateMixi
           Text(
             'What should\nwe call you?',
             style: GoogleFonts.inter(
-              fontSize: 28,
+              fontSize: 26,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
-              height: 1.25,
-              letterSpacing: -0.3,
+              color: const Color(0xFF1C1917),
+              height: 1.3,
+              letterSpacing: -0.2,
             ),
           ),
           const SizedBox(height: 10),
@@ -498,8 +513,9 @@ class _NamePageState extends State<_NamePage> with SingleTickerProviderStateMixi
                 ? 'Just your first name is enough.'
                 : 'So Rehlah feels like it was made just for you.',
             style: GoogleFonts.inter(
-              fontSize: 15,
-              color: AppColors.textSecondary,
+              fontSize: 18,
+              color: const Color(0xFF78716C),
+              height: 1.7,
             ),
           ),
           const SizedBox(height: 36),
@@ -612,19 +628,20 @@ class _CancerTypePage extends StatelessWidget {
           Text(
             'What type of\ncancer is it?',
             style: GoogleFonts.inter(
-              fontSize: 28,
+              fontSize: 26,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
-              height: 1.25,
-              letterSpacing: -0.3,
+              color: const Color(0xFF1C1917),
+              height: 1.3,
+              letterSpacing: -0.2,
             ),
           ),
           const SizedBox(height: 10),
           Text(
             'This helps us show you the most relevant guidance.',
             style: GoogleFonts.inter(
-              fontSize: 15,
-              color: AppColors.textSecondary,
+              fontSize: 18,
+              color: const Color(0xFF78716C),
+              height: 1.7,
             ),
           ),
           const SizedBox(height: 24),
@@ -686,19 +703,20 @@ class _StageAndPhasePage extends StatelessWidget {
           Text(
             'Where are you\nin your journey?',
             style: GoogleFonts.inter(
-              fontSize: 28,
+              fontSize: 26,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
-              height: 1.25,
-              letterSpacing: -0.3,
+              color: const Color(0xFF1C1917),
+              height: 1.3,
+              letterSpacing: -0.2,
             ),
           ),
           const SizedBox(height: 10),
           Text(
             'Take your time — both are optional to update later.',
             style: GoogleFonts.inter(
-              fontSize: 15,
-              color: AppColors.textSecondary,
+              fontSize: 18,
+              color: const Color(0xFF78716C),
+              height: 1.7,
             ),
           ),
           const SizedBox(height: 24),
@@ -926,20 +944,20 @@ class _DatesPage extends StatelessWidget {
           Text(
             'Two last things —\nboth are optional.',
             style: GoogleFonts.inter(
-              fontSize: 28,
+              fontSize: 26,
               fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
-              height: 1.25,
-              letterSpacing: -0.3,
+              color: const Color(0xFF1C1917),
+              height: 1.3,
+              letterSpacing: -0.2,
             ),
           ),
           const SizedBox(height: 10),
           Text(
             'These dates help us personalise your milestones.\nSkip them if you\'re not sure yet.',
             style: GoogleFonts.inter(
-              fontSize: 15,
-              color: AppColors.textSecondary,
-              height: 1.5,
+              fontSize: 18,
+              color: const Color(0xFF78716C),
+              height: 1.7,
             ),
           ),
           const SizedBox(height: 32),

@@ -2,24 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'home_screen.dart';
-import '../journey/journey_screen.dart';
 import '../checkin/checkin_screen.dart';
-import '../care/care_hub_screen.dart';
-import '../community/community_screen.dart';
+import '../ai/ai_assistant_screen.dart';
 import '../profile/profile_screen.dart';
 import '../../providers/app_provider.dart';
 import '../../theme/app_theme.dart';
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAIN SCREEN — 4-Tab Navigation
+// Tab 0: Home     Tab 1: Check-In     Tab 2: Yusr (AI)     Tab 3: Profile
+// Labs, Meds, Appointments moved into Profile as sections
+// ═══════════════════════════════════════════════════════════════════════════════
+
 class MainScreen extends StatelessWidget {
   const MainScreen({super.key});
 
-  static List<Widget> get _screens => [
-        const HomeScreen(),
-        const JourneyScreen(),
-        const DailyCheckInScreen(),
-        const CareHubScreen(),
-        const CommunityScreen(),
-      ];
+  static List<Widget> get _screens => const [
+    HomeScreen(),          // 0 — Home
+    DailyCheckInScreen(),  // 1 — Check-In
+    AIAssistantScreen(),   // 2 — Yusr AI
+    ProfileScreen(),       // 3 — Profile (contains Labs, Meds, Appointments)
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -29,10 +32,6 @@ class MainScreen extends StatelessWidget {
 
         return Scaffold(
           backgroundColor: AppColors.background,
-          endDrawer: const Drawer(
-            backgroundColor: AppColors.background,
-            child: ProfileScreen(),
-          ),
           body: Column(
             children: [
               if (provider.isDemoMode)
@@ -56,7 +55,6 @@ class MainScreen extends StatelessWidget {
             currentIndex: idx,
             hasCheckedIn: provider.hasCheckedInToday,
             onTap: (i) => provider.setNavIndex(i),
-            onProfile: () => Scaffold.of(context).openEndDrawer(),
           ),
         );
       },
@@ -77,7 +75,7 @@ class _DemoBanner extends StatelessWidget {
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
           child: Row(
             children: [
               Container(
@@ -89,31 +87,29 @@ class _DemoBanner extends StatelessWidget {
                 child: const Icon(Icons.play_arrow_rounded,
                     color: Colors.white, size: 14),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               const Expanded(
                 child: Text(
                   "Demo Mode — Sarah's journey (sample data)",
                   style: TextStyle(
                       color: Colors.white,
-                      fontSize: 12,
+                      fontSize: 14,
                       fontWeight: FontWeight.w600),
                 ),
               ),
               GestureDetector(
                 onTap: onExit,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 5),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.18),
                     borderRadius: BorderRadius.circular(20),
-                    border:
-                        Border.all(color: Colors.white.withValues(alpha: 0.30)),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.30)),
                   ),
                   child: const Text('Exit',
                       style: TextStyle(
                           color: Colors.white,
-                          fontSize: 11,
+                          fontSize: 13,
                           fontWeight: FontWeight.w700)),
                 ),
               ),
@@ -125,18 +121,16 @@ class _DemoBanner extends StatelessWidget {
   }
 }
 
-// ─── Bottom Navigation ────────────────────────────────────────────────────────
+// ─── Bottom Navigation — 4 tabs ───────────────────────────────────────────────
 class _BottomNav extends StatelessWidget {
   final int currentIndex;
   final bool hasCheckedIn;
   final ValueChanged<int> onTap;
-  final VoidCallback onProfile;
 
   const _BottomNav({
     required this.currentIndex,
     required this.hasCheckedIn,
     required this.onTap,
-    required this.onProfile,
   });
 
   @override
@@ -144,19 +138,17 @@ class _BottomNav extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius:
-            const BorderRadius.vertical(top: Radius.circular(28)),
         border: Border(top: BorderSide(color: AppColors.divider, width: 1)),
         boxShadow: AppShadows.nav,
       ),
       child: SafeArea(
         top: false,
         child: Padding(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
+              // Tab 0: Home
               _NavItem(
                 icon: Icons.home_rounded,
                 label: 'Home',
@@ -164,30 +156,25 @@ class _BottomNav extends StatelessWidget {
                 currentIndex: currentIndex,
                 onTap: onTap,
               ),
-              _NavItem(
-                icon: Icons.show_chart_rounded,
-                label: 'Journey',
-                index: 1,
-                currentIndex: currentIndex,
-                onTap: onTap,
-              ),
-              // Center FAB — Check-In
-              _CheckInFAB(
+              // Tab 1: Check-In (styled as prominent FAB-style)
+              _CheckInTab(
                 hasCheckedIn: hasCheckedIn,
-                isActive: currentIndex == 2,
-                onTap: () => onTap(2),
+                isActive: currentIndex == 1,
+                onTap: () => onTap(1),
               ),
+              // Tab 2: Yusr AI
               _NavItem(
-                icon: Icons.local_hospital_rounded,
-                label: 'Care',
-                index: 3,
+                icon: Icons.auto_awesome_rounded,
+                label: 'Yusr',
+                index: 2,
                 currentIndex: currentIndex,
                 onTap: onTap,
               ),
+              // Tab 3: Profile
               _NavItem(
-                icon: Icons.people_rounded,
-                label: 'Community',
-                index: 4,
+                icon: Icons.person_rounded,
+                label: 'Profile',
+                index: 3,
                 currentIndex: currentIndex,
                 onTap: onTap,
               ),
@@ -199,6 +186,7 @@ class _BottomNav extends StatelessWidget {
   }
 }
 
+// ─── Standard nav item ────────────────────────────────────────────────────────
 class _NavItem extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -219,42 +207,32 @@ class _NavItem extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: () => onTap(index),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 64, minHeight: 52),
         padding: EdgeInsets.symmetric(
-            horizontal: isSelected ? 16 : 12, vertical: 8),
+            horizontal: isSelected ? 14 : 10, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.10)
+              ? AppColors.primary.withValues(alpha: 0.08)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 180),
-              transitionBuilder: (child, anim) =>
-                  ScaleTransition(scale: anim, child: child),
-              child: Icon(
-                icon,
-                key: ValueKey(isSelected),
-                color: isSelected
-                    ? AppColors.primary
-                    : AppColors.textMuted,
-                size: 22,
-              ),
+            Icon(
+              icon,
+              color: isSelected ? AppColors.primary : AppColors.textSecondary,
+              size: 24,
             ),
             const SizedBox(height: 3),
-            AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 180),
-              style: TextStyle(
-                fontSize: 10,
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 11,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
-                color: isSelected ? AppColors.primary : AppColors.textMuted,
-                fontFamily: GoogleFonts.inter().fontFamily,
+                color: isSelected ? AppColors.primary : AppColors.textSecondary,
               ),
-              child: Text(label),
             ),
           ],
         ),
@@ -263,11 +241,12 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-class _CheckInFAB extends StatelessWidget {
+// ─── Check-In tab (center, visually prominent) ────────────────────────────────
+class _CheckInTab extends StatelessWidget {
   final bool hasCheckedIn, isActive;
   final VoidCallback onTap;
 
-  const _CheckInFAB({
+  const _CheckInTab({
     required this.hasCheckedIn,
     required this.isActive,
     required this.onTap,
@@ -277,53 +256,52 @@ class _CheckInFAB extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 250),
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              gradient: hasCheckedIn
-                  ? AppColors.accentGradient
-                  : AppColors.cardGradient,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: (hasCheckedIn
-                          ? AppColors.accent
-                          : AppColors.primary)
-                      .withValues(alpha: isActive ? 0.50 : 0.28),
-                  blurRadius: isActive ? 22 : 14,
-                  offset: const Offset(0, 6),
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 72, minHeight: 52),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: hasCheckedIn
+                    ? AppColors.teal
+                    : AppColors.primary,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: (hasCheckedIn ? AppColors.teal : AppColors.primary)
+                        .withValues(alpha: isActive ? 0.45 : 0.22),
+                    blurRadius: isActive ? 18 : 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Icon(
+                  hasCheckedIn
+                      ? Icons.check_rounded
+                      : Icons.edit_note_rounded,
+                  color: Colors.white,
+                  size: 24,
                 ),
-              ],
-            ),
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 220),
-              transitionBuilder: (child, anim) =>
-                  ScaleTransition(scale: anim, child: child),
-              child: Icon(
-                hasCheckedIn
-                    ? Icons.check_rounded
-                    : Icons.edit_note_rounded,
-                key: ValueKey(hasCheckedIn),
-                color: Colors.white,
-                size: 26,
               ),
             ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            'Check-In',
-            style: GoogleFonts.inter(
-              fontSize: 10,
-              fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-              color: isActive ? AppColors.primary : AppColors.textMuted,
+            const SizedBox(height: 3),
+            Text(
+              'Check-In',
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
+                color: isActive
+                    ? (hasCheckedIn ? AppColors.teal : AppColors.primary)
+                    : AppColors.textSecondary,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

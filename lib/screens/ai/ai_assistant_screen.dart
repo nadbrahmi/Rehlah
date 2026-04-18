@@ -257,20 +257,20 @@ class _AIAssistantScreenState extends State<AIAssistantScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('AI Health Assistant',
+                        Text('Yusr',
                             style: GoogleFonts.inter(
-                                fontSize: 15, fontWeight: FontWeight.w700,
-                                color: AppColors.textPrimary)),
+                                fontSize: 18, fontWeight: FontWeight.w700,
+                                color: const Color(0xFF1C1917))),
                         Row(
                           children: [
                             Container(
                               width: 6, height: 6,
                               decoration: const BoxDecoration(
-                                color: AppColors.accent, shape: BoxShape.circle),
+                                color: Color(0xFF7C3AED), shape: BoxShape.circle),
                             ),
                             const SizedBox(width: 4),
-                            Text('Always available • Cancer-care trained',
-                                style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
+                            Text('Always here • Not a doctor',
+                                style: TextStyle(fontSize: 11, color: Color(0xFF78716C))),
                           ],
                         ),
                       ],
@@ -412,76 +412,168 @@ class _MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (message.isUser) {
+      // User bubble: white, right-aligned
       return Padding(
-        padding: const EdgeInsets.only(bottom: 12, left: 48),
+        padding: const EdgeInsets.only(bottom: 16, left: 64),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.end,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Flexible(
               child: Container(
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.85,
+                ),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  gradient: AppColors.cardGradient,
+                  color: Colors.white,
                   borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(18),
                     topRight: Radius.circular(18),
                     bottomLeft: Radius.circular(18),
                     bottomRight: Radius.circular(4),
                   ),
+                  border: Border.all(color: const Color(0xFFEDD8F0)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.06),
+                      blurRadius: 8, offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
                 child: Text(message.text,
-                    style: const TextStyle(fontSize: 14, color: Colors.white, height: 1.4)),
+                    style: GoogleFonts.inter(
+                        fontSize: 15,
+                        color: const Color(0xFF1C1917),
+                        height: 1.6)),
               ),
-            ),
-            const SizedBox(width: 8),
-            Container(
-              width: 28, height: 28,
-              decoration: BoxDecoration(
-                color: AppColors.primarySurface, shape: BoxShape.circle),
-              child: const Icon(Icons.person_rounded, color: AppColors.primaryDark, size: 15),
             ),
           ],
         ),
       );
     }
 
-    // AI message with markdown-style bold
+    // Yusr AI message — bubble spec:
+    // bg #F5F3FF, max-width 85%, left-aligned, purple 'Y' avatar
+    // Max 3 sentences shown, "Tell me more →" if longer
+    // Disclaimer at bottom: italic, #78716C, 11sp
+    return _YusrBubble(message: message);
+  }
+}
+
+class _YusrBubble extends StatefulWidget {
+  final _ChatMessage message;
+  const _YusrBubble({required this.message});
+
+  @override
+  State<_YusrBubble> createState() => _YusrBubbleState();
+}
+
+class _YusrBubbleState extends State<_YusrBubble> {
+  bool _expanded = false;
+
+  // Split into sentences then take first 3
+  List<String> get _sentences {
+    // Split on sentence terminators
+    final raw = widget.message.text;
+    // Simple heuristic: split on '. ' or '! ' or '? ' or '\n\n'
+    final parts = raw.split(RegExp(r'(?<=[.!?])\s+|\n\n'));
+    return parts.where((s) => s.trim().isNotEmpty).toList();
+  }
+
+  String get _shortText {
+    final s = _sentences;
+    if (s.length <= 3) return widget.message.text;
+    return s.take(3).join(' ');
+  }
+
+  bool get _needsExpansion => _sentences.length > 3;
+
+  @override
+  Widget build(BuildContext context) {
+    final displayText = _expanded ? widget.message.text : _shortText;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12, right: 48),
+      padding: const EdgeInsets.only(bottom: 16, right: 40),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Purple 'Y' avatar
           Container(
             width: 32, height: 32,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [AppColors.primaryDark, AppColors.info]),
+            decoration: const BoxDecoration(
+              color: Color(0xFF7C3AED),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.smart_toy_rounded, color: Colors.white, size: 16),
+            child: const Center(
+              child: Text('Y',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700)),
+            ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Flexible(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(4),
-                  topRight: Radius.circular(18),
-                  bottomLeft: Radius.circular(18),
-                  bottomRight: Radius.circular(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.85,
+                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F3FF),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(4),
+                      topRight: Radius.circular(18),
+                      bottomLeft: Radius.circular(18),
+                      bottomRight: Radius.circular(18),
+                    ),
+                    border: Border.all(color: const Color(0xFFDDD6FE)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _FormattedText(text: displayText),
+                      if (_needsExpansion) ...[  
+                        const SizedBox(height: 10),
+                        GestureDetector(
+                          onTap: () => setState(() => _expanded = !_expanded),
+                          child: Text(
+                            _expanded ? 'Show less ↑' : 'Tell me more →',
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF7C3AED),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-                border: Border.all(color: AppColors.border),
-                boxShadow: AppShadows.card,
-              ),
-              child: _FormattedText(text: message.text),
+                // Disclaimer
+                Padding(
+                  padding: const EdgeInsets.only(top: 6, left: 4),
+                  child: Text(
+                    'This is not medical advice',
+                    style: GoogleFonts.inter(
+                      fontSize: 11,
+                      color: const Color(0xFF78716C),
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
   }
+
 }
 
 // ─── Formatted Text (pseudo-markdown) ─────────────────────────────────────────

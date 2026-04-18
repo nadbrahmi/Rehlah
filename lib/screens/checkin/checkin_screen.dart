@@ -4,9 +4,17 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
 import '../../models/models.dart';
-import '../../widgets/common_widgets.dart';
-import '../../theme/app_theme.dart';
 import 'voice_checkin_screen.dart';
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DAILY CHECK-IN SCREEN — Step-by-Step Full-Screen Flow
+// Step 1: Mood selector (5 large emojis, 56px)
+// Step 2: Symptom sliders (one at a time)
+// Step 3: Medication intake (Yes / Partially / Skip)
+// Step 4: Water intake selector
+// Step 5: Optional voice note + Submit
+// After completion: teal celebration card (#0D9488) auto-dismiss 3 s or tap
+// ═══════════════════════════════════════════════════════════════════════════════
 
 class DailyCheckInScreen extends StatefulWidget {
   const DailyCheckInScreen({super.key});
@@ -16,787 +24,120 @@ class DailyCheckInScreen extends StatefulWidget {
 }
 
 class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
-  bool _isQuickMode = true;
-  bool _showInterstitial = true; // UX flow: pre-check-in interstitial
+  // Flow state
+  bool _showInterstitial = true;
+  int _currentStep = 0; // 0–4
+  bool _isComplete = false;
+  bool _isSubmitting = false;
 
-  // Physical scores
-  int _moodScore = 3;
+  // Step 1: Mood
+  int _moodScore = 0; // 0 = unset
+
+  // Step 2: Symptoms (shown one at a time)
+  int _symptomIndex = 0;
   int _painScore = 1;
-  int _fatigueScore = 2;
+  int _fatigueScore = 1;
   int _nauseaScore = 1;
   int _appetiteScore = 3;
   int _sleepScore = 3;
-  bool _medicationsTaken = false;
+
+  // Step 3: Medication
+  String _medStatus = ''; // 'yes' | 'partially' | 'skip'
+
+  // Step 4: Water
   int _waterGlasses = 4;
-  bool _activitiesAble = true;
 
-  // Emotional scores
-  int _emotionalScore = 3;
-  String? _topConcern;
-
+  // Step 5: Notes
   final _notesCtrl = TextEditingController();
-  final _foodCtrl = TextEditingController();
-  bool _isSubmitting = false;
-  bool _isComplete = false;
 
-  static const _concerns = ['Pain', 'Fatigue', 'Nausea', 'Anxiety', 'Sleep', 'Appetite', 'Isolation', 'Fear of recurrence'];
-  static const _emotionEmojis = ['', '😰', '😟', '😐', '🙂', '💪'];
-  static const _emotionLabels = ['', 'Overwhelmed', 'Anxious', 'Okay', 'Hopeful', 'Strong'];
-  static const _emotionColors = [
-    Colors.transparent, AppColors.danger, AppColors.warning,
-    AppColors.info, AppColors.accent, AppColors.primary,
+  static const _moodEmojis  = ['😫', '😔', '😐', '🙂', '😊'];
+  static const _moodLabels  = ['Rough', 'Low', 'Okay', 'Good', 'Great'];
+  static const _moodColors  = [
+    Color(0xFFDC2626),
+    Color(0xFFD97706),
+    Color(0xFF2563EB),
+    Color(0xFF22C55E),
+    Color(0xFF0D9488),
   ];
+
+  static const _symptoms = [
+    _SymptomDef('Pain',          Icons.report_problem_rounded, Color(0xFFDC2626)),
+    _SymptomDef('Fatigue',       Icons.battery_2_bar_rounded,  Color(0xFFD97706)),
+    _SymptomDef('Nausea',        Icons.sick_rounded,           Color(0xFF2563EB)),
+    _SymptomDef('Appetite',      Icons.restaurant_rounded,     Color(0xFF22C55E)),
+    _SymptomDef('Sleep Quality', Icons.bedtime_rounded,        Color(0xFF7C3AED)),
+  ];
+
+  int get _symptomValue {
+    switch (_symptomIndex) {
+      case 0: return _painScore;
+      case 1: return _fatigueScore;
+      case 2: return _nauseaScore;
+      case 3: return _appetiteScore;
+      case 4: return _sleepScore;
+      default: return 1;
+    }
+  }
+
+  void _setSymptomValue(int v) {
+    setState(() {
+      switch (_symptomIndex) {
+        case 0: _painScore = v; break;
+        case 1: _fatigueScore = v; break;
+        case 2: _nauseaScore = v; break;
+        case 3: _appetiteScore = v; break;
+        case 4: _sleepScore = v; break;
+      }
+    });
+  }
 
   @override
   void dispose() {
     _notesCtrl.dispose();
-    _foodCtrl.dispose();
     super.dispose();
   }
 
-  int get _completedSections {
-    int n = 0;
-    if (_moodScore > 0) n++;
-    if (_painScore > 0 || _fatigueScore > 0 || _nauseaScore > 0) n++;
-    if (_medicationsTaken || _waterGlasses > 0) n++;
-    return n;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_isComplete) {
-      return _CompletionView(
-        moodScore: _moodScore,
-        emotionalScore: _emotionalScore,
-        isFirstCheckIn: context.read<AppProvider>().recentCheckIns.isEmpty,
-        onGoHome: () {
-          context.read<AppProvider>().setNavIndex(0);
-          Navigator.of(context).pop();
-        },
-      );
+  bool get _canAdvance {
+    switch (_currentStep) {
+      case 0: return _moodScore > 0;
+      case 1: return true; // symptoms always have defaults
+      case 2: return _medStatus.isNotEmpty;
+      case 3: return true;
+      case 4: return true;
+      default: return false;
     }
-    // UX flow: show pre-check-in interstitial on first open
-    if (_showInterstitial) {
-      return _CheckInInterstitial(
-        onContinue: () => setState(() => _showInterstitial = false),
-      );
+  }
+
+  void _nextStep() {
+    if (_currentStep == 1 && _symptomIndex < _symptoms.length - 1) {
+      // Advance through symptoms
+      setState(() => _symptomIndex++);
+      return;
     }
-    return _isQuickMode ? _buildQuick() : _buildFull();
+    if (_currentStep < 4) {
+      setState(() {
+        _currentStep++;
+        if (_currentStep == 1) _symptomIndex = 0;
+      });
+    } else {
+      _submit();
+    }
   }
 
-  // ─── QUICK MODE ───────────────────────────────────────────────────────────────
-  Widget _buildQuick() {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          // Header
-          SliverToBoxAdapter(child: _buildHeader(quick: true)),
-
-          // Step 1 – Mood
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                _StepLabel(step: '1', label: 'How\'s your overall mood?'),
-                const SizedBox(height: 14),
-                MoodEmojiSelector(
-                  selectedMood: _moodScore,
-                  onSelect: (v) => setState(() => _moodScore = v),
-                ),
-              ]),
-            ),
-          ),
-
-          // Step 2 – Emotional wellbeing
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                _StepLabel(step: '2', label: 'Emotionally, I feel…'),
-                const SizedBox(height: 14),
-                Row(
-                  children: List.generate(5, (i) {
-                    final idx = i + 1;
-                    final sel = _emotionalScore == idx;
-                    final col = _emotionColors[idx];
-                    return Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _emotionalScore = idx),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          margin: const EdgeInsets.symmetric(horizontal: 3),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(
-                            color: sel ? col : AppColors.surface,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: sel ? col : AppColors.border, width: sel ? 2 : 1),
-                            boxShadow: sel ? [BoxShadow(color: col.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))] : [],
-                          ),
-                          child: Column(mainAxisSize: MainAxisSize.min, children: [
-                            Text(_emotionEmojis[idx], style: const TextStyle(fontSize: 22)),
-                            const SizedBox(height: 4),
-                            Text(_emotionLabels[idx],
-                                textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600,
-                                    color: sel ? Colors.white : AppColors.textMuted)),
-                          ]),
-                        ),
-                      ),
-                    );
-                  }),
-                ),
-              ]),
-            ),
-          ),
-
-          // Step 3 – Medications per-med check-off
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-              child: Consumer<AppProvider>(builder: (context, app, _) {
-                final meds = app.medications.where((m) => m.isActive).toList();
-                return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  _StepLabel(step: '3', label: 'Medications taken today?'),
-                  const SizedBox(height: 14),
-                  if (meds.isEmpty)
-                    Row(children: [
-                      Expanded(child: _MedTapCard(taken: true, selected: _medicationsTaken, onTap: () => setState(() => _medicationsTaken = true))),
-                      const SizedBox(width: 12),
-                      Expanded(child: _MedTapCard(taken: false, selected: !_medicationsTaken, onTap: () => setState(() => _medicationsTaken = false))),
-                    ])
-                  else
-                    Column(
-                      children: meds.map((med) {
-                        final taken = app.isMedTakenToday(med.id);
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: GestureDetector(
-                            onTap: () {
-                              app.logMedTaken(med.id, taken: !taken);
-                              // Keep the boolean flag in sync
-                              setState(() {
-                                _medicationsTaken = meds
-                                    .where((m) => app.isMedTakenToday(m.id))
-                                    .length == meds.length;
-                              });
-                            },
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 150),
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: taken ? AppColors.accentLight : AppColors.surface,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(
-                                    color: taken ? AppColors.accent : AppColors.border,
-                                    width: taken ? 1.5 : 1),
-                              ),
-                              child: Row(children: [
-                                Container(
-                                  width: 28, height: 28,
-                                  decoration: BoxDecoration(
-                                    color: taken ? AppColors.accent : AppColors.primarySurface,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Icon(
-                                    taken ? Icons.check_rounded : Icons.medication_outlined,
-                                    color: taken ? Colors.white : AppColors.primary,
-                                    size: 16,
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                    Text(med.name,
-                                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600,
-                                            color: taken ? AppColors.accentDark : AppColors.textPrimary)),
-                                    Text('${med.dosage} · ${med.frequency}',
-                                        style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                                  ]),
-                                ),
-                                Text(taken ? 'Taken ✓' : 'Tap to mark',
-                                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600,
-                                        color: taken ? AppColors.accentDark : AppColors.textMuted)),
-                              ]),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                ]);
-              }),
-            ),
-          ),
-
-          // Top concern
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  const Icon(Icons.help_outline_rounded, color: AppColors.primary, size: 16),
-                  const SizedBox(width: 6),
-                  Text('Biggest concern today? (optional)',
-                      style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                ]),
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8, runSpacing: 8,
-                  children: _concerns.map((c) {
-                    final sel = _topConcern == c;
-                    return GestureDetector(
-                      onTap: () => setState(() => _topConcern = sel ? null : c),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: sel ? AppColors.primary : AppColors.surface,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: sel ? AppColors.primary : AppColors.border),
-                          boxShadow: sel ? AppShadows.card : [],
-                        ),
-                        child: Text(c, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
-                            color: sel ? Colors.white : AppColors.textSecondary)),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ]),
-            ),
-          ),
-
-          // Buttons
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
-              child: Column(children: [
-                PurpleGradientButton(
-                  label: 'Save Quick Check-In',
-                  icon: Icons.bolt_rounded,
-                  onTap: _submitQuick,
-                  isLoading: _isSubmitting,
-                ),
-                const SizedBox(height: 12),
-                GestureDetector(
-                  onTap: () => setState(() => _isQuickMode = false),
-                  child: Center(
-                    child: Text('Add more detail (full check-in)',
-                        style: const TextStyle(fontSize: 13, color: AppColors.primary,
-                            fontWeight: FontWeight.w600, decoration: TextDecoration.underline,
-                            decorationColor: AppColors.primary)),
-                  ),
-                ),
-              ]),
-            ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
-        ],
-      ),
-    );
+  void _prevStep() {
+    if (_currentStep == 1 && _symptomIndex > 0) {
+      setState(() => _symptomIndex--);
+      return;
+    }
+    if (_currentStep > 0) {
+      setState(() {
+        _currentStep--;
+        if (_currentStep == 1) _symptomIndex = _symptoms.length - 1;
+      });
+    }
   }
 
-  // ─── FULL MODE ────────────────────────────────────────────────────────────────
-  Widget _buildFull() {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          SliverToBoxAdapter(child: _buildHeader(quick: false)),
-
-          // Mood
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const SectionHeader(title: 'Overall Mood', icon: Icons.sentiment_satisfied_alt_rounded),
-                const SizedBox(height: 14),
-                MoodEmojiSelector(selectedMood: _moodScore, onSelect: (v) => setState(() => _moodScore = v)),
-              ]),
-            ),
-          ),
-
-          // Emotional wellbeing
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const SectionHeader(title: 'Emotional Wellbeing', icon: Icons.favorite_border_rounded),
-                const SizedBox(height: 6),
-                const Text('Beyond physical symptoms — how are you really feeling?',
-                    style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
-                const SizedBox(height: 14),
-                Row(
-                  children: List.generate(5, (i) {
-                    final idx = i + 1;
-                    final sel = _emotionalScore == idx;
-                    final col = _emotionColors[idx];
-                    return Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _emotionalScore = idx),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          margin: const EdgeInsets.symmetric(horizontal: 3),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(
-                            color: sel ? col : AppColors.surface,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: sel ? col : AppColors.border, width: sel ? 2 : 1),
-                          ),
-                          child: Column(mainAxisSize: MainAxisSize.min, children: [
-                            Text(_emotionEmojis[idx], style: const TextStyle(fontSize: 22)),
-                            const SizedBox(height: 4),
-                            Text(_emotionLabels[idx],
-                                textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600,
-                                    color: sel ? Colors.white : AppColors.textMuted)),
-                          ]),
-                        ),
-                      ),
-                    );
-                  }),
-                ),
-                if (_emotionalScore <= 2) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.dangerLight,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(children: [
-                      const Icon(Icons.support_agent_rounded, color: AppColors.danger, size: 18),
-                      const SizedBox(width: 10),
-                      const Expanded(
-                        child: Text('If you\'re struggling emotionally, your care team can help. You\'re not alone. 💜',
-                            style: TextStyle(fontSize: 12, color: AppColors.danger, height: 1.4)),
-                      ),
-                    ]),
-                  ),
-                ],
-              ]),
-            ),
-          ),
-
-          // Symptoms
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const SectionHeader(title: 'Symptom Levels', icon: Icons.monitor_heart_rounded),
-                const SizedBox(height: 14),
-                ScoreSlider(label: 'Pain', value: _painScore, onChanged: (v) => setState(() => _painScore = v),
-                    activeColor: AppColors.pain, icon: Icons.report_problem_rounded,
-                    labels: const ['None', 'Mild', 'Moderate', 'Severe', 'Extreme']),
-                const SizedBox(height: 12),
-                ScoreSlider(label: 'Fatigue', value: _fatigueScore, onChanged: (v) => setState(() => _fatigueScore = v),
-                    activeColor: AppColors.fatigue, icon: Icons.battery_2_bar_rounded,
-                    labels: const ['None', 'Mild', 'Moderate', 'High', 'Extreme']),
-                const SizedBox(height: 12),
-                ScoreSlider(label: 'Nausea', value: _nauseaScore, onChanged: (v) => setState(() => _nauseaScore = v),
-                    activeColor: AppColors.nausea, icon: Icons.sick_rounded,
-                    labels: const ['None', 'Mild', 'Moderate', 'Strong', 'Severe']),
-                const SizedBox(height: 12),
-                ScoreSlider(label: 'Appetite', value: _appetiteScore, onChanged: (v) => setState(() => _appetiteScore = v),
-                    activeColor: AppColors.appetite, icon: Icons.restaurant_rounded,
-                    labels: const ['None', 'Poor', 'Low', 'Moderate', 'Good']),
-                const SizedBox(height: 12),
-                ScoreSlider(label: 'Sleep Quality', value: _sleepScore, onChanged: (v) => setState(() => _sleepScore = v),
-                    activeColor: AppColors.sleep, icon: Icons.bedtime_rounded,
-                    labels: const ['Poor', 'Light', 'Fair', 'Good', 'Great']),
-              ]),
-            ),
-          ),
-
-          // Medications & water
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-              child: Consumer<AppProvider>(builder: (context, appP, _) {
-                final meds = appP.medications.where((m) => m.isActive).toList();
-                return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const SectionHeader(title: 'Medications & Hydration', icon: Icons.medication_liquid_rounded),
-                  const SizedBox(height: 14),
-                  if (meds.isEmpty)
-                    RehlaCard(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(children: [
-                        Container(
-                          width: 44, height: 44,
-                          decoration: BoxDecoration(color: AppColors.primarySurface, borderRadius: BorderRadius.circular(14)),
-                          child: const Icon(Icons.medication_rounded, color: AppColors.primary, size: 22),
-                        ),
-                        const SizedBox(width: 12),
-                        const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text('Medications Taken', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                          Text("Did you take all today's medications?", style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
-                        ])),
-                        Transform.scale(
-                          scale: 0.9,
-                          child: Switch(
-                            value: _medicationsTaken,
-                            onChanged: (v) => setState(() => _medicationsTaken = v),
-                            activeThumbColor: Colors.white,
-                            activeTrackColor: AppColors.primary,
-                            inactiveThumbColor: Colors.white,
-                            inactiveTrackColor: AppColors.divider,
-                          ),
-                        ),
-                      ]),
-                    )
-                  else
-                    RehlaCard(
-                      padding: const EdgeInsets.all(14),
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Row(children: [
-                          Container(
-                            width: 32, height: 32,
-                            decoration: BoxDecoration(color: AppColors.primarySurface, borderRadius: BorderRadius.circular(9)),
-                            child: const Icon(Icons.medication_rounded, color: AppColors.primary, size: 17),
-                          ),
-                          const SizedBox(width: 10),
-                          Text('Mark medications taken',
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                        ]),
-                        const SizedBox(height: 12),
-                        ...meds.map((med) {
-                          final taken = appP.isMedTakenToday(med.id);
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: GestureDetector(
-                              onTap: () {
-                                appP.logMedTaken(med.id, taken: !taken);
-                                setState(() {
-                                  _medicationsTaken = meds
-                                      .where((m) => appP.isMedTakenToday(m.id))
-                                      .length == meds.length;
-                                });
-                              },
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 150),
-                                padding: const EdgeInsets.all(10),
-                                decoration: BoxDecoration(
-                                  color: taken ? AppColors.accentLight : AppColors.surface,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                      color: taken ? AppColors.accent : AppColors.border,
-                                      width: taken ? 1.5 : 1),
-                                ),
-                                child: Row(children: [
-                                  Container(
-                                    width: 24, height: 24,
-                                    decoration: BoxDecoration(
-                                      color: taken ? AppColors.accent : AppColors.primarySurface,
-                                      borderRadius: BorderRadius.circular(7),
-                                    ),
-                                    child: Icon(taken ? Icons.check_rounded : Icons.circle_outlined,
-                                        color: taken ? Colors.white : AppColors.primary, size: 14),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: Text('${med.name} · ${med.dosage}',
-                                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500,
-                                            color: taken ? AppColors.accentDark : AppColors.textPrimary)),
-                                  ),
-                                  Text(taken ? 'Taken ✓' : 'Tap',
-                                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
-                                          color: taken ? AppColors.accentDark : AppColors.textMuted)),
-                                ]),
-                              ),
-                            ),
-                          );
-                        }),
-                      ]),
-                    ),
-                const SizedBox(height: 12),
-                RehlaCard(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [
-                      Container(
-                        width: 44, height: 44,
-                        decoration: BoxDecoration(color: AppColors.infoLight, borderRadius: BorderRadius.circular(14)),
-                        child: const Icon(Icons.water_drop_rounded, color: AppColors.info, size: 22),
-                      ),
-                      const SizedBox(width: 12),
-                      const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('Water Intake', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                        Text('Target: 8 glasses per day', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
-                      ])),
-                    ]),
-                    const SizedBox(height: 14),
-                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      _WaterBtn(icon: Icons.remove_rounded, onTap: () { if (_waterGlasses > 0) setState(() => _waterGlasses--); }),
-                      const SizedBox(width: 16),
-                      Column(children: [
-                        Row(children: List.generate(8, (i) => Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 2),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            width: 24, height: 24,
-                            decoration: BoxDecoration(
-                              color: i < _waterGlasses ? AppColors.info : AppColors.infoLight,
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Icon(Icons.water_drop_rounded, size: 14,
-                                color: i < _waterGlasses ? Colors.white : AppColors.info.withValues(alpha: 0.3)),
-                          ),
-                        ))),
-                        const SizedBox(height: 6),
-                        Text('$_waterGlasses of 8 glasses',
-                            style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.info)),
-                      ]),
-                      const SizedBox(width: 16),
-                      _WaterBtn(icon: Icons.add_rounded, onTap: () { if (_waterGlasses < 12) setState(() => _waterGlasses++); }, isAdd: true),
-                    ]),
-                  ]),
-                ),
-                ]);
-              }),
-            ),
-          ),
-
-          // Activities
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: RehlaCard(
-                padding: const EdgeInsets.all(16),
-                child: Row(children: [
-                  Container(
-                    width: 44, height: 44,
-                    decoration: BoxDecoration(color: AppColors.accentLight, borderRadius: BorderRadius.circular(14)),
-                    child: const Icon(Icons.directions_walk_rounded, color: AppColors.accent, size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Light Activities', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-                    Text('Were you able to do light activities today?', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
-                  ])),
-                  Transform.scale(
-                    scale: 0.9,
-                    child: Switch(
-                      value: _activitiesAble,
-                      onChanged: (v) => setState(() => _activitiesAble = v),
-                      activeThumbColor: Colors.white,
-                      activeTrackColor: AppColors.accent,
-                      inactiveThumbColor: Colors.white,
-                      inactiveTrackColor: AppColors.divider,
-                    ),
-                  ),
-                ]),
-              ),
-            ),
-          ),
-
-          // Notes
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const SectionHeader(title: 'Notes', icon: Icons.sticky_note_2_rounded),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: _notesCtrl, maxLines: 3,
-                  decoration: const InputDecoration(
-                    hintText: 'How are you really feeling? Any concerns to share with your care team…',
-                    prefixIcon: Padding(
-                      padding: EdgeInsets.only(left: 14, right: 8, top: 12),
-                      child: Icon(Icons.note_alt_rounded, color: AppColors.primary, size: 20),
-                    ),
-                    prefixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: _foodCtrl, maxLines: 2,
-                  decoration: const InputDecoration(
-                    hintText: 'What did you eat today? (optional)',
-                    prefixIcon: Padding(
-                      padding: EdgeInsets.only(left: 14, right: 8, top: 12),
-                      child: Icon(Icons.restaurant_menu_rounded, color: AppColors.accent, size: 20),
-                    ),
-                    prefixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
-                  ),
-                ),
-              ]),
-            ),
-          ),
-
-          // Submit
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
-              child: Column(children: [
-                PurpleGradientButton(
-                  label: 'Complete Check-In',
-                  icon: Icons.check_circle_rounded,
-                  onTap: _submitFull,
-                  isLoading: _isSubmitting,
-                ),
-                const SizedBox(height: 12),
-                GestureDetector(
-                  onTap: () => setState(() => _isQuickMode = true),
-                  child: const Center(
-                    child: Text('Switch to quick mode',
-                        style: TextStyle(fontSize: 13, color: AppColors.textMuted, decoration: TextDecoration.underline,
-                            decorationColor: AppColors.textMuted)),
-                  ),
-                ),
-              ]),
-            ),
-          ),
-          const SliverToBoxAdapter(child: SizedBox(height: 100)),
-        ],
-      ),
-    );
-  }
-
-  // ─── Shared header ────────────────────────────────────────────────────────────
-  Widget _buildHeader({required bool quick}) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: AppColors.heroGradient,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              Container(
-                width: 32, height: 32,
-                decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
-                child: Icon(quick ? Icons.bolt_rounded : Icons.edit_note_rounded, color: Colors.white, size: 18),
-              ),
-              const SizedBox(width: 8),
-              Text(quick ? 'Quick Check-In' : 'Full Check-In',
-                  style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
-              const Spacer(),
-              // Mode toggle badge
-              GestureDetector(
-                onTap: () => setState(() => _isQuickMode = !quick),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-                  ),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(quick ? Icons.tune_rounded : Icons.bolt_rounded, color: Colors.white, size: 13),
-                    const SizedBox(width: 4),
-                    Text(quick ? 'Full mode' : 'Quick mode',
-                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
-                  ]),
-                ),
-              ),
-            ]),
-            const SizedBox(height: 16),
-            Text(quick ? 'How are you today?' : 'Full daily check-in',
-                style: GoogleFonts.inter(fontSize: 22, fontWeight: FontWeight.w700, color: Colors.white, height: 1.2)),
-            const SizedBox(height: 4),
-            Text(
-              quick ? '3 taps — mood, emotions, meds. That\'s it.' : 'Take your time — this helps your care team.',
-              style: const TextStyle(fontSize: 13, color: AppColors.textOnDarkMuted),
-            ),
-            const SizedBox(height: 14),
-            // AI Voice Check-In Banner
-            GestureDetector(
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const VoiceCheckInScreen())),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.3)),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 30, height: 30,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.mic_rounded, color: Colors.white, size: 16),
-                    ),
-                    const SizedBox(width: 10),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Try AI Voice Check-In',
-                              style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
-                          Text('Just talk — AI extracts everything',
-                              style: TextStyle(color: AppColors.textOnDarkMuted, fontSize: 11)),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 14),
-                  ],
-                ),
-              ),
-            ),
-            if (!quick) ...[
-              const SizedBox(height: 14),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(
-                  value: _completedSections / 3,
-                  backgroundColor: Colors.white.withValues(alpha: 0.2),
-                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                  minHeight: 5,
-                ),
-              ),
-            ],
-          ]),
-        ),
-      ),
-    );
-  }
-
-  // ─── Submit helpers ───────────────────────────────────────────────────────────
-  List<String> _getSymptoms() {
-    final s = <String>[];
-    if (_painScore >= 3) s.add('Pain');
-    if (_fatigueScore >= 3) s.add('Fatigue');
-    if (_nauseaScore >= 3) s.add('Nausea');
-    if (_appetiteScore <= 2) s.add('Poor appetite');
-    if (_emotionalScore <= 2) s.add('Emotional distress');
-    if (_topConcern != null && !s.contains(_topConcern)) s.add(_topConcern!);
-    return s;
-  }
-
-  Future<void> _submitQuick() async {
-    setState(() => _isSubmitting = true);
-    final checkIn = CheckIn(
-      id: 'ci_${DateTime.now().millisecondsSinceEpoch}',
-      date: DateTime.now(),
-      moodScore: _moodScore,
-      painScore: _topConcern == 'Pain' ? 3 : 1,
-      fatigueScore: _topConcern == 'Fatigue' ? 3 : 2,
-      nauseaScore: _topConcern == 'Nausea' ? 3 : 1,
-      appetiteScore: _topConcern == 'Appetite' ? 2 : 3,
-      sleepScore: _topConcern == 'Sleep' ? 2 : 3,
-      medicationsTaken: _medicationsTaken,
-      waterGlasses: 4,
-      notes: [
-        if (_topConcern != null) 'Main concern: $_topConcern',
-        if (_emotionalScore <= 2) 'Feeling ${_emotionLabels[_emotionalScore].toLowerCase()} today',
-      ].join('. ').nullIfEmpty,
-      activitiesAble: true,
-      symptoms: _getSymptoms(),
-    );
-    await context.read<AppProvider>().saveCheckIn(checkIn);
-    setState(() { _isSubmitting = false; _isComplete = true; });
-  }
-
-  Future<void> _submitFull() async {
+  Future<void> _submit() async {
     setState(() => _isSubmitting = true);
     final checkIn = CheckIn(
       id: 'ci_${DateTime.now().millisecondsSinceEpoch}',
@@ -807,119 +148,844 @@ class _DailyCheckInScreenState extends State<DailyCheckInScreen> {
       nauseaScore: _nauseaScore,
       appetiteScore: _appetiteScore,
       sleepScore: _sleepScore,
-      medicationsTaken: _medicationsTaken,
+      medicationsTaken: _medStatus == 'yes',
       waterGlasses: _waterGlasses,
-      notes: [
-        if (_notesCtrl.text.isNotEmpty) _notesCtrl.text,
-        if (_emotionalScore <= 2) 'Emotional: ${_emotionLabels[_emotionalScore]}',
-      ].join(' | ').nullIfEmpty,
-      foodNotes: _foodCtrl.text.isEmpty ? null : _foodCtrl.text,
-      activitiesAble: _activitiesAble,
-      symptoms: _getSymptoms(),
+      notes: _notesCtrl.text.isEmpty ? null : _notesCtrl.text,
+      activitiesAble: true,
+      symptoms: _buildSymptoms(),
     );
     await context.read<AppProvider>().saveCheckIn(checkIn);
-    setState(() { _isSubmitting = false; _isComplete = true; });
+    if (mounted) {
+      setState(() { _isSubmitting = false; _isComplete = true; });
+    }
   }
-}
 
-extension on String {
-  String? get nullIfEmpty => isEmpty ? null : this;
-}
+  List<String> _buildSymptoms() {
+    final s = <String>[];
+    if (_painScore >= 3)      s.add('Pain');
+    if (_fatigueScore >= 3)   s.add('Fatigue');
+    if (_nauseaScore >= 3)    s.add('Nausea');
+    if (_appetiteScore <= 2)  s.add('Poor appetite');
+    return s;
+  }
 
-// ─── Step Label ───────────────────────────────────────────────────────────────
-class _StepLabel extends StatelessWidget {
-  final String step;
-  final String label;
-  const _StepLabel({required this.step, required this.label});
+  // Progress: symptom sub-steps count as part of step 1
+  double get _progressValue {
+    if (_currentStep == 0) return 0.15;
+    if (_currentStep == 1) return 0.15 + 0.35 * (_symptomIndex + 1) / _symptoms.length;
+    return 0.15 + 0.35 + (_currentStep - 1) * 0.17;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Row(children: [
-      Container(
-        width: 26, height: 26,
-        decoration: BoxDecoration(gradient: AppColors.cardGradient, shape: BoxShape.circle),
-        child: Center(child: Text(step, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.white))),
+    if (_isComplete) {
+      return _CelebrationCard(
+        moodScore: _moodScore,
+        onDismiss: () {
+          context.read<AppProvider>().setNavIndex(0);
+          setState(() { _isComplete = false; _currentStep = 0; _showInterstitial = true; });
+        },
+      );
+    }
+    if (_showInterstitial) {
+      return _Interstitial(onContinue: () => setState(() => _showInterstitial = false));
+    }
+    return _buildStep();
+  }
+
+  Widget _buildStep() {
+    return Scaffold(
+      backgroundColor: const Color(0xFFFCF7FC),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // ── Top bar: back + progress + skip ──────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+              child: Row(
+                children: [
+                  GestureDetector(
+                    onTap: _prevStep,
+                    child: Container(
+                      width: 40, height: 40,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEDE9FE),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.arrow_back_rounded,
+                          color: Color(0xFF7C3AED), size: 20),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: _progressValue,
+                        backgroundColor: const Color(0xFFEDE9FE),
+                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF7C3AED)),
+                        minHeight: 6,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  GestureDetector(
+                    onTap: () => Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const VoiceCheckInScreen())),
+                    child: Container(
+                      width: 40, height: 40,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEDE9FE),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.mic_rounded,
+                          color: Color(0xFF7C3AED), size: 20),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 32),
+
+            // ── Step content (fills remaining space) ─────────────────────
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: _stepContent(),
+              ),
+            ),
+
+            // ── Continue button ───────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+              child: Column(
+                children: [
+                  AnimatedOpacity(
+                    opacity: _canAdvance ? 1.0 : 0.4,
+                    duration: const Duration(milliseconds: 200),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: _canAdvance ? _nextStep : null,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF7C3AED),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
+                        ),
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                width: 22, height: 22,
+                                child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2))
+                            : Text(
+                                _currentStep == 4 ? 'Save Check-In →' : 'Continue →',
+                                style: GoogleFonts.inter(
+                                    fontSize: 18, fontWeight: FontWeight.w600)),
+                      ),
+                    ),
+                  ),
+                  if (_currentStep < 4) ...[
+                    const SizedBox(height: 14),
+                    GestureDetector(
+                      onTap: () => _nextStep(),
+                      child: Text(
+                        'Skip',
+                        style: GoogleFonts.inter(
+                          fontSize: 15,
+                          color: const Color(0xFF78716C),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-      const SizedBox(width: 10),
-      Text(label, style: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
-    ]);
+    );
+  }
+
+  Widget _stepContent() {
+    switch (_currentStep) {
+      case 0: return _moodStep();
+      case 1: return _symptomStep();
+      case 2: return _medStep();
+      case 3: return _waterStep();
+      case 4: return _notesStep();
+      default: return const SizedBox.shrink();
+    }
+  }
+
+  // ── Step 1: Mood ─────────────────────────────────────────────────────────────
+  Widget _moodStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'How are you\nfeeling today?',
+          style: GoogleFonts.inter(
+            fontSize: 26, fontWeight: FontWeight.w700,
+            color: const Color(0xFF1C1917), height: 1.3,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          'There are no wrong answers.',
+          style: GoogleFonts.inter(
+            fontSize: 18, color: const Color(0xFF78716C), height: 1.7),
+        ),
+        const SizedBox(height: 40),
+        // 5 large emoji selectors
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: List.generate(5, (i) {
+            final isSelected = _moodScore == i + 1;
+            final col = _moodColors[i];
+            return GestureDetector(
+              onTap: () => setState(() => _moodScore = i + 1),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 56, height: 80,
+                decoration: BoxDecoration(
+                  color: isSelected ? col.withValues(alpha: 0.12) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(16),
+                  border: isSelected
+                      ? Border.all(color: col, width: 2)
+                      : null,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      _moodEmojis[i],
+                      style: TextStyle(fontSize: isSelected ? 40 : 34),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      _moodLabels[i],
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                        color: isSelected ? col : const Color(0xFF78716C),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ),
+        const SizedBox(height: 40),
+        if (_moodScore > 0) ...[
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: _moodColors[_moodScore - 1].withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                  color: _moodColors[_moodScore - 1].withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                Text(
+                  _moodEmojis[_moodScore - 1],
+                  style: const TextStyle(fontSize: 28),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    _moodScore >= 4
+                        ? 'That\'s really good to hear. 💜'
+                        : _moodScore == 3
+                            ? 'Thank you for being honest.'
+                            : 'That takes courage to share. We\'re here. 💜',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      color: const Color(0xFF1C1917),
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  // ── Step 2: Symptoms (one at a time) ─────────────────────────────────────────
+  Widget _symptomStep() {
+    final sym = _symptoms[_symptomIndex];
+    final totalSubs = _symptoms.length;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Sub-progress dots
+        Row(
+          children: List.generate(totalSubs, (i) {
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              margin: const EdgeInsets.only(right: 6),
+              width: i == _symptomIndex ? 20 : 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: i <= _symptomIndex
+                    ? sym.color
+                    : const Color(0xFFEDE9FE),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            );
+          }),
+        ),
+        const SizedBox(height: 28),
+        Row(
+          children: [
+            Container(
+              width: 48, height: 48,
+              decoration: BoxDecoration(
+                color: sym.color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(sym.icon, color: sym.color, size: 24),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Text(
+                sym.name,
+                style: GoogleFonts.inter(
+                  fontSize: 26, fontWeight: FontWeight.w700,
+                  color: const Color(0xFF1C1917), height: 1.3,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        Text(
+          _symptomSubtext(sym.name),
+          style: GoogleFonts.inter(
+            fontSize: 18, color: const Color(0xFF78716C), height: 1.7),
+        ),
+        const SizedBox(height: 40),
+
+        // Slider
+        SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            activeTrackColor: sym.color,
+            inactiveTrackColor: sym.color.withValues(alpha: 0.15),
+            thumbColor: sym.color,
+            overlayColor: sym.color.withValues(alpha: 0.12),
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 12),
+            trackHeight: 6,
+          ),
+          child: Slider(
+            value: _symptomValue.toDouble(),
+            min: 1, max: 5, divisions: 4,
+            onChanged: (v) => _setSymptomValue(v.round()),
+          ),
+        ),
+
+        // Labels
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: _symptomLabels(sym.name).map((l) =>
+              Text(l, style: GoogleFonts.inter(
+                  fontSize: 12, color: const Color(0xFF78716C)))).toList(),
+          ),
+        ),
+        const SizedBox(height: 32),
+
+        // Current value pill
+        Center(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            decoration: BoxDecoration(
+              color: sym.color.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(color: sym.color.withValues(alpha: 0.3)),
+            ),
+            child: Text(
+              _symptomValueLabel(sym.name, _symptomValue),
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: sym.color,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  String _symptomSubtext(String name) {
+    switch (name) {
+      case 'Pain':          return 'Rate your physical pain level today.';
+      case 'Fatigue':       return 'How tired are you feeling?';
+      case 'Nausea':        return 'Any stomach discomfort or nausea?';
+      case 'Appetite':      return 'How is your appetite today?';
+      case 'Sleep Quality': return 'How did you sleep last night?';
+      default:              return 'Rate your level.';
+    }
+  }
+
+  List<String> _symptomLabels(String name) {
+    switch (name) {
+      case 'Appetite':      return ['Poor', 'Low', 'Fair', 'Good', 'Great'];
+      case 'Sleep Quality': return ['Poor', 'Light', 'Fair', 'Good', 'Great'];
+      default:              return ['None', 'Mild', 'Moderate', 'Severe', 'Extreme'];
+    }
+  }
+
+  String _symptomValueLabel(String name, int v) {
+    return _symptomLabels(name)[v - 1];
+  }
+
+  // ── Step 3: Medication ────────────────────────────────────────────────────────
+  Widget _medStep() {
+    return Consumer<AppProvider>(builder: (context, app, _) {
+      final meds = app.medications.where((m) => m.isActive).toList();
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Did you take\nyour medications?',
+            style: GoogleFonts.inter(
+              fontSize: 26, fontWeight: FontWeight.w700,
+              color: const Color(0xFF1C1917), height: 1.3,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            meds.isEmpty
+                ? 'Be honest — it helps your care team.'
+                : 'You have ${meds.length} medication${meds.length == 1 ? '' : 's'} tracked.',
+            style: GoogleFonts.inter(
+                fontSize: 18, color: const Color(0xFF78716C), height: 1.7),
+          ),
+          const SizedBox(height: 40),
+
+          if (meds.isNotEmpty) ...[
+            // Show med list
+            ...meds.map((med) {
+              final taken = app.isMedTakenToday(med.id);
+              return GestureDetector(
+                onTap: () {
+                  app.logMedTaken(med.id, taken: !taken);
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: taken
+                        ? const Color(0xFFEDE9FE)
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: taken
+                          ? const Color(0xFF7C3AED)
+                          : const Color(0xFFE5E7EB),
+                      width: taken ? 1.5 : 1,
+                    ),
+                  ),
+                  child: Row(children: [
+                    Container(
+                      width: 32, height: 32,
+                      decoration: BoxDecoration(
+                        color: taken
+                            ? const Color(0xFF7C3AED)
+                            : const Color(0xFFEDE9FE),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        taken ? Icons.check_rounded : Icons.medication_outlined,
+                        color: taken ? Colors.white : const Color(0xFF7C3AED),
+                        size: 16,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(med.name,
+                            style: GoogleFonts.inter(
+                                fontSize: 16, fontWeight: FontWeight.w600,
+                                color: const Color(0xFF1C1917))),
+                        Text('${med.dosage} · ${med.frequency}',
+                            style: GoogleFonts.inter(
+                                fontSize: 13, color: const Color(0xFF78716C))),
+                      ]),
+                    ),
+                    Text(
+                      taken ? 'Taken ✓' : 'Tap to mark',
+                      style: GoogleFonts.inter(
+                          fontSize: 13, fontWeight: FontWeight.w600,
+                          color: taken
+                              ? const Color(0xFF7C3AED)
+                              : const Color(0xFF78716C)),
+                    ),
+                  ]),
+                ),
+              );
+            }),
+            const SizedBox(height: 16),
+          ],
+
+          // Yes / Partially / Skip buttons
+          _MedOption(
+            label: 'Yes, all taken',
+            icon: Icons.check_circle_rounded,
+            color: const Color(0xFF0D9488),
+            selected: _medStatus == 'yes',
+            onTap: () => setState(() => _medStatus = 'yes'),
+          ),
+          const SizedBox(height: 10),
+          _MedOption(
+            label: 'Partially taken',
+            icon: Icons.check_circle_outline_rounded,
+            color: const Color(0xFFD97706),
+            selected: _medStatus == 'partially',
+            onTap: () => setState(() => _medStatus = 'partially'),
+          ),
+          const SizedBox(height: 10),
+          _MedOption(
+            label: "Missed today",
+            icon: Icons.remove_circle_outline_rounded,
+            color: const Color(0xFF78716C),
+            selected: _medStatus == 'skip',
+            onTap: () => setState(() => _medStatus = 'skip'),
+          ),
+          const SizedBox(height: 24),
+        ],
+      );
+    });
+  }
+
+  // ── Step 4: Water intake ──────────────────────────────────────────────────────
+  Widget _waterStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Water intake\ntoday?',
+          style: GoogleFonts.inter(
+            fontSize: 26, fontWeight: FontWeight.w700,
+            color: const Color(0xFF1C1917), height: 1.3,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          'Target: 8 glasses per day. Small sips count.',
+          style: GoogleFonts.inter(
+              fontSize: 18, color: const Color(0xFF78716C), height: 1.7),
+        ),
+        const SizedBox(height: 48),
+
+        // 8-glass visual grid
+        Center(
+          child: Wrap(
+            spacing: 10, runSpacing: 10,
+            children: List.generate(8, (i) {
+              final filled = i < _waterGlasses;
+              return GestureDetector(
+                onTap: () => setState(() => _waterGlasses = i + 1),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  width: 52, height: 64,
+                  decoration: BoxDecoration(
+                    color: filled
+                        ? const Color(0xFF2563EB).withValues(alpha: 0.1)
+                        : const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: filled
+                          ? const Color(0xFF2563EB).withValues(alpha: 0.4)
+                          : const Color(0xFFE5E7EB),
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.water_drop_rounded,
+                        color: filled
+                            ? const Color(0xFF2563EB)
+                            : const Color(0xFFD1D5DB),
+                        size: 24,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${i + 1}',
+                        style: GoogleFonts.inter(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: filled
+                              ? const Color(0xFF2563EB)
+                              : const Color(0xFF9CA3AF),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+        const SizedBox(height: 32),
+
+        Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2563EB).withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: Text(
+              '$_waterGlasses of 8 glasses',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF2563EB),
+              ),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 24),
+
+        // +/- buttons
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _WaterAdjBtn(
+              icon: Icons.remove_rounded,
+              onTap: () {
+                if (_waterGlasses > 0) setState(() => _waterGlasses--);
+              },
+            ),
+            const SizedBox(width: 32),
+            _WaterAdjBtn(
+              icon: Icons.add_rounded,
+              onTap: () {
+                if (_waterGlasses < 12) setState(() => _waterGlasses++);
+              },
+              isPrimary: true,
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  // ── Step 5: Optional notes + submit ──────────────────────────────────────────
+  Widget _notesStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Anything else\nyou want to note?',
+          style: GoogleFonts.inter(
+            fontSize: 26, fontWeight: FontWeight.w700,
+            color: const Color(0xFF1C1917), height: 1.3,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Text(
+          'Optional. A single word is enough.',
+          style: GoogleFonts.inter(
+              fontSize: 18, color: const Color(0xFF78716C), height: 1.7),
+        ),
+        const SizedBox(height: 32),
+        TextField(
+          controller: _notesCtrl,
+          maxLines: 4,
+          style: GoogleFonts.inter(
+              fontSize: 16, color: const Color(0xFF1C1917), height: 1.7),
+          decoration: InputDecoration(
+            hintText: 'How are you really feeling? A symptom, a worry, or just "okay"…',
+            hintStyle: GoogleFonts.inter(
+                fontSize: 15, color: const Color(0xFFD6D3D1), height: 1.7),
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.all(20),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Color(0xFFEDD8F0)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Color(0xFFEDD8F0)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(color: Color(0xFF7C3AED), width: 2),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        // Voice option
+        GestureDetector(
+          onTap: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const VoiceCheckInScreen())),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFEDE9FE),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.mic_rounded, color: Color(0xFF7C3AED), size: 22),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Or use voice check-in instead',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF7C3AED),
+                    ),
+                  ),
+                ),
+                const Icon(Icons.arrow_forward_ios_rounded,
+                    color: Color(0xFF7C3AED), size: 14),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
   }
 }
 
-// ─── Med Tap Card ─────────────────────────────────────────────────────────────
-class _MedTapCard extends StatelessWidget {
-  final bool taken;
+// ─── Symptom definition ───────────────────────────────────────────────────────
+class _SymptomDef {
+  final String name;
+  final IconData icon;
+  final Color color;
+  const _SymptomDef(this.name, this.icon, this.color);
+}
+
+// ─── Medication option button ─────────────────────────────────────────────────
+class _MedOption extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
   final bool selected;
   final VoidCallback onTap;
-  const _MedTapCard({required this.taken, required this.selected, required this.onTap});
+
+  const _MedOption({
+    required this.label, required this.icon,
+    required this.color, required this.selected, required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final col = taken ? AppColors.accent : AppColors.danger;
-    // bgCol intentionally unused — card uses `col` directly for selected state
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 18),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         decoration: BoxDecoration(
-          color: selected ? col : AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: selected ? col : AppColors.border, width: 2),
-          boxShadow: selected ? [BoxShadow(color: col.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))] : [],
+          color: selected ? color.withValues(alpha: 0.10) : Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: selected ? color : const Color(0xFFE5E7EB),
+            width: selected ? 2 : 1,
+          ),
         ),
-        child: Column(children: [
-          Icon(taken ? Icons.check_circle_rounded : Icons.cancel_rounded,
-              color: selected ? Colors.white : col, size: 28),
-          const SizedBox(height: 6),
-          Text(taken ? 'Yes, all taken' : 'Missed / partial',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700,
-                  color: selected ? Colors.white : AppColors.textSecondary)),
-        ]),
+        child: Row(
+          children: [
+            Icon(icon, color: selected ? color : const Color(0xFF78716C), size: 24),
+            const SizedBox(width: 14),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: selected ? color : const Color(0xFF1C1917),
+              ),
+            ),
+            const Spacer(),
+            if (selected)
+              Container(
+                width: 22, height: 22,
+                decoration: BoxDecoration(
+                  color: color, shape: BoxShape.circle),
+                child: const Icon(Icons.check_rounded,
+                    color: Colors.white, size: 13),
+              ),
+          ],
+        ),
       ),
     );
   }
 }
 
-// ─── Water Button ─────────────────────────────────────────────────────────────
-class _WaterBtn extends StatelessWidget {
+// ─── Water adjust button ──────────────────────────────────────────────────────
+class _WaterAdjBtn extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
-  final bool isAdd;
-  const _WaterBtn({required this.icon, required this.onTap, this.isAdd = false});
+  final bool isPrimary;
+  const _WaterAdjBtn({required this.icon, required this.onTap, this.isPrimary = false});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        width: 40, height: 40,
+        width: 52, height: 52,
         decoration: BoxDecoration(
-          color: isAdd ? AppColors.info.withValues(alpha: 0.1) : AppColors.surfaceElevated,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isAdd ? AppColors.info.withValues(alpha: 0.3) : AppColors.border),
+          color: isPrimary
+              ? const Color(0xFF2563EB).withValues(alpha: 0.10)
+              : const Color(0xFFF3F4F6),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isPrimary
+                ? const Color(0xFF2563EB).withValues(alpha: 0.3)
+                : const Color(0xFFE5E7EB),
+          ),
         ),
-        child: Icon(icon, color: isAdd ? AppColors.info : AppColors.textSecondary, size: 22),
+        child: Icon(
+          icon,
+          color: isPrimary ? const Color(0xFF2563EB) : const Color(0xFF78716C),
+          size: 24,
+        ),
       ),
     );
   }
 }
 
-// ─── Completion View ──────────────────────────────────────────────────────────
-// ─── Pre-Check-In Interstitial (UX flow: 2-second pause, "no wrong answers") ──
-class _CheckInInterstitial extends StatefulWidget {
+// ─── Pre-check-in interstitial ────────────────────────────────────────────────
+class _Interstitial extends StatefulWidget {
   final VoidCallback onContinue;
-  const _CheckInInterstitial({required this.onContinue});
+  const _Interstitial({required this.onContinue});
 
   @override
-  State<_CheckInInterstitial> createState() => _CheckInInterstitialState();
+  State<_Interstitial> createState() => _InterstitialState();
 }
 
-class _CheckInInterstitialState extends State<_CheckInInterstitial>
+class _InterstitialState extends State<_Interstitial>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _fade;
-  Timer? _autoTimer;
+  Timer? _timer;
 
   @override
   void initState() {
@@ -927,13 +993,12 @@ class _CheckInInterstitialState extends State<_CheckInInterstitial>
     _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
     _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
     _ctrl.forward();
-    // Auto-advance after 2.5 seconds
-    _autoTimer = Timer(const Duration(milliseconds: 2500), widget.onContinue);
+    _timer = Timer(const Duration(milliseconds: 2500), widget.onContinue);
   }
 
   @override
   void dispose() {
-    _autoTimer?.cancel();
+    _timer?.cancel();
     _ctrl.dispose();
     super.dispose();
   }
@@ -941,7 +1006,7 @@ class _CheckInInterstitialState extends State<_CheckInInterstitial>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFFCF7FC),
       body: SafeArea(
         child: FadeTransition(
           opacity: _fade,
@@ -955,24 +1020,21 @@ class _CheckInInterstitialState extends State<_CheckInInterstitial>
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Container(
-                      width: 80, height: 80,
+                      width: 88, height: 88,
                       decoration: BoxDecoration(
-                        gradient: AppColors.heroGradient,
+                        color: const Color(0xFF7C3AED).withValues(alpha: 0.10),
                         shape: BoxShape.circle,
-                        boxShadow: [BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.28),
-                          blurRadius: 24, offset: const Offset(0, 8),
-                        )],
                       ),
-                      child: const Icon(Icons.favorite_rounded, color: Colors.white, size: 38),
+                      child: const Icon(Icons.favorite_rounded,
+                          color: Color(0xFF7C3AED), size: 42),
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 32),
                     Text(
                       'Just a few questions\nabout today.',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.inter(
-                        fontSize: 24, fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary, height: 1.3,
+                        fontSize: 26, fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1C1917), height: 1.3,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -980,20 +1042,20 @@ class _CheckInInterstitialState extends State<_CheckInInterstitial>
                       'There are no wrong answers.',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.inter(
-                        fontSize: 16, fontWeight: FontWeight.w500,
-                        color: AppColors.textSecondary, height: 1.5,
+                        fontSize: 18, color: const Color(0xFF78716C), height: 1.7,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Takes about 2 minutes.',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(fontSize: 13, color: AppColors.textMuted),
+                      style: GoogleFonts.inter(
+                          fontSize: 14, color: const Color(0xFFA8A29E)),
                     ),
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 56),
                     Text(
                       'Tap anywhere to begin',
-                      style: GoogleFonts.inter(fontSize: 12, color: AppColors.textMuted, letterSpacing: 0.3),
+                      style: GoogleFonts.inter(
+                          fontSize: 13, color: const Color(0xFFD6D3D1)),
                     ),
                   ],
                 ),
@@ -1006,189 +1068,103 @@ class _CheckInInterstitialState extends State<_CheckInInterstitial>
   }
 }
 
-// ─── Completion View (UX flow: celebration + "that matters more than you know") ─
-class _CompletionView extends StatefulWidget {
+// ─── Teal celebration card (auto-dismiss 3s or tap) ──────────────────────────
+class _CelebrationCard extends StatefulWidget {
   final int moodScore;
-  final int emotionalScore;
-  final bool isFirstCheckIn;
-  final VoidCallback onGoHome;
-  const _CompletionView({
-    required this.moodScore,
-    required this.emotionalScore,
-    required this.onGoHome,
-    this.isFirstCheckIn = false,
-  });
+  final VoidCallback onDismiss;
+  const _CelebrationCard({required this.moodScore, required this.onDismiss});
 
   @override
-  State<_CompletionView> createState() => _CompletionViewState();
+  State<_CelebrationCard> createState() => _CelebrationCardState();
 }
 
-class _CompletionViewState extends State<_CompletionView>
+class _CelebrationCardState extends State<_CelebrationCard>
     with SingleTickerProviderStateMixin {
   late final AnimationController _ctrl;
   late final Animation<double> _scale;
   late final Animation<double> _fade;
-  Timer? _autoTimer;
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
-    _scale = Tween<double>(begin: 0.6, end: 1.0)
+    _ctrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 500));
+    _scale = Tween<double>(begin: 0.7, end: 1.0)
         .animate(CurvedAnimation(parent: _ctrl, curve: Curves.elasticOut));
     _fade = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
     _ctrl.forward();
-    // Auto-return to home after 4 seconds
-    _autoTimer = Timer(const Duration(seconds: 4), widget.onGoHome);
+    _timer = Timer(const Duration(seconds: 3), widget.onDismiss);
   }
 
   @override
   void dispose() {
-    _autoTimer?.cancel();
+    _timer?.cancel();
     _ctrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final moodEmoji = ['', '😞', '😔', '😐', '🙂', '😊'][widget.moodScore.clamp(1, 5)];
-    final showSupport = widget.emotionalScore <= 2;
+    final moodEmojis = ['', '😫', '😔', '😐', '🙂', '😊'];
+    final emoji = moodEmojis[widget.moodScore.clamp(1, 5)];
     final name = context.read<AppProvider>().journey?.name.split(' ').first ?? '';
-    final nameStr = name.isNotEmpty ? name : 'friend';
-
-    final String celebrationMsg;
-    final String subMsg;
-    if (widget.isFirstCheckIn) {
-      celebrationMsg = 'Check-In saved, $nameStr 💜';
-      subMsg = 'Your first one. That matters more than you know.';
-    } else if (widget.moodScore >= 4) {
-      celebrationMsg = 'Check-In saved, $nameStr 💜';
-      subMsg = 'Great mood today. Your resilience is a real strength.';
-    } else if (widget.moodScore <= 2) {
-      celebrationMsg = 'Tough day noted, $nameStr 💜';
-      subMsg = 'Tracking it — even on hard days — helps your team support you better.';
-    } else {
-      celebrationMsg = 'Check-In saved, $nameStr 💜';
-      subMsg = 'Consistent tracking helps your care team make better decisions for you.';
-    }
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFF0D9488),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(28),
+        child: GestureDetector(
+          onTap: widget.onDismiss,
+          behavior: HitTestBehavior.opaque,
           child: FadeTransition(
             opacity: _fade,
-            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              ScaleTransition(
-                scale: _scale,
-                child: Container(
-                  width: 120, height: 120,
-                  decoration: BoxDecoration(
-                    gradient: AppColors.accentGradient,
-                    shape: BoxShape.circle,
-                    boxShadow: [BoxShadow(
-                      color: AppColors.accent.withValues(alpha: 0.35),
-                      blurRadius: 30, offset: const Offset(0, 10),
-                    )],
-                  ),
-                  child: const Icon(Icons.check_rounded, color: Colors.white, size: 56),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                '$celebrationMsg $moodEmoji',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  fontSize: 22, fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary, height: 1.3,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                subMsg,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
-                  fontSize: 15, color: AppColors.textSecondary,
-                  height: 1.5, fontWeight: FontWeight.w400,
-                ),
-              ),
-              if (widget.isFirstCheckIn) ...[
-                const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFF75B9A), Color(0xFFD43F82)],
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [BoxShadow(
-                      color: const Color(0xFFF75B9A).withValues(alpha: 0.35),
-                      blurRadius: 12, offset: const Offset(0, 4),
-                    )],
-                  ),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    const Text('🔥', style: TextStyle(fontSize: 18)),
-                    const SizedBox(width: 8),
-                    Text('Day 1 Streak',
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 36),
+                child: ScaleTransition(
+                  scale: _scale,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(emoji, style: const TextStyle(fontSize: 72)),
+                      const SizedBox(height: 24),
+                      Text(
+                        name.isNotEmpty
+                            ? 'Check-in saved,\n$name 💜'
+                            : 'Check-in saved 💜',
+                        textAlign: TextAlign.center,
                         style: GoogleFonts.inter(
-                          fontSize: 14, fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        )),
-                  ]),
-                ),
-              ],
-              const SizedBox(height: 24),
-              RehlaCard(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFF3E8FA), Color(0xFFEDD8F7)],
-                  begin: Alignment.topLeft, end: Alignment.bottomRight,
-                ),
-                padding: const EdgeInsets.all(16),
-                child: Row(children: [
-                  const Icon(Icons.auto_awesome_rounded, color: AppColors.primary, size: 22),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      widget.moodScore >= 4
-                          ? 'You showed up for yourself today. That is the most important thing. 💜'
-                          : widget.moodScore <= 2
-                              ? 'Hard days are part of the journey. You are not alone in this. We are here.'
-                              : 'Every check-in builds a picture your doctor can actually use. Well done.',
-                      style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.5),
-                    ),
+                          fontSize: 28, fontWeight: FontWeight.w700,
+                          color: Colors.white, height: 1.3,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        widget.moodScore >= 4
+                            ? 'Great mood today. Keep going.'
+                            : widget.moodScore <= 2
+                                ? 'Tracking it on hard days helps\nyour team support you better.'
+                                : 'Consistent tracking makes a\nreal difference.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 18,
+                          color: Colors.white.withValues(alpha: 0.85),
+                          height: 1.7,
+                        ),
+                      ),
+                      const SizedBox(height: 48),
+                      Text(
+                        'Tap to continue',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: Colors.white.withValues(alpha: 0.55),
+                        ),
+                      ),
+                    ],
                   ),
-                ]),
-              ),
-              if (showSupport) ...[
-                const SizedBox(height: 12),
-                RehlaCard(
-                  padding: const EdgeInsets.all(14),
-                  child: Row(children: [
-                    Container(
-                      width: 38, height: 38,
-                      decoration: BoxDecoration(
-                          color: AppColors.infoLight,
-                          borderRadius: BorderRadius.circular(10)),
-                      child: const Icon(Icons.support_agent_rounded, color: AppColors.info, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text(
-                        'Your emotional wellbeing matters. Reach out to your counsellor or a support line today.',
-                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary, height: 1.4)),
-                    ),
-                  ]),
                 ),
-              ],
-              const SizedBox(height: 28),
-              PurpleGradientButton(label: 'Back to Home', icon: Icons.home_rounded, onTap: widget.onGoHome),
-              const SizedBox(height: 12),
-              Text(
-                'Returning automatically in a moment...',
-                style: GoogleFonts.inter(fontSize: 11, color: AppColors.textMuted),
               ),
-            ]),
+            ),
           ),
         ),
       ),

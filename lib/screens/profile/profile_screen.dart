@@ -4,6 +4,9 @@ import 'package:provider/provider.dart';
 import '../../providers/app_provider.dart';
 import '../../widgets/common_widgets.dart';
 import '../../theme/app_theme.dart';
+import '../ai/lab_tracker_screen.dart';
+import '../care/medication_tracker_screen.dart';
+import '../care/appointment_tracker_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -77,6 +80,52 @@ class ProfileScreen extends StatelessWidget {
                     Expanded(child: _StatCard(label: 'Day Streak', value: '${provider.checkInStreak}', icon: Icons.local_fire_department_rounded, color: const Color(0xFFF4B63E))),
                     const SizedBox(width: 10),
                     Expanded(child: _StatCard(label: 'Med Rate', value: '95%', icon: Icons.medication_rounded, color: AppColors.accent)),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // ── Quick access to moved sections ───────────────────────
+                const SectionHeader(title: 'Health Tracking'),
+                const SizedBox(height: 12),
+                _SettingsSection(
+                  items: [
+                    _SettingsItem(
+                      icon: Icons.science_rounded,
+                      label: 'Labs & Results',
+                      subtitle: 'View lab results, trends, AI analysis',
+                      color: AppColors.info,
+                      onTap: () => Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const LabTrackerScreen())),
+                    ),
+                    _SettingsItem(
+                      icon: Icons.medication_rounded,
+                      label: 'Medications',
+                      subtitle: 'Track and manage your medications',
+                      color: AppColors.primary,
+                      onTap: () => Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const MedicationTrackerScreen())),
+                    ),
+                    _SettingsItem(
+                      icon: Icons.calendar_today_rounded,
+                      label: 'Appointments',
+                      subtitle: 'Upcoming and past appointments',
+                      color: AppColors.amber,
+                      onTap: () => Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const AppointmentTrackerScreen())),
+                    ),
+                    _SettingsItem(
+                      icon: Icons.auto_awesome_rounded,
+                      label: 'Yusr AI Coach',
+                      subtitle: 'Ask health questions, get guidance',
+                      color: AppColors.teal,
+                      onTap: () => provider.setNavIndex(2),
+                    ),
+                    _SettingsItem(
+                      icon: Icons.people_rounded,
+                      label: 'Caregiver Mode',
+                      subtitle: 'Invite a caregiver — coming soon',
+                      color: const Color(0xFF78716C),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -283,7 +332,7 @@ class _SettingsSection extends StatelessWidget {
           return Column(
             children: [
               InkWell(
-                onTap: () => _showSettingsItem(context, item.label),
+                onTap: item.onTap ?? () => _showSettingsItem(context, item.label),
                 borderRadius: idx == 0
                     ? const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16))
                     : idx == items.length - 1
@@ -336,8 +385,9 @@ class _SettingsItem {
   final String label;
   final String? subtitle;
   final Color color;
+  final VoidCallback? onTap;
 
-  _SettingsItem({required this.icon, required this.label, this.subtitle, required this.color});
+  _SettingsItem({required this.icon, required this.label, this.subtitle, required this.color, this.onTap});
 }
 
 // ─── Profile Helper Functions ─────────────────────────────────────────────────

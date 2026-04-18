@@ -508,12 +508,15 @@ class _MetricChartCardState extends State<_MetricChartCard> {
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
               child: Column(
                 children: [
+                  // Zone-first card: colored left border, plain-language sentence
+                  // Raw number hidden — revealed via "See details"
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Zone strip
+                      // Zone color left border strip
                       Container(
                         width: 4,
-                        height: 48,
+                        height: 64,
                         decoration: BoxDecoration(
                           color: zoneColor,
                           borderRadius: BorderRadius.circular(4),
@@ -526,67 +529,45 @@ class _MetricChartCardState extends State<_MetricChartCard> {
                           children: [
                             Row(
                               children: [
-                                Text(widget.def.shortName,
-                                    style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w800,
-                                        color: AppColors.textPrimary)),
-                                const SizedBox(width: 6),
+                                Expanded(
+                                  child: Text(widget.def.shortName,
+                                      style: GoogleFonts.inter(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF1C1917))),
+                                ),
                                 _ZoneBadge(zone: zone, label: statusLabel),
                               ],
                             ),
-                            Text(widget.def.name,
-                                style: const TextStyle(
-                                    fontSize: 11,
-                                    color: AppColors.textMuted)),
-                            if (pts.length > 1 && pctText.isNotEmpty)
+                            const SizedBox(height: 6),
+                            // Plain-language sentence (zone-first)
+                            Text(
+                              _plainLanguageSentence(widget.def, latest, zone),
+                              style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  color: const Color(0xFF78716C),
+                                  height: 1.5),
+                            ),
+                            if (pts.length > 1 && pctText.isNotEmpty) ...[  
+                              const SizedBox(height: 4),
                               Row(
                                 children: [
-                                  Icon(trendIcon,
-                                      color: trendColor, size: 12),
+                                  Icon(trendIcon, color: trendColor, size: 12),
                                   const SizedBox(width: 3),
                                   Text(pctText,
                                       style: TextStyle(
-                                          fontSize: 10,
+                                          fontSize: 11,
                                           color: trendColor,
                                           fontWeight: FontWeight.w600)),
-                                  Text(' vs prev',
+                                  Text(' since last',
                                       style: const TextStyle(
-                                          fontSize: 10,
+                                          fontSize: 11,
                                           color: AppColors.textMuted)),
                                 ],
                               ),
+                            ],
                           ],
                         ),
-                      ),
-
-                      // Latest value
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              Text(
-                                _formatVal(latest),
-                                style: GoogleFonts.inter(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w800,
-                                    color: zoneColor),
-                              ),
-                            ],
-                          ),
-                          Text(widget.def.unit,
-                              style: const TextStyle(
-                                  fontSize: 10,
-                                  color: AppColors.textMuted)),
-                          Text(
-                              'Normal: ${_formatVal(widget.def.normalMin)}–${_formatVal(widget.def.normalMax)}',
-                              style: const TextStyle(
-                                  fontSize: 9,
-                                  color: AppColors.textMuted)),
-                        ],
                       ),
                     ],
                   ),
@@ -600,32 +581,20 @@ class _MetricChartCardState extends State<_MetricChartCard> {
                       height: 58,
                       showDots: false),
 
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 10),
                   Row(
                     children: [
                       Text(
                           '${pts.length} reading${pts.length != 1 ? 's' : ''}',
                           style: const TextStyle(
-                              fontSize: 10, color: AppColors.textMuted)),
-                      if (pts.length > 1)
-                        Text(
-                            '  ·  ${_daysBetween(pts.first.date, pts.last.date)}d history',
-                            style: const TextStyle(
-                                fontSize: 10,
-                                color: AppColors.textMuted)),
+                              fontSize: 11, color: AppColors.textMuted)),
                       const Spacer(),
-                      Icon(
-                          _expanded
-                              ? Icons.keyboard_arrow_up_rounded
-                              : Icons.keyboard_arrow_down_rounded,
-                          color: AppColors.textMuted,
-                          size: 16),
-                      const SizedBox(width: 2),
                       Text(
-                          _expanded ? 'Less' : 'Details',
-                          style: const TextStyle(
-                              fontSize: 10,
-                              color: AppColors.textMuted)),
+                          _expanded ? 'Hide details ↑' : 'See details →',
+                          style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF7C3AED))),
                     ],
                   ),
                 ],
@@ -633,7 +602,7 @@ class _MetricChartCardState extends State<_MetricChartCard> {
             ),
           ),
 
-          // Expanded panel
+          // Expanded panel — reveals: value, range, trend + full chart
           if (_expanded) ...[
             Container(height: 1, color: AppColors.divider),
             Padding(
@@ -641,6 +610,52 @@ class _MetricChartCardState extends State<_MetricChartCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Value + range reveal row
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: zoneColor.withValues(alpha: 0.07),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: zoneColor.withValues(alpha: 0.25)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Your value',
+                                  style: GoogleFonts.inter(
+                                      fontSize: 11, color: AppColors.textMuted)),
+                              Text('${_formatVal(latest)} ${widget.def.unit}',
+                                  style: GoogleFonts.inter(
+                                      fontSize: 22, fontWeight: FontWeight.w800,
+                                      color: zoneColor)),
+                            ],
+                          ),
+                        ),
+                        Container(width: 1, height: 40, color: AppColors.divider),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Normal range',
+                                  style: GoogleFonts.inter(
+                                      fontSize: 11, color: AppColors.textMuted)),
+                              Text(
+                                '${_formatVal(widget.def.normalMin)}–${_formatVal(widget.def.normalMax)} ${widget.def.unit}',
+                                style: GoogleFonts.inter(
+                                    fontSize: 14, fontWeight: FontWeight.w600,
+                                    color: AppColors.textSecondary),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
                   // Large chart
                   _ZoneLineChart(
                       pts: pts,
@@ -759,6 +774,21 @@ class _MetricChartCardState extends State<_MetricChartCard> {
         LabZone.red => 'Abnormal',
         LabZone.critical => 'Critical',
       };
+
+  // Plain-language sentence for zone-first display (hides raw number)
+  String _plainLanguageSentence(LabMetricDef def, double value, LabZone zone) {
+    final name = def.name;
+    switch (zone) {
+      case LabZone.green:
+        return '$name is within the normal range. No action needed.';
+      case LabZone.orange:
+        return '$name is slightly outside the normal range. Worth monitoring.';
+      case LabZone.red:
+        return '$name is outside the normal range. Discuss with your care team.';
+      case LabZone.critical:
+        return '$name is critically abnormal. Contact your care team today.';
+    }
+  }
 }
 
 // ─── Stats Row ────────────────────────────────────────────────────────────────
