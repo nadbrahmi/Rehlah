@@ -13,20 +13,9 @@ class CareHubScreen extends StatelessWidget {
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            SliverToBoxAdapter(child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                RichText(text: TextSpan(
-                  style: AppText.displayTitle,
-                  children: const [
-                    TextSpan(text: 'Care ',
-                      style: TextStyle(fontWeight: FontWeight.w700)),
-                    TextSpan(text: 'hub'),
-                  ],
-                )),
-                Text('Your health tools, all in one place',
-                  style: AppText.bodySecondary),
-              ]),
+            SliverToBoxAdapter(child: AppHeader(
+              title: 'Care |hub',
+              subtitle: 'Your health tools, all in one place',
             )),
             SliverToBoxAdapter(child: const SectionLabel('AI-powered')),
             SliverToBoxAdapter(child: ToolRow(

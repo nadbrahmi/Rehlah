@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/shared_widgets.dart';
 
@@ -28,31 +29,9 @@ class _ConnectScreenState extends State<ConnectScreen> {
           SafeArea(
             child: Column(
               children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    RichText(text: TextSpan(style: AppText.displayTitle, children: const [
-                      TextSpan(text: 'Your '),
-                      TextSpan(text: 'community',
-                        style: TextStyle(fontWeight: FontWeight.w700)),
-                    ])),
-                    Text('Coaches, mentors and peers — all in one place',
-                      style: AppText.bodySecondary),
-                    const SizedBox(height: 5),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.teal.withOpacity(0.07),
-                        borderRadius: AppRadius.fullBR,
-                        border: Border.all(
-                          color: AppColors.teal.withOpacity(0.18), width: 0.5),
-                      ),
-                      child: Text('✓ Safe space · Moderated',
-                        style: AppText.caption.copyWith(
-                          color: AppColors.teal, fontWeight: FontWeight.w500,
-                          fontSize: 10)),
-                    ),
-                  ]),
+                AppHeader(
+                  title: 'Your |community',
+                  subtitle: 'Coaches, mentors and peers — all in one place',
                 ),
                 // Tabs
                 Padding(

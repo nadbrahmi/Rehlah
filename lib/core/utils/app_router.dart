@@ -23,11 +23,23 @@ import 'shell_screen.dart';
 final appRouter = GoRouter(
   initialLocation: '/onboarding',
   routes: [
+    // ── No shell (full screen) ──────────────────────────────────────────────
     GoRoute(path: '/onboarding', builder: (c, s) => const OnboardingScreen()),
     GoRoute(path: '/checkin', builder: (c, s) => const CheckInScreen()),
     GoRoute(path: '/checkin/sliders', builder: (c, s) => const CheckInSlidersScreen()),
     GoRoute(path: '/checkin/success', builder: (c, s) => const CheckInSuccessScreen()),
     GoRoute(path: '/ai-chat', builder: (c, s) => const AiChatScreen()),
+
+    // ── Detail screens pushed on top of shell (have their own back button) ─
+    GoRoute(path: '/care/labs', builder: (c, s) => const LabResultsScreen()),
+    GoRoute(path: '/care/labs/history', builder: (c, s) => const LabHistoryScreen()),
+    GoRoute(path: '/care/labs/add', builder: (c, s) => const LabAddScreen()),
+    GoRoute(path: '/care/medications', builder: (c, s) => const MedicationsScreen()),
+    GoRoute(path: '/care/appointments', builder: (c, s) => const AppointmentsScreen()),
+    GoRoute(path: '/care/appointments/prep', builder: (c, s) => const PrepReportScreen()),
+    GoRoute(path: '/profile/privacy', builder: (c, s) => const PrivacyScreen()),
+
+    // ── Shell (bottom nav) ─────────────────────────────────────────────────
     ShellRoute(
       builder: (context, state, child) => ShellScreen(child: child),
       routes: [
@@ -35,15 +47,8 @@ final appRouter = GoRouter(
         GoRoute(path: '/my-health/journey', builder: (c, s) => const MyHealthJourneyScreen()),
         GoRoute(path: '/my-health/expect', builder: (c, s) => const MyHealthExpectScreen()),
         GoRoute(path: '/care', builder: (c, s) => const CareHubScreen()),
-        GoRoute(path: '/care/labs', builder: (c, s) => const LabResultsScreen()),
-        GoRoute(path: '/care/labs/history', builder: (c, s) => const LabHistoryScreen()),
-        GoRoute(path: '/care/labs/add', builder: (c, s) => const LabAddScreen()),
-        GoRoute(path: '/care/medications', builder: (c, s) => const MedicationsScreen()),
-        GoRoute(path: '/care/appointments', builder: (c, s) => const AppointmentsScreen()),
-        GoRoute(path: '/care/appointments/prep', builder: (c, s) => const PrepReportScreen()),
         GoRoute(path: '/connect', builder: (c, s) => const ConnectScreen()),
         GoRoute(path: '/profile', builder: (c, s) => const ProfileScreen()),
-        GoRoute(path: '/profile/privacy', builder: (c, s) => const PrivacyScreen()),
       ],
     ),
   ],

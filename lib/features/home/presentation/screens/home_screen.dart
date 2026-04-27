@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/shared_widgets.dart';
 import '../../../../core/utils/models.dart';
+import '../../../../core/utils/user_session.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -34,7 +35,7 @@ class HomeScreen extends StatelessWidget {
           SafeArea(
             child: CustomScrollView(
               slivers: [
-                SliverToBoxAdapter(child: _buildHeader(profile, dateStr)),
+                SliverToBoxAdapter(child: _buildHeader(context, profile, dateStr)),
                 SliverToBoxAdapter(child: _buildHeroCard(context)),
                 SliverToBoxAdapter(child: _buildNadirCard()),
                 SliverToBoxAdapter(child: _buildMoodRecap()),
@@ -51,26 +52,56 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(UserProfile profile, String dateStr) {
+  Widget _buildHeader(BuildContext context, UserProfile profile, String dateStr) {
+    final name = UserSession().displayName;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(dateStr.toUpperCase(), style: AppText.label),
-          const SizedBox(height: 3),
-          RichText(
-            text: TextSpan(
-              style: AppText.displayTitle,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const TextSpan(text: 'Good morning,\n'),
-                TextSpan(text: profile.name,
-                  style: AppText.displayTitle.copyWith(fontWeight: FontWeight.w700)),
+                Text(dateStr.toUpperCase(), style: AppText.label),
+                const SizedBox(height: 3),
+                RichText(
+                  text: TextSpan(
+                    style: AppText.displayTitle,
+                    children: [
+                      TextSpan(text: '${UserSession().greeting},\n'),
+                      TextSpan(text: name,
+                        style: AppText.displayTitle.copyWith(
+                          fontWeight: FontWeight.w700)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text('Take it one moment at a time.',
+                  style: AppText.bodySecondary),
               ],
             ),
           ),
-          const SizedBox(height: 4),
-          Text('Take it one moment at a time.', style: AppText.bodySecondary),
+          GestureDetector(
+            onTap: () => context.push('/profile'),
+            child: Container(
+              width: 38, height: 38,
+              decoration: BoxDecoration(
+                color: AppColors.primaryLight,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.primaryMid, width: 0.5),
+              ),
+              child: Center(
+                child: Text(
+                  name.isNotEmpty ? name[0].toUpperCase() : '?',
+                  style: const TextStyle(
+                    fontFamily: 'Inter', fontSize: 15,
+                    fontWeight: FontWeight.w600, color: AppColors.primary,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

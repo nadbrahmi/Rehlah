@@ -44,7 +44,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           GestureDetector(
-                            onTap: () => context.pop(),
+                            onTap: () => context.go('/'),
                             child: Row(
                               children: [
                                 Icon(Icons.arrow_back_ios_new_rounded,

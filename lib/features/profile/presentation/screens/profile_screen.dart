@@ -23,6 +23,17 @@ class ProfileScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    GestureDetector(
+                      onTap: () => context.go('/'),
+                      child: Row(children: [
+                        Icon(Icons.arrow_back_ios_new_rounded, size: 15,
+                          color: AppColors.text2.withOpacity(0.4)),
+                        const SizedBox(width: 4),
+                        Text('Home', style: AppText.caption.copyWith(
+                          color: AppColors.text2, fontSize: 11)),
+                      ]),
+                    ),
+                    const SizedBox(height: 10),
                     RichText(text: TextSpan(
                       style: AppText.displayTitle,
                       children: const [
@@ -150,7 +161,7 @@ class PrivacyScreen extends StatelessWidget {
         title: const Text('Privacy & data'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/'),
         ),
       ),
       body: SingleChildScrollView(

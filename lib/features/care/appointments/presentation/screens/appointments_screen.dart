@@ -23,6 +23,17 @@ class AppointmentsScreen extends StatelessWidget {
             SliverToBoxAdapter(child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                GestureDetector(
+                  onTap: () => context.go('/'),
+                  child: Row(children: [
+                    Icon(Icons.arrow_back_ios_new_rounded, size: 15,
+                      color: AppColors.text2.withOpacity(0.4)),
+                    const SizedBox(width: 4),
+                    Text('Home', style: AppText.caption.copyWith(
+                      color: AppColors.text2, fontSize: 11)),
+                  ]),
+                ),
+                const SizedBox(height: 10),
                 RichText(text: TextSpan(style: AppText.displayTitle, children: const [
                   TextSpan(text: '', style: TextStyle(fontWeight: FontWeight.w700)),
                   TextSpan(text: 'Appointments'),
@@ -176,7 +187,7 @@ class PrepReportScreen extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 GestureDetector(
-                  onTap: () => context.pop(),
+                  onTap: () => context.go('/care'),
                   child: Row(children: [
                     Icon(Icons.arrow_back_ios_new_rounded, size: 15,
                       color: AppColors.text2.withOpacity(0.4)),

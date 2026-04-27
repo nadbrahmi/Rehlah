@@ -235,7 +235,7 @@ class LabHistoryScreen extends StatelessWidget {
         title: const Text('Lab history'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/care/labs'),
         ),
         actions: [
           TextButton(
@@ -272,7 +272,7 @@ class LabHistoryScreen extends StatelessWidget {
         .map((m) => '${m.name.substring(0, 3)} ${m.value.toStringAsFixed(1)}')
         .join(' · ');
     return GestureDetector(
-      onTap: () => context.pop(),
+      onTap: () => context.go('/care/labs'),
       child: Container(
         margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
         padding: const EdgeInsets.all(13),
@@ -333,7 +333,7 @@ class LabAddScreen extends StatelessWidget {
         title: const Text('Add lab result'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-          onPressed: () => context.pop(),
+          onPressed: () => context.go('/care/labs'),
         ),
       ),
       body: SingleChildScrollView(
@@ -397,14 +397,14 @@ class LabAddScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () => context.pop(),
+              onPressed: () => context.go('/care/labs'),
               child: const Text('Save result'),
             ),
             const SizedBox(height: 8),
             SizedBox(
               width: double.infinity,
               child: TextButton(
-                onPressed: () => context.pop(),
+                onPressed: () => context.go('/care/labs'),
                 child: const Text('Cancel'),
               ),
             ),

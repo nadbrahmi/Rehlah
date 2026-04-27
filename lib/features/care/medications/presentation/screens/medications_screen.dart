@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../../core/theme/app_theme.dart';
 import '../../../../../core/widgets/shared_widgets.dart';
@@ -34,6 +35,17 @@ class _MedicationsScreenState extends State<MedicationsScreen> {
             SliverToBoxAdapter(child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                GestureDetector(
+                  onTap: () => context.go('/care'),
+                  child: Row(children: [
+                    Icon(Icons.arrow_back_ios_new_rounded, size: 15,
+                      color: AppColors.text2.withOpacity(0.4)),
+                    const SizedBox(width: 4),
+                    Text('Care hub', style: AppText.caption.copyWith(
+                      color: AppColors.text2, fontSize: 11)),
+                  ]),
+                ),
+                const SizedBox(height: 10),
                 RichText(text: TextSpan(
                   style: AppText.displayTitle,
                   children: const [

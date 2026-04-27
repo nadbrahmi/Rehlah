@@ -1,7 +1,105 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../theme/app_theme.dart';
+import '../utils/user_session.dart';
 
-// ── Hero Card (gradient) ──────────────────────────────────────────────────────
+// ── App Header (used on all main screens) ────────────────────────────────────
+class AppHeader extends StatelessWidget {
+  final String title;
+  final String? subtitle;
+  final bool showBack;
+  final String? backLabel;
+  final String backRoute;
+
+  const AppHeader({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.showBack = false,
+    this.backLabel,
+    this.backRoute = '/',
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final session = UserSession();
+    final initial = session.displayName.isNotEmpty
+        ? session.displayName[0].toUpperCase()
+        : '?';
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (showBack)
+            GestureDetector(
+              onTap: () => context.go(backRoute),
+              child: Row(children: [
+                Icon(Icons.arrow_back_ios_new_rounded, size: 15,
+                  color: AppColors.text2.withOpacity(0.4)),
+                const SizedBox(width: 4),
+                Text(backLabel ?? 'Back',
+                  style: AppText.caption.copyWith(
+                    color: AppColors.text2, fontSize: 11)),
+              ]),
+            ),
+          if (showBack) const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    RichText(text: TextSpan(
+                      style: AppText.displayTitle,
+                      children: title.contains('|')
+                          ? [
+                              TextSpan(text: title.split('|')[0]),
+                              TextSpan(text: title.split('|')[1],
+                                style: const TextStyle(fontWeight: FontWeight.w700)),
+                            ]
+                          : [TextSpan(text: title,
+                              style: const TextStyle(fontWeight: FontWeight.w700))],
+                    )),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 3),
+                      Text(subtitle!,
+                        style: AppText.bodySecondary),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              GestureDetector(
+                onTap: () => context.push('/profile'),
+                child: Container(
+                  width: 38, height: 38,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.primaryMid, width: 0.5),
+                  ),
+                  child: Center(
+                    child: Text(initial,
+                      style: const TextStyle(
+                        fontFamily: 'Inter', fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      )),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+
 class HeroCard extends StatelessWidget {
   final Widget child;
   final List<Color>? gradientColors;

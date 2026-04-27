@@ -90,7 +90,7 @@ class _AiChatScreenState extends State<AiChatScreen> {
               child: Row(
                 children: [
                   GestureDetector(
-                    onTap: () => context.pop(),
+                    onTap: () => context.go('/'),
                     child: Icon(Icons.arrow_back_ios_new_rounded,
                       size: 18, color: AppColors.text2),
                   ),

@@ -1,9 +1,9 @@
-import 'my_health_expect_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/shared_widgets.dart';
 import '../../../../core/utils/models.dart';
+import 'my_health_expect_screen.dart';
 
 // ── Screen 6: My Health — Journey ────────────────────────────────────────────
 class MyHealthJourneyScreen extends StatefulWidget {
@@ -44,44 +44,49 @@ class _MyHealthJourneyState extends State<MyHealthJourneyScreen> {
   }
 
   Widget _buildSegControl() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
-      child: Container(
-        height: 36,
-        padding: const EdgeInsets.all(3),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.08),
-          borderRadius: AppRadius.fullBR,
-        ),
-        child: Row(
-          children: ['My Journey', 'What to Expect'].asMap().entries.map((e) {
-            final active = e.key == _segIndex;
-            return Expanded(
-              child: GestureDetector(
-                onTap: () => setState(() => _segIndex = e.key),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  decoration: BoxDecoration(
-                    color: active ? AppColors.surface : Colors.transparent,
-                    borderRadius: AppRadius.fullBR,
-                    boxShadow: active ? [BoxShadow(
-                      color: AppColors.primary.withOpacity(0.12),
-                      blurRadius: 4)] : null,
+    return Column(
+      children: [
+        AppHeader(title: 'My |Health', subtitle: '${MockData.profile.cancerType} · Week ${MockData.profile.currentCycle}'),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+          child: Container(
+            height: 36,
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.08),
+              borderRadius: AppRadius.fullBR,
+            ),
+            child: Row(
+              children: ['My Journey', 'What to Expect'].asMap().entries.map((e) {
+                final active = e.key == _segIndex;
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _segIndex = e.key),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      decoration: BoxDecoration(
+                        color: active ? AppColors.surface : Colors.transparent,
+                        borderRadius: AppRadius.fullBR,
+                        boxShadow: active ? [BoxShadow(
+                          color: AppColors.primary.withOpacity(0.12),
+                          blurRadius: 4)] : null,
+                      ),
+                      child: Center(
+                        child: Text(e.value,
+                          style: AppText.body.copyWith(
+                            fontSize: 12,
+                            color: active ? AppColors.primary : AppColors.text3,
+                            fontWeight: active ? FontWeight.w500 : FontWeight.w400,
+                          )),
+                      ),
+                    ),
                   ),
-                  child: Center(
-                    child: Text(e.value,
-                      style: AppText.body.copyWith(
-                        fontSize: 12,
-                        color: active ? AppColors.primary : AppColors.text3,
-                        fontWeight: active ? FontWeight.w500 : FontWeight.w400,
-                      )),
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
+                );
+              }).toList(),
+            ),
+          ),
         ),
-      ),
+      ],
     );
   }
 
