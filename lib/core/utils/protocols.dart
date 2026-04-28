@@ -39,10 +39,12 @@ class ProtocolSymptom {
   final String label;
   final String arabicLabel;
   final String emoji;
-  final bool isUrgent;      // triggers warning card if score ≥ urgentThreshold
+  final bool isUrgent;
   final double urgentThreshold;
   final String? urgentMessage;
-  final String? tip;        // phase-specific tip shown below slider
+  final String? tip;
+  final bool isInverted;
+  final String? interferenceQuestion;
 
   const ProtocolSymptom({
     required this.key,
@@ -53,6 +55,8 @@ class ProtocolSymptom {
     this.urgentThreshold = 4,
     this.urgentMessage,
     this.tip,
+    this.isInverted = false,
+    this.interferenceQuestion,
   });
 }
 
@@ -61,15 +65,18 @@ class SymptomLibrary {
   static const nausea = ProtocolSymptom(
     key: 'nausea', label: 'Nausea', arabicLabel: 'غثيان', emoji: '🌊',
     tip: 'Small frequent meals every 2–3 hours. Cold or room-temperature foods are easier to tolerate.',
+    interferenceQuestion: 'Does nausea affect eating or drinking?',
   );
   static const vomiting = ProtocolSymptom(
     key: 'vomiting', label: 'Vomiting', arabicLabel: 'قيء', emoji: '🤢',
     isUrgent: true, urgentThreshold: 5,
     urgentMessage: 'More than 2–3 episodes — contact your care team. You may need anti-nausea medication adjustment.',
+    interferenceQuestion: 'How many episodes today?',
   );
   static const fatigue = ProtocolSymptom(
     key: 'fatigue', label: 'Fatigue', arabicLabel: 'إرهاق', emoji: '🌙',
     tip: 'Rest when your body asks. Short 20-minute rests are better than long naps.',
+    interferenceQuestion: 'Does fatigue stop normal activities?',
   );
   static const fever = ProtocolSymptom(
     key: 'fever', label: 'Fever / Temperature', arabicLabel: 'حمى / حرارة', emoji: '🌡️',
@@ -79,47 +86,57 @@ class SymptomLibrary {
   static const pain = ProtocolSymptom(
     key: 'pain', label: 'Pain', arabicLabel: 'ألم', emoji: '⚡',
     tip: 'Note where the pain is. Your care team needs the location and type (sharp, dull, constant).',
+    interferenceQuestion: 'Does pain stop normal activities?',
   );
   static const mouthSores = ProtocolSymptom(
     key: 'mouth_sores', label: 'Mouth sores', arabicLabel: 'تقرحات الفم', emoji: '👄',
     tip: 'Rinse with salt water 4–6 times daily. Avoid spicy, acidic, or rough-textured foods.',
     isUrgent: true, urgentThreshold: 6,
     urgentMessage: 'Severe mouth sores can make it hard to eat or drink. Contact your team if you cannot swallow.',
+    interferenceQuestion: 'Do mouth sores affect eating or speaking?',
   );
   static const appetite = ProtocolSymptom(
     key: 'appetite', label: 'Poor appetite', arabicLabel: 'فقدان الشهية', emoji: '🍽️',
     tip: 'Eat whatever you can tolerate. Calories matter more than nutrition right now.',
+    interferenceQuestion: 'Is poor appetite affecting your nutrition?',
   );
   static const constipation = ProtocolSymptom(
     key: 'constipation', label: 'Constipation', arabicLabel: 'إمساك', emoji: '🌿',
     tip: 'Stay hydrated. Gentle movement helps. Tell your team if no bowel movement for 3+ days.',
+    interferenceQuestion: 'Has this lasted more than 2 days?',
   );
   static const diarrhea = ProtocolSymptom(
     key: 'diarrhea', label: 'Diarrhoea', arabicLabel: 'إسهال', emoji: '💧',
     isUrgent: true, urgentThreshold: 6,
     urgentMessage: 'More than 4–6 loose stools per day — contact your team. Risk of dehydration.',
+    interferenceQuestion: 'How many episodes today?',
   );
   static const hairLoss = ProtocolSymptom(
     key: 'hair_loss', label: 'Hair loss', arabicLabel: 'تساقط الشعر', emoji: '💇',
     tip: 'This is temporary. Gentle shampoo and a soft pillow cover can reduce scalp discomfort.',
+    interferenceQuestion: 'Is hair loss affecting your confidence or comfort?',
   );
   static const neuropathy = ProtocolSymptom(
     key: 'neuropathy', label: 'Tingling / numbness', arabicLabel: 'تنميل', emoji: '🤲',
     tip: 'Hands and feet tingling is common with Taxol. Tell your team — dose adjustment may help.',
     isUrgent: true, urgentThreshold: 7,
     urgentMessage: 'Severe tingling or numbness — report to your care team at next visit or call if it affects walking.',
+    interferenceQuestion: 'Does tingling affect your hands or feet daily tasks?',
   );
   static const jointPain = ProtocolSymptom(
     key: 'joint_pain', label: 'Joint / muscle pain', arabicLabel: 'آلام المفاصل', emoji: '🦴',
     tip: 'Peaks 2–4 days after Taxol. Gentle warm compresses and light movement can help.',
+    interferenceQuestion: 'Does joint pain stop you moving normally?',
   );
   static const swelling = ProtocolSymptom(
     key: 'swelling', label: 'Swelling / fluid', arabicLabel: 'تورم', emoji: '💧',
     tip: 'Elevate legs when resting. Avoid tight shoes. Report significant swelling.',
+    interferenceQuestion: 'Does swelling affect walking or wearing shoes?',
   );
   static const skinNails = ProtocolSymptom(
     key: 'skin_nails', label: 'Skin / nail changes', arabicLabel: 'تغيرات الجلد والأظافر', emoji: '💅',
     tip: 'Keep nails clean and short. Moisturise hands daily. Avoid cutting cuticles.',
+    interferenceQuestion: 'Are skin or nail changes causing discomfort?',
   );
   static const breathlessness = ProtocolSymptom(
     key: 'breathlessness', label: 'Breathlessness', arabicLabel: 'ضيق التنفس', emoji: '🫁',
@@ -129,14 +146,18 @@ class SymptomLibrary {
   static const mood = ProtocolSymptom(
     key: 'mood', label: 'Mood / anxiety', arabicLabel: 'المزاج / القلق', emoji: '💜',
     tip: 'What you\'re feeling is a normal response to treatment. Talking about it helps.',
+    isInverted: true,
+    interferenceQuestion: 'Is your mood affecting daily life or sleep?',
   );
   static const sleep = ProtocolSymptom(
     key: 'sleep', label: 'Sleep quality', arabicLabel: 'جودة النوم', emoji: '😴',
     tip: 'A consistent bedtime routine helps. Avoid screens 30 minutes before sleep.',
+    interferenceQuestion: 'Is poor sleep affecting your energy during the day?',
   );
   static const fluidRetention = ProtocolSymptom(
     key: 'fluid_retention', label: 'Fluid retention', arabicLabel: 'احتباس السوائل', emoji: '⚖️',
     tip: 'Weigh yourself daily at the same time. Report a gain of 2kg+ in 48 hours.',
+    interferenceQuestion: 'Have you gained more than 1kg since yesterday?',
   );
   static const infection = ProtocolSymptom(
     key: 'infection', label: 'Signs of infection', arabicLabel: 'علامات العدوى', emoji: '🔴',
