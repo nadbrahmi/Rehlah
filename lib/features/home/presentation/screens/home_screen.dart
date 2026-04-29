@@ -297,7 +297,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           AppColors.primaryLight, AppColors.primary, '/ai-chat'),
       _TileData('Appointments', 'Next visit', Icons.calendar_month_rounded,
           AppColors.peachLight, AppColors.peach, '/care/appointments'),
-      _TileData('Medications', 'Track doses', Icons.medication_rounded,
+      _TileData('Medications',
+          '${session.medsTakenTodayCount} of ${MockData.medications.length} done',
+          Icons.medication_rounded,
           AppColors.tealLight, AppColors.teal, '/care/medications'),
     ];
 

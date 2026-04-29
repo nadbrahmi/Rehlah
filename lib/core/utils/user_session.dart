@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 import 'protocols.dart';
 
 // ── Check-in record ───────────────────────────────────────────────────────────
@@ -35,7 +37,7 @@ class CheckInRecord {
 }
 
 // ── User session ──────────────────────────────────────────────────────────────
-class UserSession {
+class UserSession extends ChangeNotifier {
   static final UserSession _instance = UserSession._();
   factory UserSession() => _instance;
   UserSession._();
@@ -113,8 +115,6 @@ class UserSession {
 
     lastCheckIn = DateTime.now();
     _saveCount++;
-    // ignore: avoid_print
-    print('✅ saveCheckIn called — history length: ${_history.length}, emoji: $emoji');
   }
 
   /// Get last 7 days of check-ins (with gaps for missed days)
@@ -168,7 +168,54 @@ class UserSession {
         lastCheckIn!.day == now.day;
   }
 
-  // ── Symptom summary ───────────────────────────────────────────────────────
+  // ── Medications ───────────────────────────────────────────────────────────
+  // Key: med id, Value: time taken today (null = not taken)
+  final Map<String, String?> _medsTakenToday = {};
+  // Key: med id, Value: total days taken (for adherence)
+  final Map<String, int> _medsAdherenceCount = {};
+  // Track which day the meds were last reset
+  int? _medsLastResetDay;
+
+  void _resetMedsIfNewDay() {
+    final today = DateTime.now().day;
+    if (_medsLastResetDay != today) {
+      _medsTakenToday.clear();
+      _medsLastResetDay = today;
+    }
+  }
+
+  bool isMedTaken(String medId) {
+    _resetMedsIfNewDay();
+    return _medsTakenToday.containsKey(medId);
+  }
+
+  String? medTakenAt(String medId) {
+    _resetMedsIfNewDay();
+    return _medsTakenToday[medId];
+  }
+
+  void markMedTaken(String medId) {
+    _resetMedsIfNewDay();
+    final time = DateFormat('h:mm a').format(DateTime.now());
+    _medsTakenToday[medId] = time;
+    _medsAdherenceCount[medId] = (_medsAdherenceCount[medId] ?? 0) + 1;
+    _saveCount++;
+    notifyListeners();
+  }
+
+  int get medsTakenTodayCount {
+    _resetMedsIfNewDay();
+    return _medsTakenToday.length;
+  }
+
+  /// Adherence % over last 14 days (approximated from count)
+  int adherencePct(int totalMeds) {
+    if (totalMeds == 0) return 0;
+    final totalPossible = totalMeds * 14;
+    final totalTaken = _medsAdherenceCount.values
+        .fold(0, (sum, v) => sum + v);
+    return ((totalTaken / totalPossible) * 100).round().clamp(0, 100);
+  }
   String get symptomSummary {
     if (symptomScores.isEmpty) return 'no symptoms reported';
     final parts = symptomScores.entries

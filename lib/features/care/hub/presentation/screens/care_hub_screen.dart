@@ -2,9 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../../core/theme/app_theme.dart';
 import '../../../../../core/widgets/shared_widgets.dart';
+import '../../../../../core/utils/models.dart';
+import '../../../../../core/utils/user_session.dart';
 
-class CareHubScreen extends StatelessWidget {
+class CareHubScreen extends StatefulWidget {
   const CareHubScreen({super.key});
+  @override
+  State<CareHubScreen> createState() => _CareHubScreenState();
+}
+
+class _CareHubScreenState extends State<CareHubScreen> {
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Rebuild every time we come back to this screen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() {});
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,11 +72,7 @@ class CareHubScreen extends StatelessWidget {
               iconBg: AppColors.tealLight,
               title: 'Medications',
               subtitle: 'Daily doses, adherence, history',
-              trailing: PillBadge(
-                text: '2 of 3',
-                bg: AppColors.tealLight,
-                textColor: AppColors.teal,
-              ),
+              trailing: _MedBadge(),
               onTap: () => context.push('/care/medications'),
             )),
             SliverToBoxAdapter(child: ToolRow(
@@ -80,6 +92,40 @@ class CareHubScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _MedBadge extends StatefulWidget {
+  @override
+  State<_MedBadge> createState() => _MedBadgeState();
+}
+
+class _MedBadgeState extends State<_MedBadge> {
+  @override
+  void initState() {
+    super.initState();
+    UserSession().addListener(_onSessionChanged);
+  }
+
+  @override
+  void dispose() {
+    UserSession().removeListener(_onSessionChanged);
+    super.dispose();
+  }
+
+  void _onSessionChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final taken = UserSession().medsTakenTodayCount;
+    final total = MockData.medications.length;
+    return PillBadge(
+      text: taken == total && total > 0 ? 'All done ✓' : '$taken of $total',
+      bg: taken == total && total > 0 ? AppColors.tealLight : AppColors.peachLight,
+      textColor: taken == total && total > 0 ? AppColors.teal : AppColors.peach,
     );
   }
 }
