@@ -26,33 +26,49 @@ class LabResultsScreen extends StatelessWidget {
           slivers: [
             SliverToBoxAdapter(child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    RichText(text: TextSpan(
-                      style: AppText.displayTitle,
-                      children: const [
-                        TextSpan(text: 'Lab '),
-                        TextSpan(text: 'results',
-                          style: TextStyle(fontWeight: FontWeight.w700)),
-                      ],
-                    )),
-                    Text('Last updated ${DateFormat('d MMM').format(latest.date)}',
-                      style: AppText.bodySecondary),
-                  ]),
                   GestureDetector(
-                    onTap: () => context.push('/care/labs/add'),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryLight,
-                        borderRadius: AppRadius.fullBR,
-                        border: Border.all(color: AppColors.primaryMid, width: 0.5),
+                    onTap: () => context.go('/care'),
+                    child: Row(children: [
+                      Icon(Icons.arrow_back_ios_new_rounded, size: 15,
+                        color: AppColors.text2.withOpacity(0.4)),
+                      const SizedBox(width: 4),
+                      Text('Care hub', style: AppText.caption.copyWith(
+                        color: AppColors.text2, fontSize: 11)),
+                    ]),
+                  ),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        RichText(text: TextSpan(
+                          style: AppText.displayTitle,
+                          children: const [
+                            TextSpan(text: 'Lab '),
+                            TextSpan(text: 'results',
+                              style: TextStyle(fontWeight: FontWeight.w700)),
+                          ],
+                        )),
+                        Text('Last updated ${DateFormat('d MMM').format(latest.date)}',
+                          style: AppText.bodySecondary),
+                      ]),
+                      GestureDetector(
+                        onTap: () => context.push('/care/labs/add'),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryLight,
+                            borderRadius: AppRadius.fullBR,
+                            border: Border.all(color: AppColors.primaryMid, width: 0.5),
+                          ),
+                          child: Text('+ Add', style: AppText.caption.copyWith(
+                            color: AppColors.primary, fontWeight: FontWeight.w500)),
+                        ),
                       ),
-                      child: Text('+ Add', style: AppText.caption.copyWith(
-                        color: AppColors.primary, fontWeight: FontWeight.w500)),
-                    ),
+                    ],
                   ),
                 ],
               ),
