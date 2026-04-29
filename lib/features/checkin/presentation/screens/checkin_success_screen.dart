@@ -80,26 +80,70 @@ Rules:
   }
 
   String _fallbackInsight() {
-    final session = _session;
-    if (session.isNadirWindow) {
-      return 'You\'re in the nadir window right now — the toughest days of the cycle. '
-          'Rest is genuinely part of your treatment this week. '
-          'Watch for fever above 38°C and call your team immediately if it occurs. '
-          'You\'re doing exactly what you need to do by checking in. 💜';
+    final s = _session;
+    final phase = s.currentPhase;
+    final name = s.displayName;
+    final protocol = s.protocol.name;
+
+    // Nadir window — highest priority
+    if (s.isNadirWindow) {
+      return '$name, you\'re in the nadir window — days when your immune system '
+          'is at its lowest. Rest is genuinely part of your treatment right now. '
+          'Take your temperature morning and evening, and call your team '
+          'immediately if it reaches 38°C. Checking in every day during this '
+          'window is one of the most important things you can do. 💜';
     }
-    final symptoms = session.symptomScores.entries
-        .where((e) => e.value >= 5)
-        .map((e) => e.key)
+
+    // Nadir approaching
+    if (s.isNadirApproaching) {
+      return 'Your nadir window is 1–2 days away — the phase when your WBC '
+          'count reaches its lowest. Start monitoring your temperature now, '
+          'twice daily. Avoid crowds where possible and wash hands frequently. '
+          'You\'re being proactive by tracking this. 💜';
+    }
+
+    // Severe symptoms (score ≥ 7)
+    final severe = s.symptomScores.entries
+        .where((e) => e.value >= 7)
+        .map((e) => e.key.replaceAll('_', ' '))
         .toList();
-    if (symptoms.isNotEmpty) {
-      return 'Your ${symptoms.first} today is real and valid — it\'s one of the most '
-          'common experiences at this stage of treatment. '
-          'Small, gentle movement and staying hydrated can help. '
-          'Your care team sees every check-in, and you\'re not going through this alone. 💜';
+    if (severe.isNotEmpty) {
+      final sym = severe.first;
+      return '$name, your $sym today is significant — please don\'t push through '
+          'it alone. ${phase.phaseNote} '
+          'Your care team can see this entry. If it worsens, reach out directly '
+          'rather than waiting for your next appointment. 💜';
     }
-    return 'Every check-in you complete helps your care team understand your journey. '
-        'The fact that you showed up today — even on a hard day — says a lot about your strength. '
-        'Rest when you need to. You\'re doing well. 💜';
+
+    // Moderate symptoms (score 4–6)
+    final moderate = s.symptomScores.entries
+        .where((e) => e.value >= 4 && e.value < 7)
+        .map((e) => e.key.replaceAll('_', ' '))
+        .toList();
+    if (moderate.isNotEmpty) {
+      final sym = moderate.first;
+      // Find tip for this symptom
+      final symptom = phase.primarySymptoms
+          .where((p) => p.key == moderate.first.replaceAll(' ', '_'))
+          .firstOrNull;
+      final tip = symptom?.tip ?? 'Rest when your body asks.';
+      return '$name, the $sym you\'re feeling is a known part of the '
+          '${phase.name.toLowerCase()} phase. $tip '
+          'You\'re doing the right thing by tracking it. 💜';
+    }
+
+    // Recovery phase
+    if (phase.name.toLowerCase().contains('recovery')) {
+      return '$name, you\'re in the recovery phase — your body is rebuilding. '
+          'Energy usually improves day by day from here. '
+          'Gentle movement, good hydration, and nutrition all help your '
+          'counts recover faster. You\'re almost through this cycle. 💜';
+    }
+
+    // Protocol-specific phase note
+    return '$name, you completed today\'s check-in for $protocol '
+        '${phase.name.toLowerCase()}. ${phase.phaseNote} '
+        'Your care team sees every entry you make. 💜';
   }
 
   @override

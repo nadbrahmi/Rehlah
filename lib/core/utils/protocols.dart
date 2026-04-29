@@ -71,6 +71,7 @@ class SymptomLibrary {
     key: 'vomiting', label: 'Vomiting', arabicLabel: 'قيء', emoji: '🤢',
     isUrgent: true, urgentThreshold: 5,
     urgentMessage: 'More than 2–3 episodes — contact your care team. You may need anti-nausea medication adjustment.',
+    tip: 'Take your anti-nausea medication as prescribed. Small sips of clear fluids help prevent dehydration.',
     interferenceQuestion: 'How many episodes today?',
   );
   static const fatigue = ProtocolSymptom(
