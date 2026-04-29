@@ -621,6 +621,7 @@ class _CheckInSlidersState extends State<CheckInSlidersScreen> {
     _session.interferenceAnswers = Map<String, String>.from(_interference);
     _session.checkInNote = _noteController.text.trim();
     _session.lastCheckIn = DateTime.now();
+    _session.saveCheckIn(); // ← save to history
     context.go('/checkin/success');
   }
 }

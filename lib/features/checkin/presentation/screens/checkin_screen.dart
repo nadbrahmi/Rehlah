@@ -362,12 +362,17 @@ class _CheckInScreenState extends State<CheckInScreen> {
   }
 
   void _save() {
+    // ignore: avoid_print
+    print('🔵 _save() called on checkin_screen, mood: ${_mood.emoji}');
     _session.moodEmoji = _mood.emoji;
     _session.moodLabel = _mood.label;
     _session.symptomScores = {
       for (final s in _selectedSymptoms) s.toLowerCase(): 5.0
     };
     _session.lastCheckIn = DateTime.now();
+    _session.saveCheckIn();
+    // ignore: avoid_print
+    print('🔵 after saveCheckIn, history: ${_session.history.length}');
     context.go('/checkin/success');
   }
 

@@ -6,8 +6,36 @@ import '../../../../core/widgets/shared_widgets.dart';
 import '../../../../core/utils/models.dart';
 import '../../../../core/utils/user_session.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) setState(() {});
+  }
+
+  // Called every time this route is pushed onto the stack
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -83,8 +111,8 @@ class HomeScreen extends StatelessWidget {
 
   // ── Check-in hero card ────────────────────────────────────────────────────
   Widget _buildHeroCard(BuildContext context, UserSession session) {
-    final hasCheckedIn = session.lastCheckIn != null &&
-        session.lastCheckIn!.day == DateTime.now().day;
+    final hasCheckedIn = session.checkedInToday;
+    final streak = session.streak;
     return HeroCard(
       onTap: () => context.push('/checkin'),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -93,10 +121,18 @@ class HomeScreen extends StatelessWidget {
           style: AppText.sectionHeading.copyWith(
             fontSize: 17, letterSpacing: -0.3)),
         const SizedBox(height: 4),
-        Text(
-          '${session.protocol.name} · Cycle ${session.currentCycle} · Day ${session.dayInCycle}',
-          style: AppText.bodySecondary.copyWith(
-            color: AppColors.primary, fontWeight: FontWeight.w500)),
+        RichText(text: TextSpan(
+          style: AppText.bodySecondary,
+          children: [
+            if (streak > 1) ...[
+              TextSpan(text: '🔥 $streak day streak · ',
+                style: AppText.bodySecondary.copyWith(
+                  color: AppColors.primary, fontWeight: FontWeight.w500)),
+            ],
+            TextSpan(text:
+              '${session.protocol.name} · Cycle ${session.currentCycle} · Day ${session.dayInCycle}'),
+          ],
+        )),
         const SizedBox(height: 14),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
@@ -104,7 +140,8 @@ class HomeScreen extends StatelessWidget {
             color: Colors.white.withOpacity(0.65),
             borderRadius: AppRadius.fullBR,
             border: Border.all(color: Colors.white.withOpacity(0.8), width: 0.5)),
-          child: Text(hasCheckedIn ? 'View today\'s check-in →' : 'Begin check-in →',
+          child: Text(
+            hasCheckedIn ? 'View today\'s check-in →' : 'Begin check-in →',
             style: AppText.bodySemibold.copyWith(
               color: AppColors.primaryDark, fontSize: 12)),
         ),
@@ -182,51 +219,72 @@ class HomeScreen extends StatelessWidget {
 
   // ── Mood recap ────────────────────────────────────────────────────────────
   Widget _buildMoodRecap(UserSession session) {
-    // Show today's mood if checked in, otherwise show placeholder strip
-    final hasCheckedIn = session.lastCheckIn != null &&
-        session.lastCheckIn!.day == DateTime.now().day;
-    final todayMood = session.moodEmoji.isNotEmpty ? session.moodEmoji : '😐';
-
-    // Generate a 7-day visual — today real, others placeholder
-    final days = ['Mon','Tue','Wed','Thu','Fri','Sat','Today'];
-    final emojis = ['😐','🙂','😔','😐','🙂','😊', hasCheckedIn ? todayMood : '?'];
+    final days = session.last7Days;
+    final hasAnyData = days.any((d) => d.hasData);
+    final streak = session.streak;
 
     return SurfaceCard(
       child: Column(children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Text('LAST 7 DAYS', style: AppText.label),
-          if (hasCheckedIn)
-            Text('Checked in today ✓',
+          if (streak > 1)
+            Text('🔥 $streak day streak',
+              style: AppText.body.copyWith(
+                color: AppColors.teal, fontWeight: FontWeight.w500,
+                fontSize: 12))
+          else if (session.checkedInToday)
+            Text('✓ Checked in today',
               style: AppText.body.copyWith(
                 color: AppColors.teal, fontWeight: FontWeight.w500,
                 fontSize: 12))
           else
-            GestureDetector(
-              onTap: null,
-              child: Text('Not checked in yet',
-                style: AppText.body.copyWith(
-                  color: AppColors.text3, fontSize: 12))),
+            Text('Not yet today',
+              style: AppText.body.copyWith(
+                color: AppColors.text3, fontSize: 12)),
         ]),
         const SizedBox(height: 10),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: List.generate(7, (i) {
-            final isToday = i == 6;
+          children: days.map((d) {
+            final isToday = d.label == 'Today';
             return Expanded(child: Column(children: [
-              Text(
-                isToday && !hasCheckedIn ? '·' : emojis[i],
-                style: TextStyle(
-                  fontSize: isToday && !hasCheckedIn ? 20 : 15,
-                  color: isToday && !hasCheckedIn
-                      ? AppColors.text3 : null)),
-              const SizedBox(height: 2),
-              Text(days[i], style: AppText.caption.copyWith(
+              d.hasData
+                  ? Text(d.emoji,
+                      style: const TextStyle(fontSize: 15))
+                  : Container(
+                      width: 20, height: 20,
+                      decoration: BoxDecoration(
+                        color: isToday
+                            ? AppColors.primaryLight
+                            : AppColors.background2,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isToday
+                              ? AppColors.primaryMid
+                              : AppColors.border,
+                          width: 0.5)),
+                      child: Center(child: Text('·',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isToday
+                              ? AppColors.primary
+                              : AppColors.text3)))),
+              const SizedBox(height: 3),
+              Text(d.label, style: AppText.caption.copyWith(
                 fontSize: 9,
                 color: isToday ? AppColors.primary : AppColors.text3,
                 fontWeight: isToday ? FontWeight.w600 : FontWeight.w400)),
             ]));
-          }),
+          }).toList(),
         ),
+        if (!hasAnyData) ...[
+          const SizedBox(height: 8),
+          Text('Complete your first check-in to see your mood history',
+            style: AppText.caption.copyWith(
+              fontSize: 11, color: AppColors.text3,
+              fontStyle: FontStyle.italic),
+            textAlign: TextAlign.center),
+        ],
       ]),
     );
   }

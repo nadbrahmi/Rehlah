@@ -283,7 +283,13 @@ Rules:
     ]);
   }
 
-  String _streakText() => '6 days in a row 🔥';
+  String _streakText() {
+    final streak = _session.streak;
+    if (streak <= 1) return 'First check-in! Keep it going 🌱';
+    if (streak == 7) return '7 days in a row 🔥 One full week!';
+    if (streak >= 30) return '$streak days in a row 🏆 Incredible!';
+    return '$streak days in a row 🔥';
+  }
 }
 
 class _AnimatedDots extends StatefulWidget {
