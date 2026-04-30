@@ -208,7 +208,31 @@ class UserSession extends ChangeNotifier {
     return _medsTakenToday.length;
   }
 
-  /// Adherence % over last 14 days (approximated from count)
+  // Track whether cycle/day were explicitly set by user
+  bool cycleDaySetByUser = false;
+
+  /// Profile completion % based on filled fields
+  int get profileCompletionPct {
+    int filled = 0;
+    const total = 5;
+    if (name.isNotEmpty && name != 'there') filled++;
+    if (cancerType.isNotEmpty) filled++;
+    if (treatmentPhase.isNotEmpty) filled++;
+    if (treatmentPhase == 'In chemotherapy') {
+      filled++; // protocol selected
+    } else {
+      filled++; // non-chemo gets credit too
+    }
+    if (history.isNotEmpty) filled++; // has checked in at least once
+    return ((filled / total) * 100).round().clamp(0, 100);
+  }
+
+  List<String> get profileMissingFields {
+    final missing = <String>[];
+    if (name.isEmpty || name == 'there') missing.add('Your name');
+    if (history.isEmpty) missing.add('First check-in');
+    return missing;
+  }
   int adherencePct(int totalMeds) {
     if (totalMeds == 0) return 0;
     final totalPossible = totalMeds * 14;

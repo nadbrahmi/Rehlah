@@ -42,7 +42,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         maxDay: _maxDay,
         protocol: _session.protocol,
         onSelected: (day) {
-          setState(() => _session.dayInCycle = day);
+          setState(() {
+            _session.dayInCycle = day;
+            _session.cycleDaySetByUser = true;
+          });
           Navigator.pop(context);
         },
       ),
@@ -125,6 +128,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           style: TextStyle(fontWeight: FontWeight.w700)),
                       ],
                     )),
+                    const SizedBox(height: 10),
+                    _buildCompletionBar(),
                   ],
                 ),
               ),
@@ -221,6 +226,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildCompletionBar() {
+    final pct = _session.profileCompletionPct;
+    final missing = _session.profileMissingFields;
+    final color = pct >= 80 ? AppColors.teal
+        : pct >= 50 ? AppColors.primary
+        : AppColors.peach;
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text('Profile complete',
+          style: AppText.bodySecondary.copyWith(fontSize: 12)),
+        Text('$pct%', style: AppText.bodySemibold.copyWith(
+          color: color, fontSize: 12)),
+      ]),
+      const SizedBox(height: 5),
+      Stack(children: [
+        Container(height: 5,
+          decoration: BoxDecoration(
+            color: AppColors.background2,
+            borderRadius: AppRadius.fullBR)),
+        FractionallySizedBox(
+          widthFactor: pct / 100,
+          child: Container(height: 5,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: AppRadius.fullBR))),
+      ]),
+      if (missing.isNotEmpty) ...[
+        const SizedBox(height: 5),
+        Text('Missing: ${missing.join(' · ')}',
+          style: AppText.caption.copyWith(
+            fontSize: 10, color: AppColors.text3)),
+      ],
+    ]);
   }
 
   Widget _infoRow(String label, String value) {

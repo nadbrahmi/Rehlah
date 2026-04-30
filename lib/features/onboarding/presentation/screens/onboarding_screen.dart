@@ -97,6 +97,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (_page == 6 && _showCycleDayStep) {
       UserSession().currentCycle = _cycleIndex + 1;
       UserSession().dayInCycle = _dayIndex + 1;
+      UserSession().cycleDaySetByUser = true;
     }
 
     int nextPage = _page + 1;

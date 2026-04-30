@@ -161,6 +161,7 @@ class InviteCodes {
     s.currentCycle = profile.currentCycle;
     s.totalCycles = profile.totalCycles;
     s.dayInCycle = profile.dayInCycle;
+    s.cycleDaySetByUser = true;
   }
 
   /// All available codes (for dev/debug display)
