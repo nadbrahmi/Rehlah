@@ -19,6 +19,7 @@ import '../../features/care/appointments/presentation/screens/appointments_scree
 import '../../features/care/appointments/presentation/screens/prep_report_screen.dart';
 import '../../features/connect/presentation/screens/connect_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
+import '../../features/monitoring/presentation/screens/cycle_tracker_screen.dart';
 import '../../features/profile/presentation/screens/privacy_screen.dart';
 import 'shell_screen.dart';
 
@@ -37,7 +38,8 @@ final appRouter = GoRouter(
     GoRoute(path: '/care/medications', builder: (c, s) => const MedicationsScreen()),
     GoRoute(path: '/care/appointments', builder: (c, s) => const AppointmentsScreen()),
     GoRoute(path: '/care/appointments/prep', builder: (c, s) => const PrepReportScreen()),
-    GoRoute(path: '/profile/privacy', builder: (c, s) => const PrivacyScreen()),
+    GoRoute(path: '/monitoring/cycle-tracker',
+      builder: (c, s) => const CycleTrackerScreen()),
     ShellRoute(
       builder: (context, state, child) => ShellScreen(child: child),
       routes: [

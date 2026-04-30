@@ -17,15 +17,32 @@ class _CheckInScreenState extends State<CheckInScreen> {
   final Set<String> _selectedSymptoms = {};
   final _session = UserSession();
   late ChemoPhase _phase;
+  late List<ProtocolSymptom> _symptoms;
 
   @override
   void initState() {
     super.initState();
-    _phase = _session.currentPhase;
-    // Pre-select most likely symptoms for this phase (top 2)
-    if (_phase.primarySymptoms.length >= 2) {
-      _selectedSymptoms.add(_phase.primarySymptoms[0].label);
-      _selectedSymptoms.add(_phase.primarySymptoms[1].label);
+    if (_session.isMonitoring) {
+      // Use monitoring symptoms
+      _symptoms = _session.isScanxietyPeriod
+          ? MonitoringSymptomLibrary.scanxietySymptoms
+          : MonitoringSymptomLibrary.standardSymptoms;
+      _phase = ChemoPhase(
+        name: 'Monitoring & surveillance',
+        description: 'Post-treatment monitoring',
+        cycleDay: 0, cycleDayEnd: 999,
+        phaseNote: 'Focus on how you\'re feeling emotionally and physically. Every check-in helps track your wellbeing.',
+        primarySymptoms: _symptoms,
+        watchSymptoms: [],
+      );
+    } else {
+      _phase = _session.currentPhase;
+      _symptoms = _phase.primarySymptoms;
+    }
+    // Pre-select top 2 symptoms
+    if (_symptoms.length >= 2) {
+      _selectedSymptoms.add(_symptoms[0].label);
+      _selectedSymptoms.add(_symptoms[1].label);
     }
   }
 
@@ -80,15 +97,22 @@ class _CheckInScreenState extends State<CheckInScreen> {
                 _buildPhaseNote(),
                 const SizedBox(height: 16),
 
-                // Nadir warning
-                if (_session.isNadirWindow) ...[
+                // Nadir warning (chemo only)
+                if (!_session.isMonitoring && _session.isNadirWindow) ...[
                   _buildNadirCard(),
                   const SizedBox(height: 14),
                 ],
 
-                // Nadir approaching
-                if (_session.isNadirApproaching && !_session.isNadirWindow) ...[
+                // Nadir approaching (chemo only)
+                if (!_session.isMonitoring && _session.isNadirApproaching &&
+                    !_session.isNadirWindow) ...[
                   _buildNadirApproachingCard(),
+                  const SizedBox(height: 14),
+                ],
+
+                // Scanxiety card (monitoring only)
+                if (_session.isMonitoring && _session.isScanxietyPeriod) ...[
+                  _buildScanxietyCheckinCard(),
                   const SizedBox(height: 14),
                 ],
 
@@ -154,30 +178,48 @@ class _CheckInScreenState extends State<CheckInScreen> {
 
   Widget _buildPhasePill() {
     final isNadir = _session.isNadirWindow;
+    final isMonitoring = _session.isMonitoring;
+    final isScanxiety = _session.isScanxietyPeriod;
+
+    Color bg, border, dot, text;
+    String label;
+
+    if (isMonitoring) {
+      if (isScanxiety) {
+        bg = AppColors.gold.withOpacity(0.10);
+        border = AppColors.gold.withOpacity(0.30);
+        dot = AppColors.gold;
+        text = AppColors.gold;
+        label = '⚡ Monitoring · Scan approaching';
+      } else {
+        bg = AppColors.teal.withOpacity(0.08);
+        border = AppColors.teal.withOpacity(0.25);
+        dot = AppColors.teal;
+        text = AppColors.teal;
+        label = '🎗️ Monitoring & surveillance';
+      }
+    } else {
+      bg = isNadir ? AppColors.peach.withOpacity(0.12) : AppColors.primaryLight;
+      border = isNadir ? AppColors.peach.withOpacity(0.3) : AppColors.primaryMid;
+      dot = isNadir ? AppColors.peach : AppColors.primary;
+      text = isNadir ? AppColors.peach : AppColors.primary;
+      label = isNadir
+          ? '⚠ ${_session.protocol.name} · Nadir · Day ${_session.dayInCycle}'
+          : '${_session.protocol.name} · Cycle ${_session.currentCycle} of ${_session.totalCycles} · Day ${_session.dayInCycle}';
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
       decoration: BoxDecoration(
-        color: isNadir
-            ? AppColors.peach.withOpacity(0.12)
-            : AppColors.primaryLight,
+        color: bg,
         borderRadius: AppRadius.fullBR,
-        border: Border.all(
-          color: isNadir
-              ? AppColors.peach.withOpacity(0.3)
-              : AppColors.primaryMid,
-          width: 0.5),
-      ),
+        border: Border.all(color: border, width: 0.5)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Container(width: 6, height: 6,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: isNadir ? AppColors.peach : AppColors.primary)),
+          decoration: BoxDecoration(shape: BoxShape.circle, color: dot)),
         const SizedBox(width: 6),
-        Text(
-          '${_session.protocol.name} · Cycle ${_session.currentCycle} of ${_session.totalCycles} · Day ${_session.dayInCycle}',
-          style: AppText.caption.copyWith(
-            fontSize: 11, fontWeight: FontWeight.w500,
-            color: isNadir ? AppColors.peach : AppColors.primary)),
+        Text(label, style: AppText.caption.copyWith(
+          fontSize: 11, fontWeight: FontWeight.w500, color: text)),
       ]),
     );
   }
@@ -208,6 +250,34 @@ class _CheckInScreenState extends State<CheckInScreen> {
             const SizedBox(height: 4),
             Text(_phase.phaseNote,
               style: AppText.bodySecondary.copyWith(fontSize: 12, height: 1.55)),
+          ],
+        )),
+      ]),
+    );
+  }
+
+  Widget _buildScanxietyCheckinCard() {
+    final next = _session.nextControl;
+    final days = next?.nextScheduled?.difference(DateTime.now()).inDays ?? 0;
+    return Container(
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: AppColors.gold.withOpacity(0.07),
+        borderRadius: AppRadius.mdBR,
+        border: Border.all(color: AppColors.gold.withOpacity(0.2), width: 0.5)),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('⚡', style: TextStyle(fontSize: 16)),
+        const SizedBox(width: 8),
+        Expanded(child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${next?.typeLabel ?? 'Scan'} in $days day${days != 1 ? 's' : ''}',
+              style: AppText.bodySemibold.copyWith(color: AppColors.gold)),
+            const SizedBox(height: 3),
+            Text(
+              'Scanxiety is real. How are you feeling today?',
+              style: AppText.bodySecondary.copyWith(fontSize: 12)),
           ],
         )),
       ]),
@@ -362,8 +432,6 @@ class _CheckInScreenState extends State<CheckInScreen> {
   }
 
   void _save() {
-    // ignore: avoid_print
-    print('🔵 _save() called on checkin_screen, mood: ${_mood.emoji}');
     _session.moodEmoji = _mood.emoji;
     _session.moodLabel = _mood.label;
     _session.symptomScores = {
@@ -371,8 +439,6 @@ class _CheckInScreenState extends State<CheckInScreen> {
     };
     _session.lastCheckIn = DateTime.now();
     _session.saveCheckIn();
-    // ignore: avoid_print
-    print('🔵 after saveCheckIn, history: ${_session.history.length}');
     context.go('/checkin/success');
   }
 

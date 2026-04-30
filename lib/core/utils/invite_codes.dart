@@ -132,7 +132,17 @@ class InviteCodes {
       scenarioEmoji: '🌿',
     ),
 
-    // ── Demo code (for presentations) ─────────────────────────────────────
+    // ── Monitoring scenario ───────────────────────────────────────────────
+    'REHLAH-MON-001': InviteProfile(
+      code: 'REHLAH-MON-001',
+      name: 'Amira',
+      cancerType: 'Breast cancer',
+      treatmentPhase: 'Monitoring / surveillance',
+      protocol: BreastProtocol.act,
+      currentCycle: 8, totalCycles: 8, dayInCycle: 1,
+      scenarioLabel: 'Monitoring · 847 days cancer-free · Regular cycles',
+      scenarioEmoji: '🎗️',
+    ),
     'DEMO': InviteProfile(
       code: 'DEMO',
       name: 'Demo Patient',
@@ -162,6 +172,15 @@ class InviteCodes {
     s.totalCycles = profile.totalCycles;
     s.dayInCycle = profile.dayInCycle;
     s.cycleDaySetByUser = true;
+    // Set monitoring fields for monitoring phase
+    if (profile.treatmentPhase == 'Monitoring / surveillance') {
+      s.treatmentEndDate = DateTime.now().subtract(const Duration(days: 847));
+      s.menstrualStatus = 'regular';
+      s.lastPeriodDate = DateTime.now().subtract(const Duration(days: 10));
+      s.cycleLength = 28;
+    }
+    // Init default medications based on phase
+    s.initDefaultMedications();
   }
 
   /// All available codes (for dev/debug display)

@@ -166,6 +166,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     final phase = _session.currentPhase;
     final isNadir = _session.isNadirWindow;
+    final isMonitoring = _session.isMonitoring;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -210,38 +211,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 margin: const EdgeInsets.fromLTRB(14, 14, 14, 0),
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: isNadir
-                      ? AppColors.peach.withOpacity(0.06)
-                      : AppColors.primary.withOpacity(0.05),
+                  color: isMonitoring
+                      ? AppColors.teal.withOpacity(0.06)
+                      : isNadir
+                          ? AppColors.peach.withOpacity(0.06)
+                          : AppColors.primary.withOpacity(0.05),
                   borderRadius: AppRadius.mdBR,
                   border: Border.all(
-                    color: isNadir
-                        ? AppColors.peach.withOpacity(0.25)
-                        : AppColors.primaryMid,
-                    width: 0.5),
-                ),
+                    color: isMonitoring
+                        ? AppColors.teal.withOpacity(0.25)
+                        : isNadir
+                            ? AppColors.peach.withOpacity(0.25)
+                            : AppColors.primaryMid,
+                    width: 0.5)),
                 child: Row(children: [
                   Container(
                     width: 36, height: 36,
                     decoration: BoxDecoration(
-                      color: isNadir
-                          ? AppColors.peachLight
-                          : AppColors.primaryLight,
+                      color: isMonitoring
+                          ? AppColors.tealLight
+                          : isNadir
+                              ? AppColors.peachLight
+                              : AppColors.primaryLight,
                       borderRadius: AppRadius.smBR),
                     child: Center(child: Text(
-                      isNadir ? '⚠' : '💊',
+                      isMonitoring ? '🎗️' : isNadir ? '⚠' : '💊',
                       style: const TextStyle(fontSize: 16)))),
                   const SizedBox(width: 11),
                   Expanded(child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${_session.protocol.name} · Cycle ${_session.currentCycle} of ${_session.totalCycles} · Day ${_session.dayInCycle}',
+                        isMonitoring
+                            ? '${_session.daysCancerFree} days cancer-free'
+                            : '${_session.protocol.name} · Cycle ${_session.currentCycle} of ${_session.totalCycles} · Day ${_session.dayInCycle}',
                         style: AppText.bodySemibold.copyWith(
-                          color: isNadir ? AppColors.peach : AppColors.primary,
+                          color: isMonitoring
+                              ? AppColors.teal
+                              : isNadir ? AppColors.peach : AppColors.primary,
                           fontSize: 13)),
                       const SizedBox(height: 2),
-                      Text(phase.name,
+                      Text(
+                        isMonitoring
+                            ? 'Monitoring & surveillance'
+                            : phase.name,
                         style: AppText.bodySecondary.copyWith(fontSize: 12)),
                     ],
                   )),
@@ -264,33 +277,79 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SectionLabel('Treatment journey'),
               _infoRow('Treatment phase', _session.treatmentPhase),
 
-              // Protocol — tappable
-              _editableRow(
-                label: 'Protocol',
-                value: '${_session.protocol.name}${_session.isTaxolPhase ? ' (Taxol phase)' : ''}',
-                subtitle: _session.protocol.fullName,
-                onTap: _showProtocolPicker,
-                color: AppColors.primary,
-              ),
+              // Monitoring-specific fields
+              if (isMonitoring) ...[
+                _editableRow(
+                  label: 'Menstrual status',
+                  value: _menstrualStatusLabel(_session.menstrualStatus),
+                  subtitle: 'Affects scan timing guidance',
+                  onTap: _showMenstrualStatusPicker,
+                  color: AppColors.rose,
+                ),
+                if (_session.menstrualStatus == 'regular') ...[
+                  _editableRow(
+                    label: 'Cycle length',
+                    value: '${_session.cycleLength} days',
+                    subtitle: 'Average cycle duration',
+                    onTap: _showCycleLengthPicker,
+                    color: AppColors.primary,
+                  ),
+                ],
+                GestureDetector(
+                  onTap: () => context.push('/monitoring/cycle-tracker'),
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(14, 0, 14, 7),
+                    padding: const EdgeInsets.all(13),
+                    decoration: BoxDecoration(
+                      color: AppColors.teal.withOpacity(0.05),
+                      borderRadius: AppRadius.mdBR,
+                      border: Border.all(
+                        color: AppColors.teal.withOpacity(0.2), width: 0.5)),
+                    child: Row(children: [
+                      const Text('🌸', style: TextStyle(fontSize: 16)),
+                      const SizedBox(width: 10),
+                      Expanded(child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Cycle & scan tracker',
+                            style: AppText.bodySemibold),
+                          Text('Track periods · Plan scan appointments',
+                            style: AppText.bodySecondary.copyWith(
+                              fontSize: 12)),
+                        ],
+                      )),
+                      Icon(Icons.chevron_right_rounded,
+                        size: 16, color: AppColors.teal),
+                    ]),
+                  ),
+                ),
+              ],
 
-              // Cycle — tappable
-              _editableRow(
-                label: 'Current cycle',
-                value: 'Cycle ${_session.currentCycle} of ${_session.totalCycles}',
-                subtitle: 'Tap to update',
-                onTap: _showCyclePicker,
-                color: AppColors.blue,
-              ),
-
-              // Day in cycle — tappable (most important)
-              _editableRow(
-                label: 'Day in cycle',
-                value: 'Day ${_session.dayInCycle} of $_maxDay',
-                subtitle: phase.name,
-                onTap: _showDayPicker,
-                color: isNadir ? AppColors.peach : AppColors.teal,
-                highlight: true,
-              ),
+              // Chemo-specific fields
+              if (!isMonitoring) ...[
+                _editableRow(
+                  label: 'Protocol',
+                  value: '${_session.protocol.name}${_session.isTaxolPhase ? ' (Taxol phase)' : ''}',
+                  subtitle: _session.protocol.fullName,
+                  onTap: _showProtocolPicker,
+                  color: AppColors.primary,
+                ),
+                _editableRow(
+                  label: 'Current cycle',
+                  value: 'Cycle ${_session.currentCycle} of ${_session.totalCycles}',
+                  subtitle: 'Tap to update',
+                  onTap: _showCyclePicker,
+                  color: AppColors.blue,
+                ),
+                _editableRow(
+                  label: 'Day in cycle',
+                  value: 'Day ${_session.dayInCycle} of $_maxDay',
+                  subtitle: phase.name,
+                  onTap: _showDayPicker,
+                  color: isNadir ? AppColors.peach : AppColors.teal,
+                  highlight: true,
+                ),
+              ],
 
               // ── Settings ──────────────────────────────────────────────
               const SectionLabel('Settings'),
@@ -301,6 +360,137 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 24),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  String _menstrualStatusLabel(String status) {
+    const labels = {
+      'regular': '🔄 Regular cycles',
+      'irregular': '〰️ Irregular cycles',
+      'amenorrhea': '⏸️ No period yet',
+      'menopause': '🍂 Menopause',
+      'unknown': 'Not set',
+    };
+    return labels[status] ?? status;
+  }
+
+  void _showMenstrualStatusPicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        child: Column(mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Center(child: Container(width: 36, height: 4,
+            decoration: BoxDecoration(color: AppColors.border,
+              borderRadius: BorderRadius.circular(2)))),
+          const SizedBox(height: 16),
+          Text('MENSTRUAL STATUS',
+            style: AppText.label.copyWith(fontSize: 10)),
+          const SizedBox(height: 12),
+          ...[
+            ('regular', '🔄', 'Regular cycles'),
+            ('irregular', '〰️', 'Irregular cycles'),
+            ('amenorrhea', '⏸️', 'No period yet'),
+            ('menopause', '🍂', 'Menopause confirmed'),
+          ].map((opt) => GestureDetector(
+            onTap: () {
+              setState(() => _session.menstrualStatus = opt.$1);
+              Navigator.pop(context);
+            },
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 7),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _session.menstrualStatus == opt.$1
+                    ? AppColors.primaryLight : AppColors.surface,
+                borderRadius: AppRadius.mdBR,
+                border: Border.all(
+                  color: _session.menstrualStatus == opt.$1
+                      ? AppColors.primaryMid : AppColors.border,
+                  width: 0.5)),
+              child: Row(children: [
+                Text(opt.$2, style: const TextStyle(fontSize: 18)),
+                const SizedBox(width: 10),
+                Text(opt.$3, style: AppText.bodySemibold.copyWith(
+                  color: _session.menstrualStatus == opt.$1
+                      ? AppColors.primary : AppColors.text1)),
+                if (_session.menstrualStatus == opt.$1) ...[
+                  const Spacer(),
+                  const Icon(Icons.check_rounded,
+                    size: 16, color: AppColors.primary)],
+              ]),
+            ),
+          )),
+        ]),
+      ),
+    );
+  }
+
+  void _showCycleLengthPicker() {
+    int length = _session.cycleLength;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setS) => Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          child: Column(mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Center(child: Container(width: 36, height: 4,
+              decoration: BoxDecoration(color: AppColors.border,
+                borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 16),
+            Text('CYCLE LENGTH',
+              style: AppText.label.copyWith(fontSize: 10)),
+            const SizedBox(height: 16),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              GestureDetector(
+                onTap: () => setS(() => length = (length - 1).clamp(21, 45)),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight, shape: BoxShape.circle),
+                  child: const Icon(Icons.remove_rounded,
+                    size: 20, color: AppColors.primary))),
+              const SizedBox(width: 24),
+              Text('$length days',
+                style: AppText.statNumber.copyWith(
+                  color: AppColors.primary, fontSize: 24)),
+              const SizedBox(width: 24),
+              GestureDetector(
+                onTap: () => setS(() => length = (length + 1).clamp(21, 45)),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight, shape: BoxShape.circle),
+                  child: const Icon(Icons.add_rounded,
+                    size: 20, color: AppColors.primary))),
+            ]),
+            const SizedBox(height: 20),
+            GestureDetector(
+              onTap: () {
+                setState(() => _session.cycleLength = length);
+                Navigator.pop(context);
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: AppRadius.fullBR),
+                child: const Center(child: Text('Save',
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.white))))),
+          ]),
         ),
       ),
     );

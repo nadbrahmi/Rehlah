@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/shared_widgets.dart';
 import '../../../../core/utils/user_session.dart';
@@ -40,7 +41,9 @@ class _MyHealthJourneyState extends State<MyHealthJourneyScreen> {
     return Column(children: [
       AppHeader(
         title: 'My |Health',
-        subtitle: '${session.cancerType} · ${session.protocol.name} · Cycle ${session.currentCycle}',
+        subtitle: session.isMonitoring
+            ? '${session.cancerType} · Monitoring & surveillance'
+            : '${session.cancerType} · ${session.protocol.name} · Cycle ${session.currentCycle}',
       ),
       Padding(
         padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
@@ -81,6 +84,10 @@ class _MyHealthJourneyState extends State<MyHealthJourneyScreen> {
     final phase = session.currentPhase;
     final progress = session.currentCycle / session.totalCycles;
     final progressPct = (progress * 100).round();
+
+    if (session.isMonitoring) {
+      return _buildMonitoringJourney(session);
+    }
 
     return SingleChildScrollView(
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -298,5 +305,109 @@ class _MyHealthJourneyState extends State<MyHealthJourneyScreen> {
         ]),
       )),
     ]);
+  }
+
+  Widget _buildMonitoringJourney(UserSession session) {
+    final days = session.daysCancerFree;
+    final milestones = [
+      (0, 'Treatment completed 🎗️', 'The hardest chapter is behind you.', true),
+      (30, '1 month cancer-free', 'Your body begins to recover.', days >= 30),
+      (90, '3 months cancer-free', 'Energy and strength returning.', days >= 90),
+      (180, '6 months cancer-free', 'First surveillance scan done.', days >= 180),
+      (365, '1 year cancer-free 🌟', 'A major milestone.', days >= 365),
+      (730, '2 years cancer-free', 'Risk continues to drop.', days >= 730),
+      (1825, '5 years cancer-free 🏆', 'Considered cured for many cancers.', days >= 1825),
+      (3650, '10 years cancer-free 🥇', 'The ultimate milestone.', days >= 3650),
+    ];
+
+    final currentIdx = milestones.lastIndexWhere((m) => days >= m.$1);
+    final nextIdx = currentIdx + 1 < milestones.length ? currentIdx + 1 : -1;
+
+    return SingleChildScrollView(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        HeroCard(
+          gradientColors: const [
+            Color(0xFFC8E8D8), Color(0xFFCCC0EC), Color(0xFFC8E8D8)],
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            HeroPill('🎗️ Monitoring & surveillance'),
+            Row(children: [
+              Text('$days', style: AppText.statNumber.copyWith(fontSize: 36)),
+              const SizedBox(width: 8),
+              const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('days', style: TextStyle(fontFamily: 'Inter',
+                  fontSize: 14, color: AppColors.text2)),
+                Text('cancer-free', style: TextStyle(fontFamily: 'Inter',
+                  fontSize: 14, color: AppColors.text2)),
+              ]),
+            ]),
+            if (session.treatmentEndDate != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Since ${DateFormat('d MMMM yyyy').format(session.treatmentEndDate!)}',
+                style: AppText.bodySecondary.copyWith(fontSize: 12)),
+            ],
+            if (nextIdx >= 0) ...[
+              const SizedBox(height: 10),
+              Text(
+                'Next: ${milestones[nextIdx].$2} in ${milestones[nextIdx].$1 - days} days',
+                style: AppText.bodySecondary.copyWith(
+                  color: AppColors.teal, fontWeight: FontWeight.w500, fontSize: 12)),
+            ],
+          ]),
+        ),
+        if (session.menstrualStatus == 'regular' &&
+            session.nextOptimalWindowStart != null)
+          _buildScanWindowCard(session),
+        const SectionLabel('Your survivorship milestones'),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(children: milestones.asMap().entries.map((e) {
+            final i = e.key;
+            final m = e.value;
+            final isDone = m.$4;
+            final isCurrent = i == currentIdx;
+            final isNext = i == nextIdx;
+            return _milestoneRow(
+              isDone ? 'ms-done' : isCurrent ? 'ms-cur' : 'ms-fut',
+              m.$2, m.$3, null,
+              badge: isCurrent ? '← You are here' : isNext ? 'Next milestone' : null,
+              last: i == milestones.length - 1);
+          }).toList()),
+        ),
+        const SizedBox(height: 24),
+      ]),
+    );
+  }
+
+  Widget _buildScanWindowCard(UserSession session) {
+    final start = session.nextOptimalWindowStart!;
+    final end = session.nextOptimalWindowEnd!;
+    final isNow = start.isBefore(DateTime.now()) && end.isAfter(DateTime.now());
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: isNow
+            ? AppColors.teal.withOpacity(0.07)
+            : AppColors.primary.withOpacity(0.05),
+        borderRadius: AppRadius.mdBR,
+        border: Border.all(
+          color: isNow ? AppColors.teal.withOpacity(0.25) : AppColors.primaryMid,
+          width: 0.5)),
+      child: Row(children: [
+        Text(isNow ? '✅' : '📅', style: const TextStyle(fontSize: 18)),
+        const SizedBox(width: 10),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(isNow ? 'Optimal scan window — NOW' : 'Next optimal scan window',
+            style: AppText.bodySemibold.copyWith(
+              color: isNow ? AppColors.teal : AppColors.primary, fontSize: 13)),
+          Text(
+            '${DateFormat('d MMM').format(start)} – ${DateFormat('d MMM').format(end)} · Days 7–14',
+            style: AppText.bodySecondary.copyWith(fontSize: 12)),
+          Text('Best time for MRI and Mammogram',
+            style: AppText.caption.copyWith(color: AppColors.text3, fontSize: 10)),
+        ])),
+      ]),
+    );
   }
 }

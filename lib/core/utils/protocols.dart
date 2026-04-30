@@ -609,3 +609,82 @@ class ProtocolResolver {
     return '${protocol.name} · Cycle $currentCycle of $totalCycles · ${phase.description}';
   }
 }
+
+// ── Monitoring & Surveillance symptom library ─────────────────────────────────
+class MonitoringSymptomLibrary {
+  static const anxiety = ProtocolSymptom(
+    key: 'anxiety', label: 'Anxiety / scanxiety', arabicLabel: 'قلق', emoji: '💜',
+    tip: 'Scanxiety is normal and valid. Mindfulness, talking to someone who understands, and limiting scan-related searches can help.',
+    interferenceQuestion: 'Is anxiety affecting your sleep or daily life?',
+    isInverted: true,
+  );
+  static const fatigue = ProtocolSymptom(
+    key: 'fatigue', label: 'Fatigue', arabicLabel: 'إرهاق', emoji: '🌙',
+    tip: 'Post-treatment fatigue can last months. Gentle daily movement and good sleep hygiene help more than rest alone.',
+    interferenceQuestion: 'Does fatigue stop you doing normal activities?',
+  );
+  static const jointPain = ProtocolSymptom(
+    key: 'joint_pain', label: 'Joint / muscle pain', arabicLabel: 'آلام المفاصل', emoji: '🦴',
+    tip: 'Common with aromatase inhibitors. Gentle movement, warm baths, and anti-inflammatory foods can help. Tell your team if severe.',
+    interferenceQuestion: 'Does joint pain limit your movement?',
+  );
+  static const hotFlashes = ProtocolSymptom(
+    key: 'hot_flashes', label: 'Hot flashes', arabicLabel: 'هبات حرارية', emoji: '🌡️',
+    tip: 'Triggered by hormone therapy. Layering clothing, cooling sprays, and avoiding triggers (caffeine, spicy food) can reduce frequency.',
+    interferenceQuestion: 'How many hot flashes per day?',
+  );
+  static const nightSweats = ProtocolSymptom(
+    key: 'night_sweats', label: 'Night sweats', arabicLabel: 'تعرق ليلي', emoji: '🌙',
+    tip: 'Light breathable bedding and keeping the room cool helps. If severe, ask about management options.',
+    interferenceQuestion: 'Do night sweats disrupt your sleep?',
+  );
+  static const cognitiveFog = ProtocolSymptom(
+    key: 'cognitive_fog', label: 'Cognitive fog', arabicLabel: 'ضباب ذهني', emoji: '🧠',
+    tip: 'Chemo brain is real. Mental exercises, good sleep, and reduced stress all help. It usually improves over time.',
+    interferenceQuestion: 'Does brain fog affect your work or daily tasks?',
+  );
+  static const sleep = ProtocolSymptom(
+    key: 'sleep', label: 'Sleep quality', arabicLabel: 'جودة النوم', emoji: '😴',
+    tip: 'Consistent sleep schedule and avoiding screens before bed helps. Anxiety and hot flashes often disturb sleep.',
+    interferenceQuestion: 'How many hours of sleep are you getting?',
+  );
+  static const mood = ProtocolSymptom(
+    key: 'mood', label: 'Mood / depression', arabicLabel: 'المزاج', emoji: '💙',
+    tip: 'Post-treatment emotional challenges are common and valid. Support groups, therapy, and talking to survivors all help.',
+    isInverted: true,
+    interferenceQuestion: 'Is your mood affecting relationships or daily life?',
+  );
+  static const vaginalDiscomfort = ProtocolSymptom(
+    key: 'vaginal_discomfort', label: 'Vaginal dryness / discomfort', arabicLabel: 'جفاف مهبلي', emoji: '🌸',
+    tip: 'Very common with hormone therapy. Non-hormonal lubricants and moisturisers help. Ask your gynaecologist.',
+    interferenceQuestion: 'Is this affecting your quality of life?',
+  );
+  static const weightChanges = ProtocolSymptom(
+    key: 'weight', label: 'Weight changes', arabicLabel: 'تغيرات الوزن', emoji: '⚖️',
+    tip: 'Common after treatment. A dietitian can help with strategies for hormone therapy-related weight changes.',
+    interferenceQuestion: 'Has weight changed more than 2kg recently?',
+  );
+  static const bodyImage = ProtocolSymptom(
+    key: 'body_image', label: 'Body image / confidence', arabicLabel: 'صورة الجسم', emoji: '🪞',
+    tip: 'Feeling differently about your body after treatment is common. Support groups and counselling can help process these feelings.',
+    isInverted: true,
+    interferenceQuestion: 'Is body image affecting your confidence or relationships?',
+  );
+
+  static const List<ProtocolSymptom> allSymptoms = [
+    anxiety, fatigue, jointPain, hotFlashes, nightSweats,
+    cognitiveFog, sleep, mood, vaginalDiscomfort, weightChanges, bodyImage,
+  ];
+
+  // Scanxiety period — scan within 14 days
+  static const List<ProtocolSymptom> scanxietySymptoms = [
+    anxiety, sleep, mood, fatigue,
+    hotFlashes, nightSweats, cognitiveFog,
+  ];
+
+  // Standard monitoring check-in
+  static const List<ProtocolSymptom> standardSymptoms = [
+    fatigue, jointPain, hotFlashes, nightSweats,
+    cognitiveFog, sleep, mood, vaginalDiscomfort,
+  ];
+}

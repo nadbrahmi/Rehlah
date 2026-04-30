@@ -65,7 +65,7 @@ class PrepReportScreen extends StatelessWidget {
     flags.sort((a, b) => b.avgScore.compareTo(a.avgScore));
 
     // ── Meds ──────────────────────────────────────────────────────────────
-    final totalMeds = MockData.medications.length;
+    final totalMeds = UserSession().medications.length;
     final medAdherence = session.adherencePct(totalMeds);
     final medsTodayTaken = session.medsTakenTodayCount;
 
@@ -332,7 +332,7 @@ class PrepReportScreen extends StatelessWidget {
               ]),
               const SizedBox(height: 10),
               // Med list
-              ...MockData.medications.map((m) => Padding(
+              ...UserSession().medications.map((m) => Padding(
                 padding: const EdgeInsets.only(bottom: 6),
                 child: Row(children: [
                   Text(m.emoji, style: const TextStyle(fontSize: 14)),

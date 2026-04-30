@@ -49,6 +49,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final today = DateTime.now();
     final dateStr = DateFormat('EEEE · d MMMM').format(today);
     final isInChemo = session.treatmentPhase == 'In chemotherapy';
+    final isMonitoring = session.isMonitoring;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -62,15 +63,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           child: CustomScrollView(slivers: [
             SliverToBoxAdapter(child: _buildHeader(context, session, dateStr)),
             SliverToBoxAdapter(child: _buildHeroCard(context, session)),
-            // Only show chemo-specific cards if in chemotherapy
+            // Monitoring cards
+            if (isMonitoring) ...[
+              if (session.daysCancerFree > 0)
+                SliverToBoxAdapter(child: _buildCancerFreeCard(session)),
+              if (session.isScanxietyPeriod)
+                SliverToBoxAdapter(child: _buildScanxietyCard(session)),
+              SliverToBoxAdapter(child: _buildLastControlsCard(session)),
+              SliverToBoxAdapter(child: _buildCycleTrackerCard(context, session)),
+              if (session.menstrualStatus == 'regular' &&
+                  session.nextOptimalWindowStart != null)
+                SliverToBoxAdapter(child: _buildScanWindowCard(session)),
+            ],
+            // Chemo-specific cards
             if (isInChemo && session.isNadirWindow)
               SliverToBoxAdapter(child: _buildNadirCard(session)),
             if (isInChemo && session.isNadirApproaching && !session.isNadirWindow)
               SliverToBoxAdapter(child: _buildNadirApproachingCard()),
-            // Phase card — different content based on phase
+            // Phase card
             SliverToBoxAdapter(child: isInChemo
                 ? _buildPhaseCard(session)
-                : _buildJourneyCard(session)),
+                : isMonitoring
+                    ? const SizedBox.shrink()
+                    : _buildJourneyCard(session)),
             SliverToBoxAdapter(child: _buildMoodRecap(session)),
             SliverToBoxAdapter(child: const SectionLabel('Quick access')),
             SliverToBoxAdapter(child: _buildQuickTiles(context, session)),
@@ -190,6 +205,250 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           Text('Your WBC count will reach its lowest in 1–2 days. Start monitoring your temperature twice daily.',
             style: AppText.bodySecondary),
         ])),
+      ]),
+    );
+  }
+
+  // ── Cancer-free counter card ───────────────────────────────────────────────
+  Widget _buildCancerFreeCard(UserSession session) {
+    final days = session.daysCancerFree;
+    final years = days ~/ 365;
+    final months = (days % 365) ~/ 30;
+    String label;
+    if (years > 0) {
+      label = months > 0
+          ? '$years year${years > 1 ? 's' : ''}, $months month${months > 1 ? 's' : ''} cancer-free'
+          : '$years year${years > 1 ? 's' : ''} cancer-free';
+    } else if (months > 0) {
+      label = '$months month${months > 1 ? 's' : ''} cancer-free';
+    } else {
+      label = '$days days cancer-free';
+    }
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.teal.withOpacity(0.12),
+            AppColors.primary.withOpacity(0.08)],
+          begin: Alignment.topLeft, end: Alignment.bottomRight),
+        borderRadius: AppRadius.mdBR,
+        border: Border.all(
+          color: AppColors.teal.withOpacity(0.25), width: 0.5)),
+      child: Row(children: [
+        Container(
+          width: 44, height: 44,
+          decoration: BoxDecoration(
+            color: AppColors.teal.withOpacity(0.15),
+            shape: BoxShape.circle),
+          child: const Center(child: Text('🎗️',
+            style: TextStyle(fontSize: 22)))),
+        const SizedBox(width: 12),
+        Expanded(child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: AppText.bodySemibold.copyWith(
+              color: AppColors.teal, fontSize: 14)),
+            Text('Every day is a milestone. Keep going.',
+              style: AppText.bodySecondary.copyWith(fontSize: 12)),
+          ],
+        )),
+        Text('$days', style: AppText.statNumber.copyWith(
+          color: AppColors.teal.withOpacity(0.4), fontSize: 20)),
+      ]),
+    );
+  }
+
+  // ── Scanxiety card ────────────────────────────────────────────────────────
+  Widget _buildScanxietyCard(UserSession session) {
+    final next = session.nextControl;
+    final days = next?.nextScheduled?.difference(DateTime.now()).inDays ?? 0;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: AppColors.gold.withOpacity(0.07),
+        borderRadius: AppRadius.mdBR,
+        border: Border.all(
+          color: AppColors.gold.withOpacity(0.25), width: 0.5)),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('⚡', style: TextStyle(fontSize: 18)),
+        const SizedBox(width: 10),
+        Expanded(child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${next?.typeLabel ?? 'Scan'} in $days day${days != 1 ? 's' : ''}',
+              style: AppText.bodySemibold.copyWith(color: AppColors.gold)),
+            const SizedBox(height: 3),
+            Text(
+              'Scanxiety is normal. Talking to someone who\'s been through it helps.',
+              style: AppText.bodySecondary.copyWith(fontSize: 12, height: 1.5)),
+          ],
+        )),
+      ]),
+    );
+  }
+
+  // ── Last controls card ────────────────────────────────────────────────────
+  Widget _buildLastControlsCard(UserSession session) {
+    final types = ['mammogram', 'mri', 'oncology', 'gynecology'];
+    final hasAny = types.any((t) => session.lastControlOfType(t) != null);
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: AppRadius.mdBR,
+        border: Border.all(color: AppColors.border, width: 0.5)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text('LAST CONTROLS', style: AppText.label.copyWith(fontSize: 10)),
+          Text('→ Add control',
+            style: AppText.caption.copyWith(
+              color: AppColors.primary, fontWeight: FontWeight.w500,
+              fontSize: 11)),
+        ]),
+        const SizedBox(height: 10),
+        if (!hasAny)
+          Text('No controls logged yet. Add your first one.',
+            style: AppText.bodySecondary.copyWith(
+              fontStyle: FontStyle.italic, fontSize: 12))
+        else
+          ...types.map((type) {
+            final last = session.lastControlOfType(type);
+            if (last == null) return const SizedBox.shrink();
+            final overdue = last.nextScheduled != null &&
+                last.nextScheduled!.isBefore(DateTime.now());
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 7),
+              child: Row(children: [
+                Text(last.typeEmoji,
+                  style: const TextStyle(fontSize: 14)),
+                const SizedBox(width: 8),
+                Expanded(child: Text(last.typeLabel,
+                  style: AppText.bodySemibold.copyWith(fontSize: 12))),
+                Text(DateFormat('MMM yyyy').format(last.date),
+                  style: AppText.caption.copyWith(fontSize: 11)),
+                const SizedBox(width: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: overdue
+                        ? AppColors.roseLight
+                        : AppColors.tealLight,
+                    borderRadius: AppRadius.fullBR),
+                  child: Text(
+                    overdue ? 'Overdue' : last.resultLabel,
+                    style: AppText.caption.copyWith(
+                      fontSize: 9,
+                      color: overdue ? AppColors.rose : AppColors.teal))),
+              ]),
+            );
+          }),
+      ]),
+    );
+  }
+
+  // ── Cycle tracker card ────────────────────────────────────────────────────
+  Widget _buildCycleTrackerCard(BuildContext context, UserSession session) {
+    final hasData = session.lastPeriodDate != null;
+    DateTime? nextPeriod;
+    if (hasData) {
+      nextPeriod = session.lastPeriodDate!.add(
+        Duration(days: session.cycleLength));
+      while (nextPeriod!.isBefore(DateTime.now())) {
+        nextPeriod = nextPeriod.add(Duration(days: session.cycleLength));
+      }
+    }
+    final daysUntil = nextPeriod != null
+        ? nextPeriod.difference(DateTime.now()).inDays : null;
+
+    return GestureDetector(
+      onTap: () => context.push('/monitoring/cycle-tracker'),
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: AppRadius.mdBR,
+          border: Border.all(color: AppColors.border, width: 0.5)),
+        child: Row(children: [
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.rose.withOpacity(0.10),
+              borderRadius: AppRadius.smBR),
+            child: const Center(child: Text('🌸',
+              style: TextStyle(fontSize: 18)))),
+          const SizedBox(width: 11),
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Cycle & scan tracker',
+                style: AppText.bodySemibold),
+              Text(
+                hasData && daysUntil != null
+                    ? 'Next period in $daysUntil days · Tap to view scan calendar'
+                    : 'Track your cycle · Plan your scans',
+                style: AppText.bodySecondary.copyWith(fontSize: 12)),
+            ],
+          )),
+          Icon(Icons.chevron_right_rounded, size: 18,
+            color: AppColors.text3),
+        ]),
+      ),
+    );
+  }
+
+  // ── Scan window card ──────────────────────────────────────────────────────
+  Widget _buildScanWindowCard(UserSession session) {
+    final start = session.nextOptimalWindowStart!;
+    final end = session.nextOptimalWindowEnd!;
+    final now = DateTime.now();
+    final isNow = start.isBefore(now) && end.isAfter(now);
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: isNow
+            ? AppColors.teal.withOpacity(0.07)
+            : AppColors.primary.withOpacity(0.05),
+        borderRadius: AppRadius.mdBR,
+        border: Border.all(
+          color: isNow
+              ? AppColors.teal.withOpacity(0.25)
+              : AppColors.primaryMid,
+          width: 0.5)),
+      child: Row(children: [
+        Text(isNow ? '✅' : '📅',
+          style: const TextStyle(fontSize: 18)),
+        const SizedBox(width: 10),
+        Expanded(child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isNow
+                  ? 'Optimal scan window — NOW'
+                  : 'Next optimal scan window',
+              style: AppText.bodySemibold.copyWith(
+                color: isNow ? AppColors.teal : AppColors.primary,
+                fontSize: 13)),
+            const SizedBox(height: 2),
+            Text(
+              '${DateFormat('d MMM').format(start)} – ${DateFormat('d MMM').format(end)} · Days 7–14 of cycle',
+              style: AppText.bodySecondary.copyWith(fontSize: 12)),
+            const SizedBox(height: 2),
+            Text('Plan your MRI / Mammogram appointment during this window',
+              style: AppText.caption.copyWith(
+                color: AppColors.text3, fontSize: 10)),
+          ],
+        )),
       ]),
     );
   }
@@ -368,7 +627,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _TileData('Appointments', 'Next visit', Icons.calendar_month_rounded,
           AppColors.peachLight, AppColors.peach, '/care/appointments'),
       _TileData('Medications',
-          '${session.medsTakenTodayCount} of ${MockData.medications.length} done',
+          '${session.medsTakenTodayCount} of ${session.medications.length} done',
           Icons.medication_rounded,
           AppColors.tealLight, AppColors.teal, '/care/medications'),
     ];
@@ -403,10 +662,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   // ── Next appointment ──────────────────────────────────────────────────────
+  List<Appointment> _monitoringAppointments() {
+    final now = DateTime.now();
+    return [
+      Appointment(
+        id: 'mon1', title: 'Oncology surveillance review',
+        doctorName: 'Dr. Sarah Chen', location: 'Oncology Clinic',
+        dateTime: DateTime(now.year, now.month + 1, 15, 10, 30),
+      ),
+      Appointment(
+        id: 'mon2', title: 'Annual mammogram',
+        doctorName: 'Radiology Dept', location: 'Breast Imaging Centre',
+        dateTime: DateTime(now.year, now.month + 2, 8, 9, 0),
+      ),
+    ];
+  }
+
   Widget _buildNextAppointment(BuildContext context) {
-    // Use session data if available, otherwise show placeholder
     final session = UserSession();
-    final apt = MockData.appointments.first;
+    // Use monitoring appointments for monitoring patients
+    final appointments = session.isMonitoring
+        ? _monitoringAppointments()
+        : MockData.appointments;
+    final upcoming = appointments.where((a) => !a.isPast).toList();
+    if (upcoming.isEmpty) return const SizedBox.shrink();
+    final apt = upcoming.first;
 
     return GestureDetector(
       onTap: () => context.push('/care/appointments'),

@@ -85,20 +85,14 @@ class Medication {
   final String dose;
   final String frequency;
   final String emoji;
-  final bool takenToday;
-  final String? takenAt;
+  final String category; // 'hormone_therapy', 'chemo', 'supplement', 'symptomatic', 'other'
+  final String? notes;
 
   const Medication({
     required this.id, required this.name, required this.dose,
     required this.frequency, required this.emoji,
-    this.takenToday = false, this.takenAt,
+    this.category = 'other', this.notes,
   });
-
-  Medication copyWith({bool? takenToday, String? takenAt}) => Medication(
-    id: id, name: name, dose: dose, frequency: frequency, emoji: emoji,
-    takenToday: takenToday ?? this.takenToday,
-    takenAt: takenAt ?? this.takenAt,
-  );
 }
 
 class Appointment {
@@ -149,7 +143,7 @@ class UserProfile {
   });
 
   static UserProfile get sample => UserProfile(
-    name: 'Sarah',
+    name: 'Nadia',
     cancerType: 'Breast cancer',
     stage: 'Stage II',
     treatmentPhase: 'Chemotherapy',
@@ -195,21 +189,6 @@ abstract class MockData {
         LabMetric(name: 'Platelets', value: 195, unit: '×10³/µL',
             normalMin: 150, normalMax: 400, previousValue: 210),
       ],
-    ),
-  ];
-
-  static final medications = [
-    const Medication(
-      id: 'med1', name: 'Tamoxifen 20mg', dose: '1 tablet',
-      frequency: 'Daily', emoji: '💊', takenToday: true, takenAt: '8:02 AM',
-    ),
-    const Medication(
-      id: 'med2', name: 'Vitamin D 1000 IU', dose: '1 capsule',
-      frequency: 'Daily', emoji: '🌞', takenToday: true, takenAt: '8:02 AM',
-    ),
-    const Medication(
-      id: 'med3', name: 'Pain Relief 500mg', dose: 'As needed',
-      frequency: 'As needed', emoji: '🩹', takenToday: false,
     ),
   ];
 

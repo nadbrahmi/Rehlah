@@ -1,5 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
+import 'models.dart';
 import 'protocols.dart';
 
 // ── Check-in record ───────────────────────────────────────────────────────────
@@ -254,6 +256,142 @@ class UserSession extends ChangeNotifier {
     return parts.isEmpty ? 'no symptoms reported' : parts.join(', ');
   }
 
+  // ── Monitoring & Surveillance ─────────────────────────────────────────────
+  DateTime? treatmentEndDate;
+  String menstrualStatus = 'unknown';
+  DateTime? lastPeriodDate;
+  int cycleLength = 28;
+  final List<ControlRecord> _controls = [];
+
+  List<ControlRecord> get controls => List.unmodifiable(_controls);
+
+  void addControl(ControlRecord record) {
+    _controls.removeWhere((c) => c.id == record.id);
+    _controls.add(record);
+    _controls.sort((a, b) => b.date.compareTo(a.date));
+    _saveCount++;
+    notifyListeners();
+  }
+
+  int get daysCancerFree {
+    if (treatmentEndDate == null) return 0;
+    return DateTime.now().difference(treatmentEndDate!).inDays;
+  }
+
+  // Next optimal MRI/Mammogram window — looks ahead up to 6 months
+  // Best window is days 7-14 of cycle (follicular phase)
+  DateTime? get nextOptimalWindowStart {
+    if (menstrualStatus != 'regular') return null;
+    if (lastPeriodDate == null) return null;
+    final now = DateTime.now();
+    final sixMonthsAhead = now.add(const Duration(days: 180));
+    DateTime cycleStart = lastPeriodDate!;
+    // Advance to current cycle
+    while (cycleStart.add(Duration(days: cycleLength)).isBefore(now)) {
+      cycleStart = cycleStart.add(Duration(days: cycleLength));
+    }
+    // Find the best window that is at least 2 weeks away (planning ahead)
+    final planningStart = now.add(const Duration(days: 14));
+    while (cycleStart.isBefore(sixMonthsAhead)) {
+      final windowStart = cycleStart.add(const Duration(days: 6)); // day 7
+      final windowEnd = cycleStart.add(const Duration(days: 13)); // day 14
+      if (windowStart.isAfter(planningStart)) {
+        return windowStart;
+      }
+      cycleStart = cycleStart.add(Duration(days: cycleLength));
+    }
+    return null;
+  }
+
+  DateTime? get nextOptimalWindowEnd {
+    final start = nextOptimalWindowStart;
+    if (start == null) return null;
+    return start.add(const Duration(days: 7));
+  }
+
+  bool get isScanxietyPeriod {
+    final next = nextControl;
+    if (next?.nextScheduled == null) return false;
+    return next!.nextScheduled!.difference(DateTime.now()).inDays <= 14;
+  }
+
+  ControlRecord? get nextControl {
+    final upcoming = _controls
+        .where((c) => c.nextScheduled != null &&
+            c.nextScheduled!.isAfter(DateTime.now()))
+        .toList();
+    if (upcoming.isEmpty) return null;
+    upcoming.sort((a, b) => a.nextScheduled!.compareTo(b.nextScheduled!));
+    return upcoming.first;
+  }
+
+  ControlRecord? lastControlOfType(String type) {
+    final filtered = _controls.where((c) => c.type == type).toList();
+    if (filtered.isEmpty) return null;
+    filtered.sort((a, b) => b.date.compareTo(a.date));
+    return filtered.first;
+  }
+
+  bool get isMonitoring => treatmentPhase == 'Monitoring / surveillance';
+
+  // ── Medications ───────────────────────────────────────────────────────────
+  final List<Medication> _medications = [];
+
+  List<Medication> get medications => List.unmodifiable(_medications);
+
+  void initDefaultMedications() {
+    if (_medications.isNotEmpty) return;
+    if (isMonitoring) {
+      _medications.addAll([
+        Medication(id: 'med1', name: 'Tamoxifen 20mg',
+          dose: '1 tablet', frequency: 'Daily · Morning',
+          emoji: '💊', category: 'hormone_therapy'),
+        Medication(id: 'med2', name: 'Vitamin D 1000 IU',
+          dose: '1 capsule', frequency: 'Daily · With food',
+          emoji: '🌤️', category: 'supplement'),
+        Medication(id: 'med3', name: 'Calcium 500mg',
+          dose: '1 tablet', frequency: 'Twice daily',
+          emoji: '🦴', category: 'supplement'),
+      ]);
+    } else {
+      _medications.addAll([
+        Medication(id: 'med1', name: 'Tamoxifen 20mg',
+          dose: '1 tablet', frequency: 'Daily',
+          emoji: '💊', category: 'hormone_therapy'),
+        Medication(id: 'med2', name: 'Vitamin D 1000 IU',
+          dose: '1 capsule', frequency: 'Daily',
+          emoji: '🌤️', category: 'supplement'),
+        Medication(id: 'med3', name: 'Pain Relief 500mg',
+          dose: 'As needed', frequency: 'As needed',
+          emoji: '🩹', category: 'symptomatic'),
+      ]);
+    }
+  }
+
+  void addMedication(Medication med) {
+    _medications.removeWhere((m) => m.id == med.id);
+    _medications.add(med);
+    _saveCount++;
+    notifyListeners();
+  }
+
+  void removeMedication(String id) {
+    _medications.removeWhere((m) => m.id == id);
+    _medsAdherenceCount.remove(id);
+    _medsTakenToday.remove(id);
+    _saveCount++;
+    notifyListeners();
+  }
+
+  void updateMedication(Medication med) {
+    final idx = _medications.indexWhere((m) => m.id == med.id);
+    if (idx >= 0) {
+      _medications[idx] = med;
+      _saveCount++;
+      notifyListeners();
+    }
+  }
+
   // ── Greeting ─────────────────────────────────────────────────────────────
   String get greeting {
     final hour = DateTime.now().hour;
@@ -270,4 +408,71 @@ class DayMood {
   final bool hasData;
   const DayMood({
     required this.label, required this.emoji, required this.hasData});
+}
+
+// ── Control record ────────────────────────────────────────────────────────────
+class ControlRecord {
+  final String id;
+  final DateTime date;
+  final String type; // 'mammogram', 'mri', 'ultrasound', 'oncology', 'gynecology', 'dexa', 'echo'
+  final String result; // 'clear', 'follow_up', 'biopsy'
+  final String? doctor;
+  final String? location;
+  final String? notes;
+  final DateTime? nextScheduled;
+
+  const ControlRecord({
+    required this.id,
+    required this.date,
+    required this.type,
+    required this.result,
+    this.doctor,
+    this.location,
+    this.notes,
+    this.nextScheduled,
+  });
+
+  String get typeLabel {
+    const labels = {
+      'mammogram': 'Mammogram',
+      'mri': 'MRI',
+      'ultrasound': 'Ultrasound',
+      'oncology': 'Oncology review',
+      'gynecology': 'Gynecology review',
+      'dexa': 'Bone density (DEXA)',
+      'echo': 'Cardiac echo',
+    };
+    return labels[type] ?? type;
+  }
+
+  String get typeEmoji {
+    const emojis = {
+      'mammogram': '🎗️',
+      'mri': '🧲',
+      'ultrasound': '🔊',
+      'oncology': '👨‍⚕️',
+      'gynecology': '👩‍⚕️',
+      'dexa': '🦴',
+      'echo': '❤️',
+    };
+    return emojis[type] ?? '🏥';
+  }
+
+  String get resultLabel {
+    const labels = {
+      'clear': 'Clear ✓',
+      'follow_up': 'Follow-up needed',
+      'biopsy': 'Biopsy recommended',
+    };
+    return labels[result] ?? result;
+  }
+
+  Color get resultColor {
+    switch (result) {
+      case 'clear': return const Color(0xFF3DB87A);
+      case 'follow_up': return const Color(0xFFE09060);
+      case 'biopsy': return const Color(0xFFC04060);
+      default: return const Color(0xFF6858A0);
+    }
+  }
 }

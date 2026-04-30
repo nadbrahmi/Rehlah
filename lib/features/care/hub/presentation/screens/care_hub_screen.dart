@@ -134,7 +134,7 @@ class _MedBadgeState extends State<_MedBadge> {
   @override
   Widget build(BuildContext context) {
     final taken = UserSession().medsTakenTodayCount;
-    final total = MockData.medications.length;
+    final total = UserSession().medications.length;
     return PillBadge(
       text: taken == total && total > 0 ? 'All done ✓' : '$taken of $total',
       bg: taken == total && total > 0 ? AppColors.tealLight : AppColors.peachLight,

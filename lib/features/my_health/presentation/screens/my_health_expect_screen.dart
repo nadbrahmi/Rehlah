@@ -11,6 +11,16 @@ class MyHealthExpectScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = UserSession();
+
+    // Show monitoring-specific content for monitoring patients
+    if (session.isMonitoring) {
+      final content = _buildMonitoringExpect(session);
+      if (embedded) return content;
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(child: content));
+    }
+
     final phase = session.currentPhase;
     final isNadir = session.isNadirWindow;
     final isNadirApproaching = session.isNadirApproaching;
@@ -239,6 +249,130 @@ class MyHealthExpectScreen extends StatelessWidget {
           const SizedBox(height: 2),
           Text(body, style: AppText.bodySecondary),
         ])),
+      ]),
+    );
+  }
+
+  Widget _buildMonitoringExpect(UserSession session) {
+    final symptoms = MonitoringSymptomLibrary.allSymptoms;
+
+    return SingleChildScrollView(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+
+        // Hero card
+        HeroCard(
+          gradientColors: const [
+            Color(0xFFC8E8D8), Color(0xFFCCC0EC), Color(0xFFC8E8D8)],
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            HeroPill('🎗️ Monitoring & surveillance'),
+            Text(session.cancerType,
+              style: const TextStyle(fontFamily: 'Inter',
+                fontSize: 14, fontWeight: FontWeight.w500,
+                color: AppColors.text1)),
+            const SizedBox(height: 6),
+            Text(
+              session.menstrualStatus == 'regular'
+                  ? 'Menstrual cycles returned · Optimal scan timing available'
+                  : session.menstrualStatus == 'menopause'
+                      ? 'Post-menopausal · Any time is good for scans'
+                      : session.menstrualStatus == 'amenorrhea'
+                          ? 'Cycles not yet returned · Ask your team about scan timing'
+                          : 'Irregular cycles · Discuss scan timing with your oncologist',
+              style: AppText.bodySecondary.copyWith(fontSize: 12, height: 1.5)),
+          ]),
+        ),
+
+        // What to expect — hormone therapy side effects
+        const SectionLabel('What to expect — post-treatment'),
+        ...symptoms.take(5).map((s) => _buildExpectCard(
+            s.emoji, s.label, s.tip ?? 'Common after treatment. Track and discuss with your team.')),
+
+        // Scan timing guidance
+        const SectionLabel('Scan timing guidance'),
+        _buildScanTimingCard(session),
+
+        // Hormone therapy
+        const SectionLabel('Long-term hormone therapy'),
+        _buildExpectCard('💊', 'Tamoxifen / Aromatase inhibitors',
+          'Taken daily for 5–10 years. Joint pain, hot flashes, and mood changes are common. Never stop without telling your oncologist.'),
+        _buildExpectCard('🦴', 'Bone health',
+          'Aromatase inhibitors reduce bone density. DEXA scan every 1–2 years. Calcium and Vitamin D supplements often recommended.'),
+        _buildExpectCard('❤️', 'Cardiac monitoring',
+          'If you had Herceptin, regular echo or MUGA scans are needed to check heart function.'),
+
+        // When to contact
+        const SectionLabel('📞  When to contact your care team'),
+        _buildWhenToCall('New lump or breast change',
+          'Any new lump, skin change, nipple discharge, or asymmetry — contact your team same day.'),
+        _buildWhenToCall('Bone pain',
+          'Persistent bone pain, especially in back, hips, or ribs — needs investigation.'),
+        _buildWhenToCall('Unexplained weight loss',
+          'More than 5% of body weight without trying — report promptly.'),
+        _buildWhenToCall('Breathlessness or chest pain',
+          'Any new breathlessness or chest pain — contact your team or go to A&E.'),
+        _buildWhenToCall('Severe joint pain',
+          'If hormone therapy side effects are affecting your quality of life — dose adjustment may help.'),
+
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
+          child: Text(
+            'General information only — not a substitute for medical advice. '
+            'Always contact your care team with any concern.',
+            style: AppText.caption.copyWith(
+              fontSize: 12, fontStyle: FontStyle.italic),
+            textAlign: TextAlign.center),
+        ),
+      ]),
+    );
+  }
+
+  Widget _buildScanTimingCard(UserSession session) {
+    String guidance, detail;
+    Color color;
+
+    switch (session.menstrualStatus) {
+      case 'regular':
+        guidance = 'Best: Days 7–14 of your cycle';
+        detail = 'Breast tissue is least dense during the follicular phase, making abnormalities easier to detect on MRI and mammogram. Plan 6 months ahead.';
+        color = AppColors.teal;
+        break;
+      case 'irregular':
+        guidance = 'Discuss timing with your oncologist';
+        detail = 'With irregular cycles, your team will advise on the best approach — sometimes progesterone suppression is used before MRI.';
+        color = AppColors.peach;
+        break;
+      case 'amenorrhea':
+        guidance = 'Any time is acceptable';
+        detail = 'Without active cycles, there is no optimal window. Schedule whenever is convenient for you and your team.';
+        color = AppColors.primary;
+        break;
+      case 'menopause':
+        guidance = 'Any time — no restriction';
+        detail = 'Post-menopausal breast tissue is less dense. No cycle-based timing needed. Annual mammogram and MRI on schedule.';
+        color = AppColors.primary;
+        break;
+      default:
+        guidance = 'Ask your oncologist';
+        detail = 'Update your menstrual status in your profile to get personalised scan timing guidance.';
+        color = AppColors.text2;
+    }
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05),
+        borderRadius: AppRadius.mdBR,
+        border: Border.all(color: color.withOpacity(0.2), width: 0.5)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Text('📅', style: TextStyle(fontSize: 16)),
+          const SizedBox(width: 8),
+          Text(guidance, style: AppText.bodySemibold.copyWith(
+            color: color, fontSize: 13)),
+        ]),
+        const SizedBox(height: 6),
+        Text(detail, style: AppText.bodySecondary.copyWith(height: 1.5)),
       ]),
     );
   }
