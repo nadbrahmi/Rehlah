@@ -314,4 +314,42 @@ footer{background:var(--t1);color:white;padding:3rem 0 2rem}
     </div>
     <div class="market-grid">
       <div class="market-card"><div class="market-num">400K</div><div class="market-desc">Cancer patients across the GCC — each managing their illness with no structured support between clinical visits</div></div>
-      <div class="market-card"><div class="market-num">8M</div><div class="market-desc">Chronic 
+      <div class="market-card"><div class="market-num">8M</div><div class="market-desc">Chronic disease patients across the GCC — the platform Rehlah is building toward, condition by condition</div></div>
+      <div class="market-card"><div class="market-num">$2.1B</div><div class="market-desc">Total addressable market for clinical engagement infrastructure in Arabic healthcare</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="waitlist" id="waitlist">
+  <div class="waitlist-inner">
+    <h2>Launching October 2026 — Breast Cancer Awareness Month</h2>
+    <p>Join the waitlist for early access. For patients, caregivers, and hospital partners interested in the beta programme.</p>
+    <form id="wlForm" onsubmit="handleWL(event)">
+      <div class="waitlist-form">
+        <input type="email" class="waitlist-input" placeholder="Your email address" required>
+        <button type="submit" class="waitlist-btn">Request access</button>
+      </div>
+    </form>
+    <div class="waitlist-confirm" id="wlConfirm">✓ You are on the list. We will be in touch before October 2026.</div>
+    <div class="wl-tags"><span class="wl-tag">✓ No spam</span><span class="wl-tag">✓ Arabic &amp; English</span><span class="wl-tag">✓ Free for patients</span></div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">Rehlah<p>The Arabic clinical companion for cancer patients. Protocol-aware. Phase-sensitive. Always present.</p></div>
+    <div class="footer-links">
+      <div class="footer-col"><h4>Product</h4><ul><li><a href="#how-it-works">How it works</a></li><li><a href="#protocols">Protocols</a></li><li><a href="https://rehlah-app.lovable.app" target="_blank" rel="noopener noreferrer">Live app</a></li></ul></div>
+      <div class="footer-col"><h4>For hospitals</h4><ul><li><a href="#for-hospitals">Pre-visit reports</a></li><li><a href="#waitlist">Pilot programme</a></li><li><a href="mailto:nadia@rehlah.app">Contact us</a></li></ul></div>
+    </div>
+  </div>
+  <div class="footer-bottom"><span>© 2026 Rehlah. Abu Dhabi, UAE.</span><span>rehlah-app.lovable.app</span></div>
+</footer>
+
+<script>
+function handleWL(e){e.preventDefault();document.getElementById('wlForm').style.display='none';document.getElementById('wlConfirm').classList.add('on');}
+var obs=new IntersectionObserver(function(en){en.forEach(function(e){if(e.isIntersecting){e.target.style.opacity='1';e.target.style.transform='translateY(0)'}})},{threshold:0.1});
+document.querySelectorAll('.step,.proto-card,.market-card,.trust-item').forEach(function(el){el.style.opacity='0';el.style.transform='translateY(20px)';el.style.transition='opacity 0.6s ease,transform 0.6s ease';obs.observe(el);});
+</script>
+</body>
+</html>
