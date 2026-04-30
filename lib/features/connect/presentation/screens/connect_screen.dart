@@ -630,6 +630,21 @@ class _ConnectScreenState extends State<ConnectScreen> {
   }
 
   Widget _buildWeeklyPrompt() {
+    final phase = UserSession().currentPhase;
+    final isNadir = UserSession().isNadirWindow;
+
+    final prompts = {
+      'nadir': '"What\'s one small thing that helped you through a hard day?"',
+      'Peak nausea window': '"What food or drink actually worked for you this week?"',
+      'Recovery week': '"What\'s one thing your body can do today that it couldn\'t last week?"',
+      'Taxol infusion': '"What helped you mentally prepare for treatment day?"',
+      'default': '"What\'s one small thing that helped you through a hard day?"',
+    };
+
+    final prompt = isNadir
+        ? prompts['nadir']!
+        : prompts[phase.name] ?? prompts['default']!;
+
     return Container(
       margin: const EdgeInsets.fromLTRB(14, 8, 14, 8),
       padding: const EdgeInsets.all(13),
@@ -641,7 +656,7 @@ class _ConnectScreenState extends State<ConnectScreen> {
         Text('✦ THIS WEEK\'S PROMPT',
           style: AppText.label.copyWith(color: AppColors.blue)),
         const SizedBox(height: 5),
-        Text('"What\'s one small thing that helped you through a hard day?"',
+        Text(prompt,
           style: AppText.body.copyWith(color: AppColors.text1)),
         const SizedBox(height: 8),
         Container(

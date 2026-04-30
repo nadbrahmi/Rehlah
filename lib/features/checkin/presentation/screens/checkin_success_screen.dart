@@ -250,6 +250,21 @@ Rules:
               ),
               const SizedBox(height: 12),
               GestureDetector(
+                onTap: () => context.go('/care/appointments/prep'),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.blueLight,
+                    borderRadius: AppRadius.fullBR,
+                    border: Border.all(color: AppColors.blue.withOpacity(0.2), width: 0.5)),
+                  child: const Center(child: Text('View doctor-ready report →',
+                    style: TextStyle(fontFamily: 'Inter', fontSize: 13,
+                      fontWeight: FontWeight.w400, color: AppColors.blue))),
+                ),
+              ),
+              const SizedBox(height: 8),
+              GestureDetector(
                 onTap: () => context.go('/ai-chat'),
                 child: Container(
                   width: double.infinity,

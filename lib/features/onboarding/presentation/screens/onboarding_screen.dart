@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/user_session.dart';
 import '../../../../core/utils/protocols.dart';
+import '../../../../core/utils/invite_codes.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -79,6 +80,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   String get _firstName {
     final t = _nameController.text.trim();
     return t.isEmpty ? 'there' : t;
+  }
+
+  void _loadDemo() {
+    // Load DEMO invite code and go straight to dashboard
+    final profile = InviteCodes.validate('DEMO');
+    if (profile != null) {
+      InviteCodes.apply(profile);
+      context.go('/');
+    }
   }
 
   void _next() {
@@ -243,7 +253,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       _fpill(Icons.people_outline_rounded, AppColors.peachLight, AppColors.peach,
         'Community', 'of patients & survivors'),
       const SizedBox(height:24),
-      _ghost('Explore with sample data', _next),
+      _ghost('Explore with sample data', _loadDemo),
       const SizedBox(height:10),
       const Text('🔒 Your data stays yours. We never sell your health information.',
         textAlign: TextAlign.center,

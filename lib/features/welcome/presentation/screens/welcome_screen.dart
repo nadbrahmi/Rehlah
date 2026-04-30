@@ -44,6 +44,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
   void _setupManually() => context.go('/onboarding');
 
+  void _loadDemo() {
+    final profile = InviteCodes.validate('DEMO');
+    if (profile != null) {
+      InviteCodes.apply(profile);
+      context.go('/');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -155,6 +163,21 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                           color: AppColors.text3,
                           fontWeight: FontWeight.w300)),
                     ]),
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                // ── Explore with sample data ──────────────────────────────
+                GestureDetector(
+                  onTap: _loadDemo,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Center(child: Text('Explore with sample data →',
+                      style: TextStyle(fontFamily: 'Inter', fontSize: 13,
+                        color: AppColors.text3,
+                        fontWeight: FontWeight.w300))),
                   ),
                 ),
 
