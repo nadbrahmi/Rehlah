@@ -42,6 +42,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final session = UserSession();
     final today = DateTime.now();
     final dateStr = DateFormat('EEEE · d MMMM').format(today);
+    final isInChemo = session.treatmentPhase == 'In chemotherapy';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -55,11 +56,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           child: CustomScrollView(slivers: [
             SliverToBoxAdapter(child: _buildHeader(context, session, dateStr)),
             SliverToBoxAdapter(child: _buildHeroCard(context, session)),
-            if (session.isNadirWindow)
+            // Only show chemo-specific cards if in chemotherapy
+            if (isInChemo && session.isNadirWindow)
               SliverToBoxAdapter(child: _buildNadirCard(session)),
-            if (session.isNadirApproaching && !session.isNadirWindow)
+            if (isInChemo && session.isNadirApproaching && !session.isNadirWindow)
               SliverToBoxAdapter(child: _buildNadirApproachingCard()),
-            SliverToBoxAdapter(child: _buildPhaseCard(session)),
+            // Phase card — different content based on phase
+            SliverToBoxAdapter(child: isInChemo
+                ? _buildPhaseCard(session)
+                : _buildJourneyCard(session)),
             SliverToBoxAdapter(child: _buildMoodRecap(session)),
             SliverToBoxAdapter(child: const SectionLabel('Quick access')),
             SliverToBoxAdapter(child: _buildQuickTiles(context, session)),
@@ -113,6 +118,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Widget _buildHeroCard(BuildContext context, UserSession session) {
     final hasCheckedIn = session.checkedInToday;
     final streak = session.streak;
+    final isInChemo = session.treatmentPhase == 'In chemotherapy';
+
     return HeroCard(
       onTap: () => context.push('/checkin'),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -124,13 +131,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         RichText(text: TextSpan(
           style: AppText.bodySecondary,
           children: [
-            if (streak > 1) ...[
+            if (streak > 1)
               TextSpan(text: '🔥 $streak day streak · ',
                 style: AppText.bodySecondary.copyWith(
                   color: AppColors.primary, fontWeight: FontWeight.w500)),
-            ],
-            TextSpan(text:
-              '${session.protocol.name} · Cycle ${session.currentCycle} · Day ${session.dayInCycle}'),
+            if (isInChemo)
+              TextSpan(text:
+                '${session.protocol.name} · Cycle ${session.currentCycle} · Day ${session.dayInCycle}')
+            else
+              TextSpan(text: session.treatmentPhase),
           ],
         )),
         const SizedBox(height: 14),
@@ -179,7 +188,62 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  // ── Phase summary card ────────────────────────────────────────────────────
+  // ── Journey card (non-chemo patients) ────────────────────────────────────
+  Widget _buildJourneyCard(UserSession session) {
+    final phaseEmojis = {
+      'Just diagnosed': '🌱',
+      'Awaiting treatment plan': '📋',
+      'In radiotherapy': '⚡',
+      'Post-surgery recovery': '🌿',
+      'Monitoring / surveillance': '🔭',
+    };
+    final phaseMessages = {
+      'Just diagnosed':
+          'You\'ve taken the first and hardest step. Your care team is building your plan.',
+      'Awaiting treatment plan':
+          'Your oncologist is reviewing your case. Use this time to ask questions and prepare.',
+      'In radiotherapy':
+          'Radiotherapy is a daily commitment. Rest well between sessions.',
+      'Post-surgery recovery':
+          'Your body is healing. Rest, nutrition, and gentle movement all support recovery.',
+      'Monitoring / surveillance':
+          'Regular monitoring keeps you and your team informed. Each clear scan is a win.',
+    };
+    final emoji = phaseEmojis[session.treatmentPhase] ?? '💜';
+    final message = phaseMessages[session.treatmentPhase] ??
+        'You\'re on your journey. We\'re here every step of the way.';
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: AppRadius.mdBR,
+        border: Border.all(color: AppColors.border, width: 0.5)),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Container(
+          width: 36, height: 36,
+          decoration: BoxDecoration(
+            color: AppColors.primaryLight,
+            borderRadius: AppRadius.smBR),
+          child: Center(child: Text(emoji,
+            style: const TextStyle(fontSize: 18)))),
+        const SizedBox(width: 11),
+        Expanded(child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(session.treatmentPhase,
+              style: AppText.bodySemibold),
+            const SizedBox(height: 3),
+            Text(message,
+              style: AppText.bodySecondary.copyWith(height: 1.5)),
+          ],
+        )),
+      ]),
+    );
+  }
+
+  // ── Phase card (chemo patients only) ─────────────────────────────────────
   Widget _buildPhaseCard(UserSession session) {
     final phase = session.currentPhase;
     final progress = session.currentCycle / session.totalCycles;

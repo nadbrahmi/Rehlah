@@ -16,12 +16,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   int _whoIndex = 0;
   final _nameController = TextEditingController();
   int _typeIndex = 0;
-  int _protocolIndex = 0; // NEW
+  int _protocolIndex = 0;
+  int _cycleIndex = 0; // 0-based index into cycle list
+  int _dayIndex = 0;   // 0-based index (day = _dayIndex + 1)
   int _phaseIndex = 2;
   final Set<int> _notifSelected = {0, 1};
 
-  // Pages: 0=welcome, 1=who, 2=name, 3=type, 4=protocol(NEW), 5=phase, 6=notifs, 7=celebration
-  static const _totalSteps = 6; // dots show steps 1–6
+  // Pages: 0=welcome,1=who,2=name,3=type,4=phase,5=protocol,6=cycleday,7=notifs,8=celebration
+  static const _totalSteps = 7;
 
   final _cancerTypes = ['Breast','Lung','Colorectal','Leukemia','Lymphoma','Other'];
   final _cancerEmojis = ['🎀','🫁','🫀','🩸','💜','✦'];
@@ -70,7 +72,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     'Just diagnosed','Awaiting treatment plan','In chemotherapy',
     'In radiotherapy','Post-surgery recovery','Monitoring / surveillance'];
 
-  bool get _showProtocolStep => _typeIndex == 0; // Only for Breast cancer
+  bool get _showProtocolStep =>
+      _typeIndex == 0 && _phaseIndex == 2; // Breast + In chemotherapy
+  bool get _showCycleDayStep => _showProtocolStep;
 
   String get _firstName {
     final t = _nameController.text.trim();
@@ -78,36 +82,33 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _next() {
-    // Save data at each step
-    if (_page == 2) {
-      UserSession().name = _firstName;
-      UserSession().currentCycle = 1;
-      UserSession().dayInCycle = 1;
-    }
+    if (_page == 2) UserSession().name = _firstName;
     if (_page == 3) UserSession().cancerType = _cancerTypes[_typeIndex];
-    if (_page == 4 && _showProtocolStep) {
+    if (_page == 4) UserSession().treatmentPhase = _phases[_phaseIndex];
+    if (_page == 5 && _showProtocolStep) {
       final selected = _protocols[_protocolIndex].protocol;
       UserSession().protocol = selected;
-      // Set default total cycles per protocol
       switch (selected) {
-        case BreastProtocol.act:
-          UserSession().totalCycles = 8; // 4 AC + 4 Taxol
-          break;
-        case BreastProtocol.tc:
-          UserSession().totalCycles = 6;
-          break;
-        case BreastProtocol.cmf:
-          UserSession().totalCycles = 6;
-          break;
+        case BreastProtocol.act: UserSession().totalCycles = 8; break;
+        case BreastProtocol.tc:  UserSession().totalCycles = 6; break;
+        case BreastProtocol.cmf: UserSession().totalCycles = 6; break;
       }
     }
-    if (_page == 5) UserSession().treatmentPhase = _phases[_phaseIndex];
+    if (_page == 6 && _showCycleDayStep) {
+      UserSession().currentCycle = _cycleIndex + 1;
+      UserSession().dayInCycle = _dayIndex + 1;
+    }
 
-    // Skip protocol step if not breast cancer
     int nextPage = _page + 1;
-    if (_page == 3 && !_showProtocolStep) nextPage = 5;
+    // After phase (4): skip protocol+cycleday if not breast+chemo
+    if (_page == 4 && !_showProtocolStep) nextPage = 7;
+    // After protocol (5): go to cycleday
+    if (_page == 5 && _showProtocolStep) nextPage = 6;
+    if (_page == 5 && !_showProtocolStep) nextPage = 7;
+    // After cycleday (6): go to notifs
+    if (_page == 6) nextPage = 7;
 
-    if (nextPage <= 7) {
+    if (nextPage <= 8) {
       setState(() => _page = nextPage);
       _pageController.animateToPage(nextPage,
         duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
@@ -119,18 +120,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void _back() {
     if (_page > 0) {
       int prevPage = _page - 1;
-      // Skip protocol step when going back if not breast cancer
-      if (_page == 5 && !_showProtocolStep) prevPage = 3;
+      // From notifs (7): go back to cycleday or phase
+      if (_page == 7 && _showCycleDayStep) prevPage = 6;
+      if (_page == 7 && !_showProtocolStep) prevPage = 4;
+      // From cycleday (6): go to protocol
+      if (_page == 6) prevPage = 5;
+      // From protocol (5): go to phase
+      if (_page == 5) prevPage = 4;
       setState(() => _page = prevPage);
       _pageController.animateToPage(prevPage,
         duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
     }
   }
 
-  // Step label — accounts for skipped protocol step
+  // Step label — accounts for skipped steps
   String _stepLabel(int page) {
+    if (!_showProtocolStep && page >= 6) {
+      return 'Step ${page - 2} of ${_totalSteps - 2}';
+    }
     if (!_showProtocolStep && page >= 5) {
-      return 'Step ${page - 1} of ${_totalSteps - 1}';
+      return 'Step ${page - 2} of ${_totalSteps - 2}';
     }
     return 'Step ${page - 1} of $_totalSteps';
   }
@@ -153,19 +162,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             gradient: RadialGradient(colors: [
               AppColors.teal.withOpacity(0.08), Colors.transparent])))),
         SafeArea(child: Column(children: [
-          if (_page > 0 && _page < 7) _dots(),
+          if (_page > 0 && _page < 8) _dots(),
           Expanded(child: PageView(
             controller: _pageController,
             physics: const NeverScrollableScrollPhysics(),
             children: [
-              _welcome(),   // 0
-              _who(),       // 1
-              _name(),      // 2
-              _type(),      // 3
-              _protocol(),  // 4 — NEW
-              _phase(),     // 5
-              _notifs(),    // 6
-              _celebration(), // 7
+              _welcome(),     // 0
+              _who(),         // 1
+              _name(),        // 2
+              _type(),        // 3
+              _phase(),       // 4 ← MOVED UP
+              _protocol(),    // 5
+              _cycleDay(),    // 6
+              _notifs(),      // 7
+              _celebration(), // 8
             ],
           )),
         ])),
@@ -173,12 +183,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  // ── Progress dots (6 steps) ───────────────────────────────────────────────
   Widget _dots() {
-    final totalDots = _showProtocolStep ? 6 : 5;
+    final totalDots = _showProtocolStep ? _totalSteps : _totalSteps - 2;
     int activeDot = _page - 1;
-    // Adjust dot position when protocol step is skipped
-    if (!_showProtocolStep && _page >= 5) activeDot = _page - 2;
+    if (!_showProtocolStep && _page >= 6) activeDot = _page - 3;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -388,15 +396,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   // ── Page 4: Protocol (NEW) ────────────────────────────────────────────────
   Widget _protocol() {
-    // If not breast cancer, skip automatically
+    // If not breast+chemo, skip automatically
     if (!_showProtocolStep) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_page == 4) _next();
+        if (_page == 5) _next();
       });
       return const SizedBox.shrink();
     }
 
-    return _scaffold('Step 4 of $_totalSteps','Your chemo\n','protocol',
+    return _scaffold('Step 5 of $_totalSteps','Your chemo\n','protocol',
       'This lets us show you the right symptoms at the right time.',
       Column(children:[
         ...List.generate(_protocols.length,(i){
@@ -480,11 +488,163 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       _next, _back);
   }
 
-  // ── Page 5: Treatment Phase ───────────────────────────────────────────────
+  // ── Page 6: Cycle & Day ───────────────────────────────────────────────────
+  Widget _cycleDay() {
+    if (!_showProtocolStep) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_page == 6) _next();
+      });
+      return const SizedBox.shrink();
+    }
+
+    final totalCycles = UserSession().totalCycles;
+    final maxDay = UserSession().protocol == BreastProtocol.cmf ? 28 : 21;
+    final selectedCycle = _cycleIndex + 1;
+    final selectedDay = _dayIndex + 1;
+    final currentProtocol = UserSession().protocol;
+
+    return _scaffold('Step 6 of $_totalSteps', 'Where are you\nin your ', 'cycle?',
+      'This helps us show the right symptoms immediately.',
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+
+        // Cycle selector
+        Text('WHICH CYCLE ARE YOU ON?',
+          style: AppText.label.copyWith(fontSize: 10)),
+        const SizedBox(height: 10),
+        Wrap(spacing: 8, runSpacing: 8,
+          children: List.generate(totalCycles, (i) {
+            final cycle = i + 1;
+            final sel = _cycleIndex == i;
+            return GestureDetector(
+              onTap: () => setState(() => _cycleIndex = i),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 120),
+                width: 44, height: 44,
+                decoration: BoxDecoration(
+                  color: sel ? AppColors.primary : AppColors.surface,
+                  borderRadius: AppRadius.smBR,
+                  border: Border.all(
+                    color: sel ? AppColors.primary : AppColors.border,
+                    width: sel ? 2 : 0.5)),
+                child: Center(child: Text('$cycle',
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: sel ? Colors.white : AppColors.text2))),
+              ),
+            );
+          }),
+        ),
+
+        const SizedBox(height: 20),
+
+        // Day selector
+        Text('WHICH DAY OF CYCLE $selectedCycle?',
+          style: AppText.label.copyWith(fontSize: 10)),
+        const SizedBox(height: 6),
+
+        // Legend
+        Row(children: [
+          _dot(AppColors.primary, 'Selected'),
+          const SizedBox(width: 12),
+          _dot(AppColors.peach, 'Nadir days'),
+          const SizedBox(width: 12),
+          _dot(AppColors.background2, 'Normal'),
+        ]),
+        const SizedBox(height: 10),
+
+        // Day grid
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 7,
+            mainAxisSpacing: 5,
+            crossAxisSpacing: 5,
+            childAspectRatio: 1,
+          ),
+          itemCount: maxDay,
+          itemBuilder: (_, i) {
+            final day = i + 1;
+            final sel = _dayIndex == i;
+            final dayPhase = ProtocolResolver.resolve(
+              currentProtocol, day);
+            final isNadirDay = dayPhase.isNadir;
+
+            Color bg, textColor, borderColor;
+            if (sel) {
+              bg = AppColors.primary;
+              textColor = Colors.white;
+              borderColor = AppColors.primary;
+            } else if (isNadirDay) {
+              bg = AppColors.peachLight;
+              textColor = AppColors.peach;
+              borderColor = AppColors.peach.withOpacity(0.3);
+            } else {
+              bg = AppColors.background2;
+              textColor = AppColors.text2;
+              borderColor = AppColors.border;
+            }
+
+            return GestureDetector(
+              onTap: () => setState(() => _dayIndex = i),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 100),
+                decoration: BoxDecoration(
+                  color: bg,
+                  borderRadius: BorderRadius.circular(7),
+                  border: Border.all(color: borderColor, width: 0.5),
+                  boxShadow: sel ? [BoxShadow(
+                    color: AppColors.primary.withOpacity(0.3),
+                    blurRadius: 6)] : null),
+                child: Center(child: Text('$day',
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 11,
+                    fontWeight: sel ? FontWeight.w700 : FontWeight.w400,
+                    color: textColor))),
+              ),
+            );
+          },
+        ),
+
+        const SizedBox(height: 10),
+
+        // Current selection summary
+        Container(
+          padding: const EdgeInsets.all(11),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.05),
+            borderRadius: AppRadius.mdBR,
+            border: Border.all(color: AppColors.primaryMid, width: 0.5)),
+          child: Row(children: [
+            const Text('📍', style: TextStyle(fontSize: 16)),
+            const SizedBox(width: 8),
+            Expanded(child: RichText(text: TextSpan(
+              style: AppText.bodySecondary,
+              children: [
+                const TextSpan(text: 'You are on '),
+                TextSpan(text: 'Cycle $selectedCycle, Day $selectedDay',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primary)),
+                TextSpan(
+                  text: ' · ${ProtocolResolver.resolve(currentProtocol, selectedDay).name}'),
+              ],
+            ))),
+          ]),
+        ),
+      ]),
+      _next, _back);
+  }
+
+  Widget _dot(Color color, String label) => Row(children: [
+    Container(width: 8, height: 8,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+    const SizedBox(width: 4),
+    Text(label, style: AppText.caption.copyWith(fontSize: 10)),
+  ]);
+
+  // ── Page 6: Treatment Phase ───────────────────────────────────────────────
   Widget _phase() {
-    final stepNum = _showProtocolStep ? 5 : 4;
-    final totalNum = _showProtocolStep ? _totalSteps : _totalSteps - 1;
-    return _scaffold('Step $stepNum of $totalNum','Where are you\nin your ','journey?',
+    return _scaffold('Step 4 of $_totalSteps','Where are you\nin your ','journey?',
       "There's no wrong answer.",
       Column(children:List.generate(_phases.length,(i){
         final sel = _phaseIndex==i;
@@ -515,8 +675,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   // ── Page 6: Notifications ─────────────────────────────────────────────────
   Widget _notifs() {
     final n = _firstName;
-    final stepNum = _showProtocolStep ? 6 : 5;
-    final totalNum = _showProtocolStep ? _totalSteps : _totalSteps - 1;
+    final stepNum = _showProtocolStep ? 7 : 5;
+    final totalNum = _showProtocolStep ? _totalSteps : _totalSteps - 2;
     final items = [
       (Icons.notifications_outlined,AppColors.primaryLight,AppColors.primary,
           'Daily check-in reminder','A gentle nudge each morning'),
@@ -579,9 +739,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _celebration() {
     final name = UserSession().displayName;
     final type = _cancerTypes[_typeIndex];
-    final protocol = _showProtocolStep
-        ? _protocols[_protocolIndex]
-        : null;
+    final protocol = _showProtocolStep ? _protocols[_protocolIndex] : null;
+    final cycle = _cycleIndex + 1;
+    final day = _dayIndex + 1;
 
     return Column(children:[
       const SizedBox(height:60),
@@ -605,7 +765,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       Padding(padding:const EdgeInsets.symmetric(horizontal:40),
         child:Text(
           protocol != null
-              ? 'Your $type journey is set up for ${protocol.name} protocol. We\'re here every step of the way.'
+              ? 'Your $type journey is set up for ${protocol.name} · Cycle $cycle · Day $day. We\'re here every step of the way.'
               : 'Everything is personalised for your $type journey. We\'re here every step of the way.',
           textAlign:TextAlign.center,
           style:const TextStyle(fontFamily:'Inter',fontSize:14,
