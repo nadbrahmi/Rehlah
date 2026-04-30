@@ -43,7 +43,12 @@ class UserSession extends ChangeNotifier {
   UserSession._();
 
   // ── Onboarding ────────────────────────────────────────────────────────────
-  String name = 'there';
+  String _name = 'there';
+  String get name => _name;
+  set name(String value) {
+    _name = value;
+    notifyListeners();
+  }
   String cancerType = 'Breast cancer';
   String treatmentPhase = 'In chemotherapy';
   int whoIndex = 0;

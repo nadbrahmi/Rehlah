@@ -31,6 +31,77 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   int get _maxCycle => _session.totalCycles;
 
+  void _showNameEditor() {
+    final controller = TextEditingController(text: _session.name);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => Padding(
+        padding: EdgeInsets.fromLTRB(20, 16, 20,
+            MediaQuery.of(context).viewInsets.bottom + 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(child: Container(
+              width: 36, height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 16),
+            Text('UPDATE NAME', style: AppText.label.copyWith(fontSize: 10)),
+            const SizedBox(height: 8),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              textCapitalization: TextCapitalization.words,
+              style: const TextStyle(fontFamily: 'Inter', fontSize: 15,
+                color: AppColors.text1),
+              decoration: InputDecoration(
+                hintText: 'Your first name',
+                hintStyle: const TextStyle(color: AppColors.text3),
+                filled: true, fillColor: AppColors.background,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(13),
+                  borderSide: const BorderSide(color: AppColors.border, width: 0.5)),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(13),
+                  borderSide: const BorderSide(color: AppColors.border, width: 0.5)),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(13),
+                  borderSide: BorderSide(color: AppColors.primaryMid, width: 1.5))),
+            ),
+            const SizedBox(height: 14),
+            GestureDetector(
+              onTap: () {
+                final name = controller.text.trim();
+                if (name.isNotEmpty) {
+                  setState(() => _session.name = name);
+                }
+                Navigator.pop(context);
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(13),
+                  boxShadow: [BoxShadow(
+                    color: AppColors.primary.withOpacity(0.3),
+                    blurRadius: 10, offset: const Offset(0, 3))]),
+                child: const Center(child: Text('Save name',
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 15,
+                    fontWeight: FontWeight.w500, color: Colors.white)))),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showDayPicker() {
     showModalBottomSheet(
       context: context,
@@ -179,7 +250,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
               // ── Personal info ─────────────────────────────────────────
               const SectionLabel('Personal info'),
-              _infoRow('Name', _session.displayName),
+              _editableRow(
+                label: 'Name',
+                value: _session.displayName,
+                subtitle: 'Tap to update',
+                onTap: _showNameEditor,
+                color: AppColors.primary,
+                highlight: false,
+              ),
               _infoRow('Cancer type', _session.cancerType),
 
               // ── Treatment — editable ──────────────────────────────────

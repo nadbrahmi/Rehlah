@@ -4,7 +4,7 @@ import '../theme/app_theme.dart';
 import '../utils/user_session.dart';
 
 // ── App Header (used on all main screens) ────────────────────────────────────
-class AppHeader extends StatelessWidget {
+class AppHeader extends StatefulWidget {
   final String title;
   final String? subtitle;
   final bool showBack;
@@ -21,6 +21,25 @@ class AppHeader extends StatelessWidget {
   });
 
   @override
+  State<AppHeader> createState() => _AppHeaderState();
+}
+
+class _AppHeaderState extends State<AppHeader> {
+  @override
+  void initState() {
+    super.initState();
+    UserSession().addListener(_rebuild);
+  }
+
+  @override
+  void dispose() {
+    UserSession().removeListener(_rebuild);
+    super.dispose();
+  }
+
+  void _rebuild() { if (mounted) setState(() {}); }
+
+  @override
   Widget build(BuildContext context) {
     final session = UserSession();
     final initial = session.displayName.isNotEmpty
@@ -32,19 +51,19 @@ class AppHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (showBack)
+          if (widget.showBack)
             GestureDetector(
-              onTap: () => context.go(backRoute),
+              onTap: () => context.go(widget.backRoute),
               child: Row(children: [
                 Icon(Icons.arrow_back_ios_new_rounded, size: 15,
                   color: AppColors.text2.withOpacity(0.4)),
                 const SizedBox(width: 4),
-                Text(backLabel ?? 'Back',
+                Text(widget.backLabel ?? 'Back',
                   style: AppText.caption.copyWith(
                     color: AppColors.text2, fontSize: 11)),
               ]),
             ),
-          if (showBack) const SizedBox(height: 10),
+          if (widget.showBack) const SizedBox(height: 10),
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
@@ -54,18 +73,18 @@ class AppHeader extends StatelessWidget {
                   children: [
                     RichText(text: TextSpan(
                       style: AppText.displayTitle,
-                      children: title.contains('|')
+                      children: widget.title.contains('|')
                           ? [
-                              TextSpan(text: title.split('|')[0]),
-                              TextSpan(text: title.split('|')[1],
+                              TextSpan(text: widget.title.split('|')[0]),
+                              TextSpan(text: widget.title.split('|')[1],
                                 style: const TextStyle(fontWeight: FontWeight.w700)),
                             ]
-                          : [TextSpan(text: title,
+                          : [TextSpan(text: widget.title,
                               style: const TextStyle(fontWeight: FontWeight.w700))],
                     )),
-                    if (subtitle != null) ...[
+                    if (widget.subtitle != null) ...[
                       const SizedBox(height: 3),
-                      Text(subtitle!,
+                      Text(widget.subtitle!,
                         style: AppText.bodySecondary),
                     ],
                   ],
