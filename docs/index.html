@@ -1,237 +1,215 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rehlah — You are not alone between appointments</title>
 <meta name="description" content="Rehlah is the Arabic clinical companion built for cancer patients — protocol-aware, phase-sensitive, and always present between appointments.">
-<link href="https://api.fontshare.com/v2/css?f[]=zodiak@400,500,700&f[]=satoshi@300,400,500,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root,[data-theme="light"]{--color-bg:#f7f5f0;--color-surface:#faf9f6;--color-surface-2:#ffffff;--color-surface-offset:#ede9e3;--color-divider:#dcd8d1;--color-border:#d0ccc4;--color-text:#1e1b16;--color-text-muted:#6b6760;--color-text-faint:#b0ada7;--color-text-inverse:#faf9f6;--color-primary:#1a6b5e;--color-primary-hover:#155549;--color-primary-light:#e6f0ee;--color-accent:#c45c2a;--color-accent-light:#f7ede6;--shadow-sm:0 1px 3px oklch(0.2 0.01 80/0.06);--shadow-md:0 4px 16px oklch(0.2 0.01 80/0.08);--shadow-lg:0 12px 40px oklch(0.2 0.01 80/0.12);--radius-sm:0.375rem;--radius-md:0.5rem;--radius-lg:0.75rem;--radius-xl:1rem;--radius-2xl:1.5rem;--radius-full:9999px;--font-display:'Zodiak',Georgia,serif;--font-body:'Satoshi','Inter',sans-serif;--text-xs:clamp(0.75rem,0.7rem + 0.25vw,0.875rem);--text-sm:clamp(0.875rem,0.8rem + 0.35vw,1rem);--text-base:clamp(1rem,0.95rem + 0.25vw,1.125rem);--text-lg:clamp(1.125rem,1rem + 0.75vw,1.5rem);--text-xl:clamp(1.5rem,1.2rem + 1.25vw,2.25rem);--text-2xl:clamp(2rem,1.2rem + 2.5vw,3.5rem);--text-hero:clamp(2.8rem,1rem + 5.5vw,5.5rem);--space-1:0.25rem;--space-2:0.5rem;--space-3:0.75rem;--space-4:1rem;--space-5:1.25rem;--space-6:1.5rem;--space-8:2rem;--space-10:2.5rem;--space-12:3rem;--space-16:4rem;--space-20:5rem;--space-24:6rem;--transition:180ms cubic-bezier(0.16,1,0.3,1);--content-default:960px;--content-wide:1200px}
-[data-theme="dark"]{--color-bg:#141210;--color-surface:#1a1815;--color-surface-2:#1f1d1a;--color-surface-offset:#242119;--color-divider:#2a2723;--color-border:#353129;--color-text:#e8e4dc;--color-text-muted:#928e87;--color-text-faint:#5c5952;--color-text-inverse:#1a1815;--color-primary:#4a9e8e;--color-primary-hover:#3d8578;--color-primary-light:#1e2e2b;--color-accent:#e07040;--color-accent-light:#2a1e17;--shadow-sm:0 1px 3px oklch(0 0 0/0.2);--shadow-md:0 4px 16px oklch(0 0 0/0.3);--shadow-lg:0 12px 40px oklch(0 0 0/0.4)}
+:root{--bg:#F5F2FC;--bg2:#EDE8F8;--surface:#FFFFFF;--brd:rgba(123,92,196,0.13);--p:#7B5CC4;--pd:#5B3A9C;--pl:#EDE8F8;--pm:rgba(123,92,196,0.25);--pe:#E09060;--pel:#FEF2EA;--te:#3DB87A;--tel:#EAF8F0;--t1:#2A2040;--t2:#6858A0;--t3:#B8A8D8;--shadow-sm:0 2px 8px rgba(123,92,196,0.08);--shadow-md:0 8px 32px rgba(123,92,196,0.12);--shadow-lg:0 20px 60px rgba(123,92,196,0.18);--radius:16px;--radius-lg:24px;--radius-full:9999px;--font-display:'DM Serif Display',Georgia,serif;--font-body:'Inter',sans-serif;--transition:200ms cubic-bezier(0.16,1,0.3,1);--max-w:1160px}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{-webkit-font-smoothing:antialiased;scroll-behavior:smooth;scroll-padding-top:5rem}
-body{min-height:100dvh;font-family:var(--font-body);font-size:var(--text-base);color:var(--color-text);background:var(--color-bg);line-height:1.6;transition:background var(--transition),color var(--transition)}
-button{cursor:pointer;background:none;border:none;font:inherit;color:inherit}
-h1,h2,h3,h4{font-family:var(--font-display);text-wrap:balance;line-height:1.1}
-a{color:inherit;text-decoration:none;transition:color var(--transition)}
-.container{max-width:var(--content-default);margin-inline:auto;padding-inline:var(--space-6)}
-.container-wide{max-width:var(--content-wide);margin-inline:auto;padding-inline:var(--space-6)}
-section{padding-block:clamp(var(--space-16),8vw,var(--space-24))}
-nav{position:sticky;top:0;z-index:100;background:color-mix(in oklab,var(--color-bg) 90%,transparent);backdrop-filter:blur(16px);border-bottom:1px solid var(--color-divider);padding:var(--space-4) 0}
-.nav-inner{max-width:var(--content-wide);margin-inline:auto;padding-inline:var(--space-6);display:flex;align-items:center;justify-content:space-between;gap:var(--space-6)}
-.nav-logo{display:flex;align-items:center;gap:var(--space-3)}
-.nav-logo-text{font-family:var(--font-display);font-size:var(--text-lg);font-weight:700;letter-spacing:-0.02em}
-.nav-links{display:flex;align-items:center;gap:var(--space-6)}
-.nav-links a{font-size:var(--text-sm);color:var(--color-text-muted);font-weight:500}
-.nav-links a:hover{color:var(--color-text)}
-.nav-actions{display:flex;align-items:center;gap:var(--space-3)}
-.btn-theme{width:36px;height:36px;border-radius:var(--radius-full);display:flex;align-items:center;justify-content:center;color:var(--color-text-muted);transition:all var(--transition)}
-.btn-theme:hover{background:var(--color-surface-offset)}
-.btn-primary{background:var(--color-primary);color:var(--color-text-inverse);font-size:var(--text-sm);font-weight:600;padding:var(--space-2) var(--space-5);border-radius:var(--radius-full);transition:all var(--transition);white-space:nowrap}
-.btn-primary:hover{background:var(--color-primary-hover);transform:translateY(-1px);box-shadow:var(--shadow-md)}
-.hero{padding-block:clamp(var(--space-16),10vw,8rem);background:var(--color-bg);overflow:hidden;position:relative}
-.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 60% at 60% 40%,color-mix(in oklab,var(--color-primary) 8%,transparent),transparent 70%);pointer-events:none}
-.hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-12);align-items:center;position:relative}
-.hero-eyebrow{display:inline-flex;align-items:center;gap:var(--space-2);font-size:var(--text-xs);font-weight:600;color:var(--color-primary);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:var(--space-5)}
-.hero-eyebrow-dot{width:6px;height:6px;border-radius:50%;background:var(--color-primary);animation:pulse 2s ease-in-out infinite}
-@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.3)}}
-.hero h1{font-size:var(--text-hero);font-weight:700;letter-spacing:-0.03em;margin-bottom:var(--space-6);line-height:1.05}
-.hero h1 em{font-style:italic;color:var(--color-primary)}
-.hero-sub{font-size:var(--text-base);color:var(--color-text-muted);max-width:48ch;margin-bottom:var(--space-8);line-height:1.7}
-.hero-actions{display:flex;align-items:center;gap:var(--space-4);flex-wrap:wrap}
-.btn-hero{background:var(--color-primary);color:var(--color-text-inverse);font-size:var(--text-base);font-weight:600;padding:var(--space-3) var(--space-8);border-radius:var(--radius-full);transition:all var(--transition)}
-.btn-hero:hover{background:var(--color-primary-hover);transform:translateY(-2px);box-shadow:var(--shadow-lg)}
-.btn-hero-ghost{font-size:var(--text-base);font-weight:500;display:flex;align-items:center;gap:var(--space-2);padding:var(--space-3) var(--space-5);border-radius:var(--radius-full);border:1px solid var(--color-border);transition:all var(--transition)}
-.btn-hero-ghost:hover{background:var(--color-surface-offset)}
-.hero-stats{display:flex;gap:var(--space-8);margin-top:var(--space-10)}
-.stat{display:flex;flex-direction:column;gap:2px}
-.stat-value{font-family:var(--font-display);font-size:var(--text-xl);font-weight:700;letter-spacing:-0.02em}
-.stat-label{font-size:var(--text-xs);color:var(--color-text-muted);max-width:16ch;line-height:1.4}
-.phone-wrap{display:flex;justify-content:center;align-items:center}
-.phone{width:260px;background:var(--color-surface-2);border-radius:2.5rem;padding:var(--space-3);box-shadow:0 2px 8px oklch(0.2 0.01 80/0.08),0 32px 80px oklch(0.2 0.01 80/0.15),inset 0 0 0 1px var(--color-border);animation:float 4s ease-in-out infinite}
+html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased}
+body{font-family:var(--font-body);background:var(--bg);color:var(--t1);line-height:1.6}
+a{color:inherit;text-decoration:none}
+button{cursor:pointer;border:none;background:none;font:inherit}
+nav{position:sticky;top:0;z-index:100;background:rgba(245,242,252,0.88);backdrop-filter:blur(20px);border-bottom:1px solid var(--brd);padding:1rem 0}
+.nav-inner{max-width:var(--max-w);margin:0 auto;padding:0 2rem;display:flex;align-items:center;justify-content:space-between}
+.nav-logo{font-family:var(--font-display);font-size:1.5rem;color:var(--t1);display:flex;align-items:center;gap:0.5rem}
+.nav-logo-dot{width:8px;height:8px;border-radius:50%;background:var(--p);animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.4)}}
+.nav-links{display:flex;gap:2rem}
+.nav-links a{font-size:0.9rem;color:var(--t2);font-weight:500;transition:color var(--transition)}
+.nav-links a:hover{color:var(--p)}
+.btn-nav{background:var(--p);color:white;font-size:0.875rem;font-weight:600;padding:0.5rem 1.25rem;border-radius:var(--radius-full);transition:all var(--transition)}
+.btn-nav:hover{background:var(--pd);transform:translateY(-1px);box-shadow:var(--shadow-md)}
+.hero{padding:clamp(4rem,10vw,7rem) 0 clamp(3rem,6vw,5rem);overflow:hidden;position:relative}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 70% 60% at 65% 40%,rgba(123,92,196,0.1),transparent 70%);pointer-events:none}
+.hero-inner{max-width:var(--max-w);margin:0 auto;padding:0 2rem;display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center;position:relative}
+.hero-pill{display:inline-flex;align-items:center;gap:0.4rem;background:var(--pl);border:1px solid var(--pm);color:var(--pd);font-size:0.75rem;font-weight:600;padding:0.3rem 0.85rem;border-radius:var(--radius-full);margin-bottom:1.5rem;text-transform:uppercase;letter-spacing:0.06em}
+.hero h1{font-family:var(--font-display);font-size:clamp(2.8rem,5.5vw,4.8rem);line-height:1.05;letter-spacing:-0.02em;color:var(--t1);margin-bottom:1.25rem}
+.hero h1 em{color:var(--p);font-style:italic}
+.hero-sub{font-size:1.05rem;color:var(--t2);max-width:46ch;line-height:1.75;margin-bottom:2rem}
+.hero-actions{display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:2.5rem}
+.btn-primary{background:linear-gradient(135deg,var(--p),var(--pd));color:white;font-size:1rem;font-weight:600;padding:0.8rem 2rem;border-radius:var(--radius-full);transition:all var(--transition);box-shadow:0 4px 16px rgba(123,92,196,0.3)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(123,92,196,0.4)}
+.btn-ghost{font-size:0.95rem;font-weight:500;color:var(--t2);display:flex;align-items:center;gap:0.4rem;padding:0.8rem 1.25rem;border-radius:var(--radius-full);border:1px solid var(--brd);transition:all var(--transition);background:var(--surface)}
+.btn-ghost:hover{background:var(--pl);border-color:var(--pm);color:var(--p)}
+.hero-stats{display:flex;gap:2rem}
+.stat-val{font-family:var(--font-display);font-size:2rem;color:var(--p);letter-spacing:-0.02em}
+.stat-lbl{font-size:0.75rem;color:var(--t3);max-width:14ch;line-height:1.4;margin-top:2px}
+.phone-wrap{display:flex;justify-content:center}
+.phone{width:255px;background:white;border-radius:2.5rem;padding:0.6rem;box-shadow:0 4px 16px rgba(123,92,196,0.1),0 24px 64px rgba(123,92,196,0.18),inset 0 0 0 1px rgba(123,92,196,0.15);animation:float 4s ease-in-out infinite}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-.phone-screen{background:var(--color-bg);border-radius:2rem;overflow:hidden;padding:var(--space-5);min-height:460px}
-.phone-notch{width:80px;height:20px;background:var(--color-surface-2);border-radius:0 0 12px 12px;margin:0 auto var(--space-4)}
-.phone-greeting{font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:2px}
-.phone-name{font-family:var(--font-display);font-size:var(--text-lg);font-weight:700}
-.phone-badge{display:inline-flex;align-items:center;gap:var(--space-2);font-size:10px;font-weight:600;padding:3px 8px;border-radius:var(--radius-full);background:var(--color-primary-light);color:var(--color-primary);margin-top:var(--space-2)}
-.phone-alert{background:linear-gradient(135deg,#fff8f6,#fff3f0);border:1px solid #ffd4c2;border-radius:var(--radius-lg);padding:var(--space-4);margin-bottom:var(--space-4)}
-[data-theme="dark"] .phone-alert{background:linear-gradient(135deg,#2a1e18,#241a14);border-color:#5a3020}
-.phone-alert-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-accent);margin-bottom:var(--space-2);display:flex;align-items:center;gap:var(--space-1)}
-.phone-alert-msg{font-size:11px;font-weight:500;line-height:1.4}
-.phone-checkin{background:var(--color-primary-light);border-radius:var(--radius-lg);padding:var(--space-4);margin-bottom:var(--space-4)}
-.phone-checkin-label{font-size:10px;font-weight:600;color:var(--color-primary);margin-bottom:var(--space-2);text-transform:uppercase;letter-spacing:0.06em}
-.phone-checkin-q{font-size:11px;font-weight:500;margin-bottom:var(--space-3);line-height:1.4}
-.phone-scale{display:flex;gap:4px}
-.scale-dot{flex:1;height:6px;border-radius:3px;background:var(--color-divider)}
-.scale-dot.active{background:var(--color-primary)}
-.phone-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2)}
-.phone-tile{background:var(--color-surface);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;border:1px solid var(--color-divider)}
-.phone-tile-icon{font-size:18px;margin-bottom:3px}
-.phone-tile-label{font-size:9px;color:var(--color-text-muted);font-weight:500}
-.story-section{background:var(--color-surface)}
-.story-grid{display:grid;grid-template-columns:5fr 7fr;gap:var(--space-16);align-items:start}
-.story-label{font-size:var(--text-xs);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--color-primary);margin-bottom:var(--space-5)}
-.story-quote{font-family:var(--font-display);font-size:clamp(1.5rem,1.2rem + 1.5vw,2.5rem);font-weight:500;line-height:1.25;letter-spacing:-0.02em}
-.story-quote em{color:var(--color-primary);font-style:italic}
-.story-body p{font-size:var(--text-base);color:var(--color-text-muted);line-height:1.75;margin-bottom:var(--space-5);max-width:58ch}
-.story-body strong{color:var(--color-text);font-weight:600}
-.how-section{background:var(--color-bg)}
-.section-label{font-size:var(--text-xs);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--color-primary);margin-bottom:var(--space-4);text-align:center}
-.section-heading{font-family:var(--font-display);font-size:var(--text-2xl);text-align:center;letter-spacing:-0.02em;margin-bottom:var(--space-4)}
-.section-sub{font-size:var(--text-base);color:var(--color-text-muted);text-align:center;max-width:52ch;margin:0 auto var(--space-16);line-height:1.7}
-.steps-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-6)}
-.step-num{width:40px;height:40px;border-radius:var(--radius-full);background:var(--color-primary);color:var(--color-text-inverse);font-size:var(--text-sm);font-weight:700;display:flex;align-items:center;justify-content:center;margin-bottom:var(--space-5);font-family:var(--font-display)}
-.step h3{font-family:var(--font-display);font-size:var(--text-lg);margin-bottom:var(--space-3);font-weight:600}
-.step p{font-size:var(--text-sm);color:var(--color-text-muted);line-height:1.65}
-.protocols-section{background:var(--color-surface)}
-.protocols-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-5);margin-top:var(--space-12)}
-.protocol-card{background:var(--color-surface-2);border:1px solid var(--color-divider);border-radius:var(--radius-xl);padding:var(--space-8);transition:all var(--transition);box-shadow:var(--shadow-sm)}
-.protocol-card:hover{box-shadow:var(--shadow-md);transform:translateY(-3px)}
-.protocol-tag{display:inline-flex;align-items:center;font-size:var(--text-xs);font-weight:700;padding:var(--space-1) var(--space-3);border-radius:var(--radius-full);margin-bottom:var(--space-5)}
-.tag-green{background:var(--color-primary-light);color:var(--color-primary)}
-.tag-orange{background:var(--color-accent-light);color:var(--color-accent)}
-.tag-slate{background:var(--color-surface-offset);color:var(--color-text-muted)}
-.protocol-card h3{font-family:var(--font-display);font-size:var(--text-lg);margin-bottom:var(--space-2);font-weight:700}
-.protocol-subtitle{font-size:var(--text-xs);color:var(--color-text-muted);margin-bottom:var(--space-5);font-weight:500}
-.protocol-phases{display:flex;flex-direction:column;gap:var(--space-3)}
-.phase-item{display:flex;align-items:flex-start;gap:var(--space-3)}
-.phase-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:5px}
-.dot-primary{background:var(--color-primary)}
-.dot-accent{background:var(--color-accent)}
-.dot-muted{background:var(--color-text-faint)}
-.phase-text{font-size:var(--text-sm);color:var(--color-text-muted);line-height:1.5}
-.phase-text strong{color:var(--color-text);font-weight:600}
-.trust-section{background:var(--color-text);color:var(--color-bg);position:relative;overflow:hidden}
-[data-theme="dark"] .trust-section{background:var(--color-surface);color:var(--color-text)}
-.trust-section::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 70% at 20% 50%,color-mix(in oklab,var(--color-primary) 20%,transparent),transparent 70%);pointer-events:none}
-.trust-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-16);align-items:center;position:relative}
-.trust-label{font-size:var(--text-xs);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--color-primary);margin-bottom:var(--space-5)}
-.trust-heading{font-family:var(--font-display);font-size:var(--text-2xl);font-weight:700;letter-spacing:-0.02em;margin-bottom:var(--space-6);line-height:1.1}
-.trust-body{font-size:var(--text-base);opacity:0.75;line-height:1.7;max-width:48ch}
-.trust-items{display:flex;flex-direction:column;gap:var(--space-4)}
-.trust-item{display:flex;align-items:flex-start;gap:var(--space-4);padding:var(--space-5) var(--space-6);border-radius:var(--radius-lg);background:oklch(from var(--color-bg) l c h/0.06);border:1px solid oklch(from var(--color-bg) l c h/0.1)}
-[data-theme="dark"] .trust-item{background:var(--color-surface-offset);border-color:var(--color-border)}
-.trust-icon{width:36px;height:36px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px}
-.icon-check{background:color-mix(in oklab,var(--color-primary) 20%,transparent);color:var(--color-primary)}
-.icon-progress{background:color-mix(in oklab,var(--color-accent) 20%,transparent);color:var(--color-accent)}
-.trust-item-body h4{font-size:var(--text-sm);font-weight:600;margin-bottom:3px}
-.trust-item-body p{font-size:var(--text-xs);opacity:0.65;line-height:1.5}
-.knows-section{background:var(--color-bg)}
-.knows-grid{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-16);align-items:start}
-.knows-text h2{font-family:var(--font-display);font-size:var(--text-2xl);letter-spacing:-0.02em;margin-bottom:var(--space-6);line-height:1.1}
-.knows-text p{font-size:var(--text-base);color:var(--color-text-muted);line-height:1.75;margin-bottom:var(--space-5);max-width:50ch}
-.knows-list{display:flex;flex-direction:column;gap:var(--space-3);margin-top:var(--space-6)}
-.knows-item{display:flex;align-items:center;gap:var(--space-3);font-size:var(--text-sm);color:var(--color-text-muted)}
-.knows-item::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--color-primary);flex-shrink:0}
-.knows-item strong{color:var(--color-text);font-weight:600}
-.report-card{background:var(--color-surface-2);border:1px solid var(--color-divider);border-radius:var(--radius-2xl);padding:var(--space-8);box-shadow:var(--shadow-lg)}
-.report-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-6);padding-bottom:var(--space-5);border-bottom:1px solid var(--color-divider)}
-.report-title{font-family:var(--font-display);font-size:var(--text-base);font-weight:700}
-.report-badge{font-size:10px;font-weight:700;padding:3px 8px;border-radius:var(--radius-full);background:var(--color-primary-light);color:var(--color-primary)}
-.report-row{display:flex;justify-content:space-between;align-items:center;padding:var(--space-4) 0;border-bottom:1px solid var(--color-divider)}
-.report-row:last-child{border-bottom:none}
-.report-row-label{font-size:var(--text-xs);color:var(--color-text-muted);font-weight:500}
-.report-row-val{font-size:var(--text-sm);font-weight:600}
-.badge-ok{background:color-mix(in oklab,#437a22 15%,transparent);color:#437a22;padding:2px 8px;border-radius:var(--radius-full);font-size:10px;font-weight:700}
-.badge-warn{background:color-mix(in oklab,var(--color-accent) 15%,transparent);color:var(--color-accent);padding:2px 8px;border-radius:var(--radius-full);font-size:10px;font-weight:700}
-.market-section{background:var(--color-surface)}
-.market-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-5);margin-top:var(--space-12)}
-.market-card{background:var(--color-bg);border:1px solid var(--color-divider);border-radius:var(--radius-xl);padding:var(--space-8)}
-.market-num{font-family:var(--font-display);font-size:var(--text-2xl);font-weight:700;color:var(--color-primary);letter-spacing:-0.03em;margin-bottom:var(--space-2)}
-.market-desc{font-size:var(--text-sm);color:var(--color-text-muted);line-height:1.6}
-.waitlist-section{background:var(--color-primary);color:var(--color-text-inverse);text-align:center;padding-block:clamp(var(--space-16),8vw,var(--space-24))}
-.waitlist-section h2{font-family:var(--font-display);font-size:var(--text-2xl);font-weight:700;letter-spacing:-0.02em;margin-bottom:var(--space-4)}
-.waitlist-section p{font-size:var(--text-base);opacity:0.85;max-width:48ch;margin:0 auto var(--space-8);line-height:1.7}
-.waitlist-form{display:flex;gap:var(--space-3);justify-content:center;max-width:500px;margin:0 auto;flex-wrap:wrap}
-.waitlist-input{flex:1;min-width:260px;padding:var(--space-3) var(--space-6);border-radius:var(--radius-full);border:none;font:inherit;font-size:var(--text-sm);background:oklch(from white l c h/0.15);color:white;outline:none}
-.waitlist-input::placeholder{color:oklch(from white l c h/0.6)}
-.waitlist-input:focus{background:oklch(from white l c h/0.2)}
-.waitlist-submit{background:white;color:var(--color-primary);font-size:var(--text-sm);font-weight:700;padding:var(--space-3) var(--space-8);border-radius:var(--radius-full);transition:all var(--transition);white-space:nowrap;cursor:pointer;border:none}
-.waitlist-submit:hover{transform:translateY(-1px);box-shadow:0 4px 16px oklch(0 0 0/0.2)}
-.waitlist-confirm{display:none;font-size:var(--text-base);opacity:0.9;font-weight:500;padding:var(--space-4)}
-.waitlist-confirm.visible{display:block}
-.waitlist-tags{display:flex;gap:var(--space-4);justify-content:center;flex-wrap:wrap;margin-top:var(--space-6)}
-.waitlist-tag{font-size:var(--text-xs);opacity:0.7;display:flex;align-items:center;gap:var(--space-2)}
-footer{background:var(--color-text);color:var(--color-text-inverse);padding:var(--space-12) 0 var(--space-8)}
-[data-theme="dark"] footer{background:var(--color-surface)}
-.footer-inner{max-width:var(--content-wide);margin-inline:auto;padding-inline:var(--space-6)}
-.footer-top{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--space-8);margin-bottom:var(--space-10);padding-bottom:var(--space-8);border-bottom:1px solid oklch(from white l c h/0.1)}
-.footer-brand p{font-size:var(--text-sm);opacity:0.6;max-width:36ch;margin-top:var(--space-3);line-height:1.6}
-.footer-logo-text{font-family:var(--font-display);font-size:var(--text-lg);font-weight:700}
-.footer-links{display:flex;gap:var(--space-12)}
-.footer-col h4{font-size:var(--text-xs);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;opacity:0.5;margin-bottom:var(--space-4)}
-.footer-col ul{list-style:none;display:flex;flex-direction:column;gap:var(--space-3)}
-.footer-col a{font-size:var(--text-sm);opacity:0.65}
+.phone-screen{background:var(--bg);border-radius:2rem;overflow:hidden;padding:1.1rem;min-height:440px}
+.phone-notch{width:72px;height:18px;background:white;border-radius:0 0 12px 12px;margin:0 auto 1rem}
+.ph-greet{font-size:0.65rem;color:var(--t3)}
+.ph-name{font-family:var(--font-display);font-size:1.2rem;color:var(--t1)}
+.ph-badge{display:inline-flex;align-items:center;gap:0.3rem;font-size:0.6rem;font-weight:600;padding:2px 7px;border-radius:var(--radius-full);background:var(--pl);color:var(--p);margin-top:0.3rem;border:1px solid var(--pm)}
+.ph-alert{background:linear-gradient(135deg,#fff8f5,#fff3ef);border:1px solid #ffd5c0;border-radius:10px;padding:0.7rem;margin:0.7rem 0}
+.ph-alert-lbl{font-size:0.55rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--pe);margin-bottom:0.3rem}
+.ph-alert-msg{font-size:0.6rem;color:var(--t1);line-height:1.5;font-weight:500}
+.ph-checkin{background:var(--pl);border-radius:10px;padding:0.7rem;margin-bottom:0.7rem;border:1px solid var(--pm)}
+.ph-checkin-lbl{font-size:0.55rem;font-weight:600;color:var(--p);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:0.3rem}
+.ph-checkin-q{font-size:0.6rem;color:var(--t1);font-weight:500;margin-bottom:0.5rem;line-height:1.4}
+.ph-scale{display:flex;gap:3px}
+.ph-dot{flex:1;height:5px;border-radius:3px;background:rgba(123,92,196,0.15)}
+.ph-dot.on{background:var(--p)}
+.ph-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.4rem}
+.ph-tile{background:white;border-radius:8px;padding:0.5rem;text-align:center;border:1px solid var(--brd)}
+.ph-tile-ic{font-size:14px;margin-bottom:2px}
+.ph-tile-lbl{font-size:0.55rem;color:var(--t3);font-weight:500}
+.story{background:white;padding:clamp(4rem,8vw,6rem) 0}
+.story-inner{max-width:var(--max-w);margin:0 auto;padding:0 2rem;display:grid;grid-template-columns:5fr 7fr;gap:5rem;align-items:start}
+.label{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:var(--p);margin-bottom:1.25rem}
+.story-quote{font-family:var(--font-display);font-size:clamp(1.5rem,2.5vw,2.2rem);line-height:1.25;color:var(--t1);letter-spacing:-0.01em}
+.story-quote em{color:var(--p);font-style:italic}
+.story-body p{font-size:1rem;color:var(--t2);line-height:1.8;margin-bottom:1.25rem;max-width:56ch}
+.story-body p:last-child{margin-bottom:0}
+.story-body strong{color:var(--t1);font-weight:600}
+.how{padding:clamp(4rem,8vw,6rem) 0}
+.how-inner{max-width:var(--max-w);margin:0 auto;padding:0 2rem}
+.section-head{text-align:center;margin-bottom:3.5rem}
+.section-head h2{font-family:var(--font-display);font-size:clamp(2rem,3.5vw,3rem);color:var(--t1);letter-spacing:-0.02em;margin-bottom:0.75rem}
+.section-head p{font-size:1rem;color:var(--t2);max-width:50ch;margin:0 auto;line-height:1.7}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:1.5rem}
+.step-num{width:38px;height:38px;border-radius:var(--radius-full);background:linear-gradient(135deg,var(--p),var(--pd));color:white;font-size:0.9rem;font-weight:700;display:flex;align-items:center;justify-content:center;margin-bottom:1.1rem;font-family:var(--font-display);box-shadow:0 4px 12px rgba(123,92,196,0.3)}
+.step h3{font-family:var(--font-display);font-size:1.1rem;color:var(--t1);margin-bottom:0.6rem}
+.step p{font-size:0.875rem;color:var(--t2);line-height:1.65}
+.protocols{background:white;padding:clamp(4rem,8vw,6rem) 0}
+.protocols-inner{max-width:var(--max-w);margin:0 auto;padding:0 2rem}
+.proto-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;margin-top:3rem}
+.proto-card{background:var(--bg);border:1px solid var(--brd);border-radius:var(--radius-lg);padding:2rem;transition:all var(--transition)}
+.proto-card:hover{box-shadow:var(--shadow-md);transform:translateY(-3px);background:white}
+.proto-tag{display:inline-flex;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:var(--radius-full);margin-bottom:1rem}
+.tag-p{background:var(--pl);color:var(--pd);border:1px solid var(--pm)}
+.tag-o{background:var(--pel);color:#b05020;border:1px solid rgba(224,144,96,0.25)}
+.tag-g{background:var(--tel);color:#267a4a;border:1px solid rgba(61,184,122,0.25)}
+.proto-card h3{font-family:var(--font-display);font-size:1.2rem;color:var(--t1);margin-bottom:0.25rem}
+.proto-sub{font-size:0.75rem;color:var(--t3);margin-bottom:1.25rem}
+.phase-list{display:flex;flex-direction:column;gap:0.65rem}
+.phase-row{display:flex;align-items:flex-start;gap:0.65rem}
+.phase-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:5px}
+.dp{background:var(--p)}.do{background:var(--pe)}.dm{background:var(--t3)}
+.phase-row span{font-size:0.825rem;color:var(--t2);line-height:1.5}
+.phase-row strong{color:var(--t1);font-weight:600}
+.clinicians{padding:clamp(4rem,8vw,6rem) 0}
+.clinicians-inner{max-width:var(--max-w);margin:0 auto;padding:0 2rem;display:grid;grid-template-columns:1fr 1fr;gap:5rem;align-items:start}
+.clinicians h2{font-family:var(--font-display);font-size:clamp(1.8rem,3vw,2.6rem);color:var(--t1);letter-spacing:-0.02em;margin-bottom:1.25rem}
+.clinicians-inner>div:first-child p{font-size:1rem;color:var(--t2);line-height:1.75;margin-bottom:1.1rem;max-width:48ch}
+.knows-list{margin-top:1.5rem;display:flex;flex-direction:column;gap:0.75rem}
+.knows-item{display:flex;align-items:center;gap:0.65rem;font-size:0.9rem;color:var(--t2)}
+.knows-item::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--p);flex-shrink:0}
+.knows-item strong{color:var(--t1);font-weight:600}
+.report-card{background:white;border:1px solid var(--brd);border-radius:var(--radius-lg);padding:2rem;box-shadow:var(--shadow-lg)}
+.rc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;padding-bottom:1.25rem;border-bottom:1px solid var(--brd)}
+.rc-title{font-family:var(--font-display);font-size:1rem;color:var(--t1)}
+.rc-badge{font-size:0.65rem;font-weight:700;padding:3px 8px;border-radius:var(--radius-full);background:var(--pl);color:var(--p);border:1px solid var(--pm)}
+.rc-row{display:flex;justify-content:space-between;align-items:center;padding:0.85rem 0;border-bottom:1px solid var(--brd)}
+.rc-row:last-child{border-bottom:none}
+.rc-lbl{font-size:0.75rem;color:var(--t3);font-weight:500}
+.rc-val{font-size:0.85rem;color:var(--t1);font-weight:600}
+.badge-ok{background:var(--tel);color:#267a4a;padding:2px 8px;border-radius:var(--radius-full);font-size:0.65rem;font-weight:700}
+.badge-warn{background:var(--pel);color:#b05020;padding:2px 8px;border-radius:var(--radius-full);font-size:0.65rem;font-weight:700}
+.trust{background:var(--t1);color:white;padding:clamp(4rem,8vw,6rem) 0;position:relative;overflow:hidden}
+.trust::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 70% at 20% 50%,rgba(123,92,196,0.3),transparent 70%);pointer-events:none}
+.trust-inner{max-width:var(--max-w);margin:0 auto;padding:0 2rem;display:grid;grid-template-columns:1fr 1fr;gap:5rem;align-items:center;position:relative}
+.trust-lbl{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#9b7de8;margin-bottom:1.25rem}
+.trust h2{font-family:var(--font-display);font-size:clamp(1.8rem,3vw,2.6rem);font-weight:400;letter-spacing:-0.02em;margin-bottom:1rem;line-height:1.15}
+.trust-sub{font-size:0.95rem;opacity:0.65;line-height:1.75;max-width:46ch}
+.trust-items{display:flex;flex-direction:column;gap:1rem}
+.trust-item{display:flex;align-items:flex-start;gap:1rem;padding:1.1rem 1.25rem;border-radius:12px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1)}
+.t-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:14px}
+.i-check{background:rgba(61,184,122,0.2);color:#3DB87A}
+.i-prog{background:rgba(224,144,96,0.2);color:#E09060}
+.trust-item h4{font-size:0.875rem;font-weight:600;margin-bottom:2px}
+.trust-item p{font-size:0.75rem;opacity:0.55;line-height:1.5}
+.market{padding:clamp(4rem,8vw,6rem) 0}
+.market-inner{max-width:var(--max-w);margin:0 auto;padding:0 2rem}
+.market-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;margin-top:3rem}
+.market-card{background:white;border:1px solid var(--brd);border-radius:var(--radius-lg);padding:2rem}
+.market-num{font-family:var(--font-display);font-size:2.8rem;color:var(--p);letter-spacing:-0.03em;margin-bottom:0.5rem;line-height:1}
+.market-desc{font-size:0.875rem;color:var(--t2);line-height:1.6}
+.waitlist{background:linear-gradient(135deg,var(--p) 0%,var(--pd) 100%);color:white;text-align:center;padding:clamp(4rem,8vw,6rem) 0}
+.waitlist-inner{max-width:var(--max-w);margin:0 auto;padding:0 2rem}
+.waitlist h2{font-family:var(--font-display);font-size:clamp(2rem,4vw,3.2rem);font-weight:400;letter-spacing:-0.02em;margin-bottom:0.75rem}
+.waitlist p{font-size:1rem;opacity:0.85;max-width:48ch;margin:0 auto 2rem;line-height:1.7}
+.waitlist-form{display:flex;gap:0.75rem;justify-content:center;max-width:480px;margin:0 auto;flex-wrap:wrap}
+.waitlist-input{flex:1;min-width:240px;padding:0.8rem 1.5rem;border-radius:var(--radius-full);border:none;font:inherit;font-size:0.95rem;background:rgba(255,255,255,0.18);color:white;outline:none}
+.waitlist-input::placeholder{color:rgba(255,255,255,0.55)}
+.waitlist-input:focus{background:rgba(255,255,255,0.25)}
+.waitlist-btn{background:white;color:var(--pd);font-size:0.9rem;font-weight:700;padding:0.8rem 2rem;border-radius:var(--radius-full);transition:all var(--transition);white-space:nowrap;cursor:pointer;border:none}
+.waitlist-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,0.2)}
+.waitlist-confirm{display:none;font-size:1rem;opacity:0.9;font-weight:500;padding:1rem}
+.waitlist-confirm.on{display:block}
+.wl-tags{display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-top:1.5rem}
+.wl-tag{font-size:0.8rem;opacity:0.65}
+footer{background:var(--t1);color:white;padding:3rem 0 2rem}
+.footer-inner{max-width:var(--max-w);margin:0 auto;padding:0 2rem;display:flex;justify-content:space-between;align-items:flex-start;gap:3rem;flex-wrap:wrap}
+.footer-brand{font-family:var(--font-display);font-size:1.4rem}
+.footer-brand p{font-size:0.85rem;opacity:0.5;max-width:32ch;margin-top:0.5rem;line-height:1.6;font-family:var(--font-body);font-weight:400}
+.footer-links{display:flex;gap:4rem}
+.footer-col h4{font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;opacity:0.4;margin-bottom:1rem}
+.footer-col ul{list-style:none;display:flex;flex-direction:column;gap:0.65rem}
+.footer-col a{font-size:0.875rem;opacity:0.55;transition:opacity var(--transition)}
 .footer-col a:hover{opacity:1}
-.footer-bottom{display:flex;justify-content:space-between;align-items:center;gap:var(--space-4);font-size:var(--text-xs);opacity:0.45;flex-wrap:wrap}
-@media(max-width:768px){.hero-grid,.story-grid,.knows-grid,.trust-grid{grid-template-columns:1fr}.phone-wrap{display:none}.steps-grid{grid-template-columns:1fr 1fr}.protocols-grid,.market-grid{grid-template-columns:1fr}.nav-links{display:none}.footer-top,.footer-links{flex-direction:column}}
-@media(max-width:480px){.steps-grid{grid-template-columns:1fr}.hero-actions{flex-direction:column;align-items:flex-start}}
+.footer-bottom{max-width:var(--max-w);margin:2rem auto 0;padding:1.5rem 2rem 0;border-top:1px solid rgba(255,255,255,0.08);display:flex;justify-content:space-between;font-size:0.75rem;opacity:0.35;flex-wrap:wrap;gap:0.5rem}
+@media(max-width:900px){.hero-inner,.story-inner,.clinicians-inner,.trust-inner{grid-template-columns:1fr}.phone-wrap{display:none}.steps{grid-template-columns:1fr 1fr}.proto-grid,.market-grid{grid-template-columns:1fr}.nav-links{display:none}.footer-inner,.footer-links{flex-direction:column}}
+@media(max-width:480px){.steps{grid-template-columns:1fr}.hero-actions{flex-direction:column;align-items:flex-start}.hero-stats{flex-wrap:wrap;gap:1.25rem}}
 </style>
 </head>
 <body>
 <nav>
   <div class="nav-inner">
-    <a href="#" class="nav-logo">
-      <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><circle cx="14" cy="14" r="13" stroke="var(--color-primary)" stroke-width="1.5"/><path d="M8 14 C8 10 11 7.5 14 7.5 C17 7.5 20 10 20 14" stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" fill="none"/><circle cx="14" cy="18" r="3" fill="var(--color-primary)"/><path d="M14 15 L14 11" stroke="var(--color-primary)" stroke-width="1.5" stroke-linecap="round"/></svg>
-      <span class="nav-logo-text">Rehlah</span>
-    </a>
+    <div class="nav-logo"><div class="nav-logo-dot"></div>Rehlah</div>
     <div class="nav-links">
       <a href="#how-it-works">How it works</a>
       <a href="#protocols">Protocols</a>
       <a href="#for-hospitals">For hospitals</a>
     </div>
-    <div class="nav-actions">
-      <button class="btn-theme" data-theme-toggle aria-label="Toggle dark mode">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-      </button>
-      <a href="#waitlist" class="btn-primary">Join Waitlist</a>
-    </div>
+    <a href="#waitlist" class="btn-nav">Join Waitlist</a>
   </div>
 </nav>
 
 <section class="hero">
-  <div class="container-wide">
-    <div class="hero-grid">
-      <div>
-        <div class="hero-eyebrow"><span class="hero-eyebrow-dot"></span>Arabic-first clinical companion · Cancer v1 · Oct 2026</div>
-        <h1>You are not alone <em>between</em> appointments.</h1>
-        <p class="hero-sub">Rehlah knows your protocol, your cycle day, and your nadir window. It checks in on what matters — and returns structured intelligence to your care team before every appointment.</p>
-        <div class="hero-actions">
-          <a href="#waitlist" class="btn-hero">Join the waitlist</a>
-          <a href="https://rehlah-app.lovable.app" target="_blank" rel="noopener noreferrer" class="btn-hero-ghost">See the app <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
-        </div>
-        <div class="hero-stats">
-          <div class="stat"><span class="stat-value">8h</span><span class="stat-label">Average appointment time per year</span></div>
-          <div class="stat"><span class="stat-value">8,752h</span><span class="stat-label">Hours a patient is alone with illness</span></div>
-          <div class="stat"><span class="stat-value">0</span><span class="stat-label">Arabic clinical companions before Rehlah</span></div>
-        </div>
+  <div class="hero-inner">
+    <div>
+      <div class="hero-pill"><span style="width:5px;height:5px;border-radius:50%;background:var(--p);display:inline-block"></span>Arabic-first · Cancer v1 · Oct 2026</div>
+      <h1>You are not alone <em>between</em> appointments.</h1>
+      <p class="hero-sub">Rehlah knows your protocol, your cycle day, and your nadir window. It checks in on what matters — and returns structured intelligence to your care team before every appointment.</p>
+      <div class="hero-actions">
+        <a href="#waitlist" class="btn-primary">Join the waitlist</a>
+        <a href="https://rehlah-app.lovable.app" target="_blank" rel="noopener noreferrer" class="btn-ghost">See the live app <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
       </div>
-      <div class="phone-wrap">
-        <div class="phone">
-          <div class="phone-screen">
-            <div class="phone-notch"></div>
-            <div style="margin-bottom:var(--space-5)">
-              <div class="phone-greeting">Good morning,</div>
-              <div class="phone-name">Maha</div>
-              <div class="phone-badge"><svg width="8" height="8" viewBox="0 0 8 8" fill="currentColor"><circle cx="4" cy="4" r="4"/></svg>AC-T · Cycle 2 · Day 7</div>
-            </div>
-            <div class="phone-alert">
-              <div class="phone-alert-label">⚠ Nadir Window</div>
-              <div class="phone-alert-msg">Days 10–14: Watch for fatigue and fever above 38°C. Your care team has been notified.</div>
-            </div>
-            <div class="phone-checkin">
-              <div class="phone-checkin-label">Today's check-in</div>
-              <div class="phone-checkin-q">How severe is your fatigue right now?</div>
-              <div class="phone-scale"><div class="scale-dot active"></div><div class="scale-dot active"></div><div class="scale-dot active"></div><div class="scale-dot"></div><div class="scale-dot"></div></div>
-            </div>
-            <div class="phone-grid">
-              <div class="phone-tile"><div class="phone-tile-icon">💊</div><div class="phone-tile-label">Medications</div></div>
-              <div class="phone-tile"><div class="phone-tile-icon">📋</div><div class="phone-tile-label">Pre-visit report</div></div>
-              <div class="phone-tile"><div class="phone-tile-icon">📈</div><div class="phone-tile-label">Labs</div></div>
-              <div class="phone-tile"><div class="phone-tile-icon">🗓</div><div class="phone-tile-label">Next appointment</div></div>
-            </div>
+      <div class="hero-stats">
+        <div><div class="stat-val">8h</div><div class="stat-lbl">Average appointment time per year</div></div>
+        <div><div class="stat-val">8,752h</div><div class="stat-lbl">Hours alone with illness</div></div>
+        <div><div class="stat-val">0</div><div class="stat-lbl">Arabic clinical companions before Rehlah</div></div>
+      </div>
+    </div>
+    <div class="phone-wrap">
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="phone-notch"></div>
+          <div style="margin-bottom:0.8rem">
+            <div class="ph-greet">Good morning,</div>
+            <div class="ph-name">Maha</div>
+            <div class="ph-badge"><span style="width:5px;height:5px;background:var(--p);border-radius:50%;display:inline-block"></span>AC-T · Cycle 2 · Day 7</div>
+          </div>
+          <div class="ph-alert">
+            <div class="ph-alert-lbl">⚠ Nadir Window</div>
+            <div class="ph-alert-msg">Days 10–14: Watch for fatigue and fever above 38°C. Your care team has been notified.</div>
+          </div>
+          <div class="ph-checkin">
+            <div class="ph-checkin-lbl">Today's check-in</div>
+            <div class="ph-checkin-q">How severe is your fatigue right now?</div>
+            <div class="ph-scale"><div class="ph-dot on"></div><div class="ph-dot on"></div><div class="ph-dot on"></div><div class="ph-dot"></div><div class="ph-dot"></div></div>
+          </div>
+          <div class="ph-grid">
+            <div class="ph-tile"><div class="ph-tile-ic">💊</div><div class="ph-tile-lbl">Medications</div></div>
+            <div class="ph-tile"><div class="ph-tile-ic">📋</div><div class="ph-tile-lbl">Pre-visit report</div></div>
+            <div class="ph-tile"><div class="ph-tile-ic">📈</div><div class="ph-tile-lbl">Labs</div></div>
+            <div class="ph-tile"><div class="ph-tile-ic">🗓</div><div class="ph-tile-lbl">Next appointment</div></div>
           </div>
         </div>
       </div>
@@ -239,157 +217,101 @@ footer{background:var(--color-text);color:var(--color-text-inverse);padding:var(
   </div>
 </section>
 
-<section class="story-section" id="story">
-  <div class="container-wide">
-    <div class="story-grid">
-      <div>
-        <div class="story-label">Why Rehlah exists</div>
-        <div class="story-quote">"I watched my brother navigate cancer for years — <em>alone</em> between every appointment."</div>
-      </div>
-      <div class="story-body">
-        <p>Ten years ago, Nadia's brother was diagnosed with lung cancer. She sat with him through every cycle, every nadir window, every appointment. She watched him struggle to communicate what he was feeling to his doctors — not because he lacked words, but because <strong>nothing was designed to help him track it</strong>. The system never asked between visits.</p>
-        <p>Since then, Nadia has spent a decade alongside cancer patients — as a caregiver, a companion, and a fierce advocate. She has helped patients through chemotherapy, guided families through the terror of nadir windows, and watched clinicians walk into consultations with almost no information about how their patients had actually been.</p>
-        <p>Rehlah is the product that <strong>she could not find when she needed it</strong>. Built not from research, but from ten years of sitting in the gap. Designed for the Arabic-speaking patient — in her language, in her culture, at every hour the healthcare system cannot reach her.</p>
-      </div>
+<section class="story" id="story">
+  <div class="story-inner">
+    <div>
+      <div class="label">Why Rehlah exists</div>
+      <div class="story-quote">"I watched my brother navigate cancer for years — <em>alone</em> between every appointment."</div>
+    </div>
+    <div class="story-body">
+      <p>Ten years ago, Nadia's brother was diagnosed with lung cancer. She sat with him through every cycle, every nadir window, every appointment. She watched him struggle to communicate what he was feeling to his doctors — not because he lacked words, but because <strong>nothing was designed to help him track it</strong>. The system never asked between visits.</p>
+      <p>Since then, cancer has never left Nadia's mind. She became deeply invested in awareness and prevention, met many patients along the way, and watched friends go through treatment. She did her best to support them — but always felt the gap. Always wondered: what is the right way to help someone through something this difficult and this lonely?</p>
+      <p>Rehlah is the product that <strong>she could not find when she needed it</strong>. Built not from research, but from lived experience of sitting in the gap. Designed for the Arabic-speaking patient — in her language, in her culture, at every hour the healthcare system cannot reach her.</p>
     </div>
   </div>
 </section>
 
-<section class="how-section" id="how-it-works">
-  <div class="container">
-    <div class="section-label">How it works</div>
-    <h2 class="section-heading">From your hospital to your pocket — and back</h2>
-    <p class="section-sub">Rehlah is the bridge between the clinical data your hospital holds and the daily life only you live.</p>
-    <div class="steps-grid">
+<section class="how" id="how-it-works">
+  <div class="how-inner">
+    <div class="section-head">
+      <div class="label" style="text-align:center">How it works</div>
+      <h2>From your hospital to your pocket — and back</h2>
+      <p>Rehlah is the bridge between the clinical data your hospital holds and the daily life only you live.</p>
+    </div>
+    <div class="steps">
       <div class="step"><div class="step-num">1</div><h3>Hospital seeds your profile</h3><p>Your oncologist uploads your protocol — drug names, cycle dates, nadir window. Rehlah pre-loads everything before you open the app for the first time.</p></div>
       <div class="step"><div class="step-num">2</div><h3>Check in daily — 2 minutes</h3><p>Each check-in is personalised to your exact cycle day. On Day 10 of AC-T, Rehlah asks about fatigue and fever. On Day 3, it asks about nausea and appetite.</p></div>
-      <div class="step"><div class="step-num">3</div><h3>Your care team is always informed</h3><p>If your symptoms cross a threshold, your care coordinator receives an alert before you call in crisis. The early warning reaches the right person, automatically.</p></div>
+      <div class="step"><div class="step-num">3</div><h3>Your care team is always informed</h3><p>If your symptoms cross a threshold, your care coordinator receives an alert before you call in crisis. The right person is notified automatically.</p></div>
       <div class="step"><div class="step-num">4</div><h3>Pre-visit report, 48 hours before</h3><p>Your oncologist walks into every appointment already knowing how you have been — in the context of your exact protocol and cycle phase.</p></div>
     </div>
   </div>
 </section>
 
-<section class="protocols-section" id="protocols">
-  <div class="container-wide">
-    <div class="section-label">Breast cancer v1</div>
-    <h2 class="section-heading">Built around your protocol — not a generic symptom list</h2>
-    <p class="section-sub">Every check-in question, education card, and alert threshold is configured for your specific treatment protocol and phase.</p>
-    <div class="protocols-grid">
-      <div class="protocol-card"><div class="protocol-tag tag-green">AC-T</div><h3>AC-T Protocol</h3><p class="protocol-subtitle">Doxorubicin + Cyclophosphamide → Taxol · 21-day cycles</p><div class="protocol-phases"><div class="phase-item"><div class="phase-dot dot-accent"></div><div class="phase-text"><strong>Days 1–4</strong> — Nausea, appetite, and anti-emetic adherence monitoring</div></div><div class="phase-item"><div class="phase-dot dot-primary"></div><div class="phase-text"><strong>Days 10–14 Nadir</strong> — Daily fatigue, fever, and infection risk alerts</div></div><div class="phase-item"><div class="phase-dot dot-muted"></div><div class="phase-text"><strong>Days 15–21</strong> — Recovery tracking and pre-cycle readiness</div></div></div></div>
-      <div class="protocol-card"><div class="protocol-tag tag-orange">TC</div><h3>TC Protocol</h3><p class="protocol-subtitle">Docetaxel + Cyclophosphamide · 21-day cycles</p><div class="protocol-phases"><div class="phase-item"><div class="phase-dot dot-accent"></div><div class="phase-text"><strong>Days 1–5</strong> — Oedema, joint pain, and fluid retention monitoring</div></div><div class="phase-item"><div class="phase-dot dot-primary"></div><div class="phase-text"><strong>Days 10–14 Nadir</strong> — Neutropenia risk with temperature threshold alerts</div></div><div class="phase-item"><div class="phase-dot dot-muted"></div><div class="phase-text"><strong>Days 15–21</strong> — Energy recovery and medication adherence review</div></div></div></div>
-      <div class="protocol-card"><div class="protocol-tag tag-slate">CMF</div><h3>CMF Protocol</h3><p class="protocol-subtitle">Cyclophosphamide + Methotrexate + 5-FU · 28-day cycles</p><div class="protocol-phases"><div class="phase-item"><div class="phase-dot dot-accent"></div><div class="phase-text"><strong>Days 1–3</strong> — Oral hydration, bladder irritation, and nausea monitoring</div></div><div class="phase-item"><div class="phase-dot dot-primary"></div><div class="phase-text"><strong>Days 14–18 Nadir</strong> — Mucositis, CBC patterns, and fatigue alerts</div></div><div class="phase-item"><div class="phase-dot dot-muted"></div><div class="phase-text"><strong>Days 22–28</strong> — Recovery window and upcoming cycle preparation</div></div></div></div>
+<section class="protocols" id="protocols">
+  <div class="protocols-inner">
+    <div class="section-head">
+      <div class="label" style="text-align:center">Breast cancer v1</div>
+      <h2>Built around your protocol — not a generic symptom list</h2>
+      <p>Every check-in question, education card, and alert threshold is configured for your specific treatment protocol and phase.</p>
+    </div>
+    <div class="proto-grid">
+      <div class="proto-card"><div class="proto-tag tag-p">AC-T</div><h3>AC-T Protocol</h3><p class="proto-sub">Doxorubicin + Cyclophosphamide → Taxol · 21-day cycles</p><div class="phase-list"><div class="phase-row"><div class="phase-dot do"></div><span><strong>Days 1–4</strong> — Nausea, appetite, and anti-emetic adherence monitoring</span></div><div class="phase-row"><div class="phase-dot dp"></div><span><strong>Days 10–14 Nadir</strong> — Daily fatigue, fever, and infection risk alerts</span></div><div class="phase-row"><div class="phase-dot dm"></div><span><strong>Days 15–21</strong> — Recovery tracking and pre-cycle readiness</span></div></div></div>
+      <div class="proto-card"><div class="proto-tag tag-o">TC</div><h3>TC Protocol</h3><p class="proto-sub">Docetaxel + Cyclophosphamide · 21-day cycles</p><div class="phase-list"><div class="phase-row"><div class="phase-dot do"></div><span><strong>Days 1–5</strong> — Oedema, joint pain, and fluid retention monitoring</span></div><div class="phase-row"><div class="phase-dot dp"></div><span><strong>Days 10–14 Nadir</strong> — Neutropenia risk with temperature threshold alerts</span></div><div class="phase-row"><div class="phase-dot dm"></div><span><strong>Days 15–21</strong> — Energy recovery and medication adherence review</span></div></div></div>
+      <div class="proto-card"><div class="proto-tag tag-g">CMF</div><h3>CMF Protocol</h3><p class="proto-sub">Cyclophosphamide + Methotrexate + 5-FU · 28-day cycles</p><div class="phase-list"><div class="phase-row"><div class="phase-dot do"></div><span><strong>Days 1–3</strong> — Oral hydration, bladder irritation, and nausea monitoring</span></div><div class="phase-row"><div class="phase-dot dp"></div><span><strong>Days 14–18 Nadir</strong> — Mucositis, CBC patterns, and fatigue alerts</span></div><div class="phase-row"><div class="phase-dot dm"></div><span><strong>Days 22–28</strong> — Recovery window and upcoming cycle preparation</span></div></div></div>
     </div>
   </div>
 </section>
 
-<section class="knows-section" id="for-hospitals">
-  <div class="container-wide">
-    <div class="knows-grid">
-      <div class="knows-text">
-        <div class="story-label">For oncologists &amp; care teams</div>
-        <h2>14 days of patient reality — before every consultation</h2>
-        <p>Clinicians miss approximately 50% of patient symptoms during appointments without structured PRO collection. Rehlah returns what the appointment never captures.</p>
-        <p>Every pre-visit report is protocol-aware, phase-specific, and ready in 2 minutes.</p>
-        <div class="knows-list">
-          <div class="knows-item"><strong>Phase-specific symptom flags</strong> — only what is unexpected for this cycle day</div>
-          <div class="knows-item"><strong>Medication adherence</strong> — missed dose detail and reason captured</div>
-          <div class="knows-item"><strong>Lab correlation</strong> — uploaded values linked to reported symptoms</div>
-          <div class="knows-item"><strong>AI talking points</strong> — three protocol-aware questions for the doctor</div>
-          <div class="knows-item"><strong>PRO-CTCAE validated</strong> — NCI-standard, Arabic-validated instruments</div>
-        </div>
+<section class="clinicians" id="for-hospitals">
+  <div class="clinicians-inner">
+    <div>
+      <div class="label">For oncologists &amp; care teams</div>
+      <h2>14 days of patient reality — before every consultation</h2>
+      <p>Clinicians miss approximately 50% of patient symptoms during appointments without structured PRO collection. Rehlah returns what the appointment never captures.</p>
+      <p>Every pre-visit report is protocol-aware, phase-specific, and ready in 2 minutes.</p>
+      <div class="knows-list">
+        <div class="knows-item"><strong>Phase-specific symptom flags</strong> — only what is unexpected for this cycle day</div>
+        <div class="knows-item"><strong>Medication adherence</strong> — missed dose detail and reason captured</div>
+        <div class="knows-item"><strong>Lab correlation</strong> — uploaded values linked to reported symptoms</div>
+        <div class="knows-item"><strong>AI talking points</strong> — three protocol-aware questions for the doctor</div>
+        <div class="knows-item"><strong>PRO-CTCAE validated</strong> — NCI-standard, Arabic-validated instruments</div>
       </div>
-      <div class="report-card">
-        <div class="report-header"><div class="report-title">Pre-Visit Intelligence Report</div><div class="report-badge">Generated 48h before</div></div>
-        <div class="report-row"><span class="report-row-label">Protocol</span><span class="report-row-val">AC-T · Cycle 3 · Day 18</span></div>
-        <div class="report-row"><span class="report-row-label">Check-in completion</span><span class="report-row-val"><span class="badge-ok">13 of 14 days</span></span></div>
-        <div class="report-row"><span class="report-row-label">Fatigue (Days 10–14)</span><span class="report-row-val"><span class="badge-warn">Severity 4 — above threshold</span></span></div>
-        <div class="report-row"><span class="report-row-label">Nausea</span><span class="report-row-val"><span class="badge-ok">Controlled — Severity 1–2</span></span></div>
-        <div class="report-row"><span class="report-row-label">Ondansetron adherence</span><span class="report-row-val"><span class="badge-ok">100% — no missed doses</span></span></div>
-        <div class="report-row"><span class="report-row-label">Suggested talking point</span><span class="report-row-val" style="max-width:22ch;text-align:right;font-size:var(--text-xs)">Nadir fatigue exceeded baseline — ask about functional impact at home</span></div>
-      </div>
+    </div>
+    <div class="report-card">
+      <div class="rc-head"><div class="rc-title">Pre-Visit Intelligence Report</div><div class="rc-badge">Generated 48h before</div></div>
+      <div class="rc-row"><span class="rc-lbl">Protocol</span><span class="rc-val">AC-T · Cycle 3 · Day 18</span></div>
+      <div class="rc-row"><span class="rc-lbl">Check-in completion</span><span class="rc-val"><span class="badge-ok">13 of 14 days</span></span></div>
+      <div class="rc-row"><span class="rc-lbl">Fatigue (Days 10–14)</span><span class="rc-val"><span class="badge-warn">Severity 4 — above threshold</span></span></div>
+      <div class="rc-row"><span class="rc-lbl">Nausea</span><span class="rc-val"><span class="badge-ok">Controlled — Severity 1–2</span></span></div>
+      <div class="rc-row"><span class="rc-lbl">Ondansetron adherence</span><span class="rc-val"><span class="badge-ok">100% — no missed doses</span></span></div>
+      <div class="rc-row"><span class="rc-lbl">Suggested talking point</span><span class="rc-val" style="max-width:22ch;text-align:right;font-size:0.75rem">Nadir fatigue exceeded baseline — ask about functional impact at home</span></div>
     </div>
   </div>
 </section>
 
-<section class="trust-section">
-  <div class="container-wide">
-    <div class="trust-grid">
-      <div style="color:inherit">
-        <div class="trust-label">Clinical foundation</div>
-        <h2 class="trust-heading">Built on validated clinical standards</h2>
-        <p class="trust-body">Every check-in item, alert threshold, and report section is co-developed with clinical advisors and grounded in internationally validated PRO frameworks.</p>
-      </div>
-      <div class="trust-items">
-        <div class="trust-item"><div class="trust-icon icon-check">✓</div><div class="trust-item-body"><h4>PRO-CTCAE — NCI validated, Arabic</h4><p>78 symptomatic toxicities, frequency + severity + interference. The clinical backbone of every check-in.</p></div></div>
-        <div class="trust-item"><div class="trust-icon icon-check">✓</div><div class="trust-item-body"><h4>EORTC QLQ-C30 alignment</h4><p>30-item quality-of-life standard used in ESMO clinical guidelines globally.</p></div></div>
-        <div class="trust-item"><div class="trust-icon icon-progress">↗</div><div class="trust-item-body"><h4>Clinical advisor validation — in progress</h4><p>Cardio-oncologist collaboration underway. Threshold specification and report format co-authored per protocol.</p></div></div>
-        <div class="trust-item"><div class="trust-icon" style="opacity:0.5">○</div><div class="trust-item-body"><h4>DoH Abu Dhabi regulatory pathway — planned</h4><p>NABIDH FHIR integration and UAE data residency from Day 1. Engaging via Hub71 Life Sciences cohort.</p></div></div>
-      </div>
+<section class="trust">
+  <div class="trust-inner">
+    <div>
+      <div class="trust-lbl">Clinical foundation</div>
+      <h2>Built on validated clinical standards</h2>
+      <p class="trust-sub">Every check-in item, alert threshold, and report section is co-developed with clinical advisors and grounded in internationally validated PRO frameworks.</p>
+    </div>
+    <div class="trust-items">
+      <div class="trust-item"><div class="t-icon i-check">✓</div><div><h4>PRO-CTCAE — NCI validated, Arabic</h4><p>78 symptomatic toxicities, frequency + severity + interference. The clinical backbone of every check-in.</p></div></div>
+      <div class="trust-item"><div class="t-icon i-check">✓</div><div><h4>EORTC QLQ-C30 alignment</h4><p>30-item quality-of-life standard used in ESMO clinical guidelines globally.</p></div></div>
+      <div class="trust-item"><div class="t-icon i-prog">↗</div><div><h4>Clinical advisor validation — in progress</h4><p>Cardio-oncologist collaboration underway. Thresholds and report format co-authored per protocol.</p></div></div>
+      <div class="trust-item"><div class="t-icon" style="opacity:0.4;color:white;background:rgba(255,255,255,0.08)">○</div><div><h4>DoH Abu Dhabi regulatory pathway — planned</h4><p>NABIDH FHIR integration and UAE data residency from Day 1. Engaging via Hub71 Life Sciences.</p></div></div>
     </div>
   </div>
 </section>
 
-<section class="market-section">
-  <div class="container">
-    <div class="section-label">Market opportunity</div>
-    <h2 class="section-heading">The gap is large — and entirely unserved</h2>
-    <p class="section-sub">Zero Arabic-native clinical companions exist. Every competing platform is English-only, culturally foreign, and not built for GCC hospital infrastructure.</p>
+<section class="market">
+  <div class="market-inner">
+    <div class="section-head">
+      <div class="label" style="text-align:center">Market opportunity</div>
+      <h2>The gap is large — and entirely unserved</h2>
+      <p>Zero Arabic-native clinical companions exist. Every competing platform is English-only and not built for GCC hospital infrastructure.</p>
+    </div>
     <div class="market-grid">
       <div class="market-card"><div class="market-num">400K</div><div class="market-desc">Cancer patients across the GCC — each managing their illness with no structured support between clinical visits</div></div>
-      <div class="market-card"><div class="market-num">8M</div><div class="market-desc">Chronic disease patients across the GCC — the platform Rehlah is building toward, condition by condition</div></div>
-      <div class="market-card"><div class="market-num">$2.1B</div><div class="market-desc">Total addressable market for clinical engagement infrastructure in Arabic healthcare</div></div>
-    </div>
-  </div>
-</section>
-
-<section class="waitlist-section" id="waitlist">
-  <div class="container">
-    <h2>Launching October 2026 — Breast Cancer Awareness Month</h2>
-    <p>Join the waitlist for early access. For patients, caregivers, and hospital partners interested in the beta programme.</p>
-    <form class="waitlist-form" id="waitlistForm" onsubmit="handleWaitlist(event)">
-      <input type="email" class="waitlist-input" placeholder="Your email address" required id="waitlistEmail">
-      <button type="submit" class="waitlist-submit">Request access</button>
-    </form>
-    <div class="waitlist-confirm" id="waitlistConfirm">✓ You are on the list. We will be in touch before October 2026.</div>
-    <div class="waitlist-tags">
-      <span class="waitlist-tag">✓ No spam</span>
-      <span class="waitlist-tag">✓ Arabic &amp; English</span>
-      <span class="waitlist-tag">✓ Free for patients</span>
-    </div>
-  </div>
-</section>
-
-<footer>
-  <div class="footer-inner">
-    <div class="footer-top">
-      <div class="footer-brand">
-        <div class="footer-logo-text">Rehlah</div>
-        <p>The Arabic clinical companion for cancer patients. Protocol-aware. Phase-sensitive. Always present.</p>
-      </div>
-      <div class="footer-links">
-        <div class="footer-col"><h4>Product</h4><ul><li><a href="#how-it-works">How it works</a></li><li><a href="#protocols">Protocols</a></li><li><a href="https://rehlah-app.lovable.app" target="_blank" rel="noopener noreferrer">Live app</a></li></ul></div>
-        <div class="footer-col"><h4>For hospitals</h4><ul><li><a href="#for-hospitals">Pre-visit reports</a></li><li><a href="#waitlist">Pilot programme</a></li><li><a href="mailto:nadia@rehlah.app">Contact us</a></li></ul></div>
-      </div>
-    </div>
-    <div class="footer-bottom"><span>© 2026 Rehlah. Abu Dhabi, UAE.</span><span>rehlah-app.lovable.app</span></div>
-  </div>
-</footer>
-
-<script>
-(function(){
-  var t=document.querySelector('[data-theme-toggle]');
-  var r=document.documentElement;
-  var d=matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';
-  r.setAttribute('data-theme',d);
-  if(t){t.addEventListener('click',function(){d=d==='dark'?'light':'dark';r.setAttribute('data-theme',d)});}
-})();
-function handleWaitlist(e){
-  e.preventDefault();
-  document.getElementById('waitlistForm').style.display='none';
-  document.getElementById('waitlistConfirm').classList.add('visible');
-}
-var obs=new IntersectionObserver(function(entries){entries.forEach(function(e){if(e.isIntersecting){e.target.style.opacity='1';e.target.style.transform='translateY(0)'}})},{threshold:0.1});
-document.querySelectorAll('.step,.protocol-card,.market-card,.trust-item').forEach(function(el){el.style.opacity='0';el.style.transform='translateY(20px)';el.style.transition='opacity 0.6s ease,transform 0.6s ease';obs.observe(el);});
-</script>
-</body>
-</html>
+      <div class="market-card"><div class="market-num">8M</div><div class="market-desc">Chronic 
