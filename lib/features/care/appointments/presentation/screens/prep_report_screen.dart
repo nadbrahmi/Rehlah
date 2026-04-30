@@ -381,33 +381,51 @@ class PrepReportScreen extends StatelessWidget {
                 ..._buildLabCorrelations(flags, session),
               ],
               const SizedBox(height: 10),
-              // Last CBC values from MockData
+              // Last lab values from session
               Divider(color: AppColors.border, height: 1, thickness: 0.5),
               const SizedBox(height: 8),
               Text('LAST LAB VALUES', style: AppText.label.copyWith(fontSize: 10)),
               const SizedBox(height: 6),
-              ...[
-                ('WBC', '3.2', 'K/μL', AppColors.peach, 'Low — nadir expected'),
-                ('Hemoglobin', '10.2', 'g/dL', AppColors.peach, 'Below normal range'),
-                ('Platelets', '182', 'K/μL', AppColors.teal, 'Within range'),
-                ('Neutrophils', '1.4', 'K/μL', AppColors.peach, 'Watch closely'),
-              ].map((l) => Padding(
-                padding: const EdgeInsets.only(bottom: 7),
-                child: Row(children: [
-                  Container(width: 5, height: 5,
-                    decoration: BoxDecoration(
-                      color: l.$4, shape: BoxShape.circle)),
-                  const SizedBox(width: 8),
-                  Expanded(child: Text(l.$1,
-                    style: AppText.bodySemibold.copyWith(fontSize: 12))),
-                  Text('${l.$2} ${l.$3}',
-                    style: AppText.bodySecondary.copyWith(fontSize: 12)),
-                  const SizedBox(width: 8),
-                  Text(l.$5,
-                    style: AppText.caption.copyWith(
-                      color: l.$4, fontSize: 10)),
-                ]),
-              )),
+              Builder(builder: (_) {
+                final latestLab = session.labs.isNotEmpty ? session.labs.first : null;
+                if (latestLab == null) {
+                  return Text('No lab results logged yet.',
+                    style: AppText.bodySecondary.copyWith(
+                      fontSize: 12, fontStyle: FontStyle.italic));
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('${latestLab.panelName} · ${DateFormat('d MMM yyyy').format(latestLab.date)}',
+                      style: AppText.caption.copyWith(
+                        fontSize: 10, color: AppColors.text3)),
+                    const SizedBox(height: 6),
+                    ...latestLab.metrics.map((m) => Padding(
+                      padding: const EdgeInsets.only(bottom: 7),
+                      child: Row(children: [
+                        Container(width: 5, height: 5,
+                          decoration: BoxDecoration(
+                            color: m.isLow ? AppColors.peach
+                                : m.isHigh ? AppColors.rose
+                                : AppColors.teal,
+                            shape: BoxShape.circle)),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(m.name,
+                          style: AppText.bodySemibold.copyWith(fontSize: 12))),
+                        Text('${m.value} ${m.unit}',
+                          style: AppText.bodySecondary.copyWith(fontSize: 12)),
+                        const SizedBox(width: 8),
+                        Text(m.isLow ? 'Low' : m.isHigh ? 'High' : 'Normal',
+                          style: AppText.caption.copyWith(
+                            color: m.isLow ? AppColors.peach
+                                : m.isHigh ? AppColors.rose
+                                : AppColors.teal,
+                            fontSize: 10)),
+                      ]),
+                    )),
+                  ],
+                );
+              }),
             ]),
           )),
 
@@ -543,37 +561,68 @@ class PrepReportScreen extends StatelessWidget {
   List<Widget> _buildLabCorrelations(
       List<_SymptomFlag> flags, UserSession session) {
     final correlations = <String>[];
+    final latestLab = session.labs.isNotEmpty ? session.labs.first : null;
+
+    // Get real values from latest lab if available
+    double? hgb = latestLab?.metrics
+        .where((m) => m.name == 'Hemoglobin').firstOrNull?.value;
+    double? wbc = latestLab?.metrics
+        .where((m) => m.name == 'WBC').firstOrNull?.value;
+    double? neutrophils = latestLab?.metrics
+        .where((m) => m.name == 'Neutrophils').firstOrNull?.value;
 
     // Fatigue → Hemoglobin
     if (flags.any((f) => f.key == 'fatigue' || f.key == 'energy')) {
-      correlations.add(
-          'Hemoglobin 10.2 — consistent with reported fatigue pattern. '
-          'Below normal range may explain reduced energy levels.');
+      if (hgb != null && hgb < 12) {
+        correlations.add(
+            'Hemoglobin $hgb g/dL — below normal range, consistent with reported fatigue. '
+            'May explain reduced energy levels.');
+      } else {
+        correlations.add(
+            'Fatigue reported — not clearly linked to Hemoglobin levels. '
+            'May be treatment-related. Worth discussing with your team.');
+      }
     }
-    // Infection/fever → WBC
+    // Infection/fever → WBC/Neutrophils
     if (flags.any((f) => f.key == 'fever' || f.key == 'infection') ||
         session.isNadirWindow) {
-      correlations.add(
-          'WBC 3.2 K/μL — low count consistent with nadir phase. '
-          'Elevated infection risk. Temperature monitoring is essential.');
+      if (neutrophils != null && neutrophils < 1.8) {
+        correlations.add(
+            'Neutrophils $neutrophils K/µL — low, consistent with nadir phase. '
+            'Elevated infection risk. Temperature monitoring is essential.');
+      } else if (wbc != null) {
+        correlations.add(
+            'WBC $wbc K/µL — ${wbc < 4.5 ? 'below normal range' : 'within range'}. '
+            'Monitor for signs of infection given treatment phase.');
+      }
     }
     // Breathlessness → Hemoglobin
     if (flags.any((f) => f.key == 'breathlessness')) {
-      correlations.add(
-          'Hemoglobin 10.2 — mild anaemia may contribute to reported breathlessness. '
-          'Consider whether iron supplementation discussion is warranted.');
+      if (hgb != null && hgb < 12) {
+        correlations.add(
+            'Hemoglobin $hgb g/dL — mild anaemia may contribute to breathlessness. '
+            'Consider whether iron supplementation discussion is warranted.');
+      }
     }
     // Mouth sores → WBC
     if (flags.any((f) => f.key == 'mouth_sores')) {
-      correlations.add(
-          'WBC 3.2 — low white cell count may be contributing to mouth sores. '
-          'Neutrophils 1.4 K/μL — borderline low.');
+      if (wbc != null && wbc < 4.5) {
+        correlations.add(
+            'WBC $wbc — low white cell count may be contributing to mouth sores. '
+            '${neutrophils != null ? 'Neutrophils $neutrophils K/µL.' : ''}');
+      }
     }
 
     if (correlations.isEmpty) {
-      correlations.add(
-          'No direct correlations identified between current symptoms and lab values. '
-          'All reported symptoms appear within expected range for this treatment phase.');
+      if (latestLab == null) {
+        correlations.add(
+            'No lab results logged yet. Add lab results to see correlations '
+            'with your reported symptoms.');
+      } else {
+        correlations.add(
+            'No direct correlations identified between current symptoms and lab values. '
+            'All reported symptoms appear within expected range for this treatment phase.');
+      }
     }
 
     return correlations.map((c) => Container(

@@ -334,6 +334,63 @@ class UserSession extends ChangeNotifier {
 
   bool get isMonitoring => treatmentPhase == 'Monitoring / surveillance';
 
+  // ── Lab results ───────────────────────────────────────────────────────────
+  final List<LabResult> _labs = [];
+
+  List<LabResult> get labs {
+    final sorted = [..._labs]..sort((a, b) => b.date.compareTo(a.date));
+    return List.unmodifiable(sorted);
+  }
+
+  void addLabResult(LabResult result) {
+    _labs.removeWhere((l) => l.id == result.id);
+    _labs.add(result);
+    _saveCount++;
+    notifyListeners();
+  }
+
+  void removeLabResult(String id) {
+    _labs.removeWhere((l) => l.id == id);
+    _saveCount++;
+    notifyListeners();
+  }
+
+  void initDefaultLabs() {
+    if (_labs.isNotEmpty) return;
+    _labs.addAll([
+      LabResult(
+        id: 'cbc-1',
+        panelName: 'CBC',
+        date: DateTime.now().subtract(const Duration(days: 10)),
+        metrics: [
+          const LabMetric(name: 'Hemoglobin', value: 10.2, unit: 'g/dL',
+            normalMin: 12, normalMax: 17.5, previousValue: 11.4),
+          const LabMetric(name: 'WBC', value: 5.8, unit: '×10³/µL',
+            normalMin: 4.5, normalMax: 11, previousValue: 6.1),
+          const LabMetric(name: 'Platelets', value: 182, unit: '×10³/µL',
+            normalMin: 150, normalMax: 400, previousValue: 195),
+          const LabMetric(name: 'Neutrophils', value: 1.4, unit: '×10³/µL',
+            normalMin: 1.8, normalMax: 7.7, previousValue: 2.1),
+        ],
+      ),
+      LabResult(
+        id: 'cbc-2',
+        panelName: 'CBC',
+        date: DateTime.now().subtract(const Duration(days: 24)),
+        metrics: [
+          const LabMetric(name: 'Hemoglobin', value: 11.4, unit: 'g/dL',
+            normalMin: 12, normalMax: 17.5, previousValue: 12.1),
+          const LabMetric(name: 'WBC', value: 6.1, unit: '×10³/µL',
+            normalMin: 4.5, normalMax: 11, previousValue: 6.8),
+          const LabMetric(name: 'Platelets', value: 195, unit: '×10³/µL',
+            normalMin: 150, normalMax: 400, previousValue: 210),
+          const LabMetric(name: 'Neutrophils', value: 2.1, unit: '×10³/µL',
+            normalMin: 1.8, normalMax: 7.7, previousValue: 2.8),
+        ],
+      ),
+    ]);
+  }
+
   // ── Medications ───────────────────────────────────────────────────────────
   final List<Medication> _medications = [];
 

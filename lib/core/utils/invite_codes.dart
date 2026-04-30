@@ -181,6 +181,7 @@ class InviteCodes {
     }
     // Init default medications based on phase
     s.initDefaultMedications();
+    s.initDefaultLabs();
   }
 
   /// All available codes (for dev/debug display)
