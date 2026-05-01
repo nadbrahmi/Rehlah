@@ -55,37 +55,99 @@ h1 .ar{font-family:'Almarai',sans-serif;font-weight:700;}
 
 /* ── PHONE MOCKUP ── */
 .mockup-section{padding:80px 6%;background:linear-gradient(180deg,var(--bg) 0%,var(--pl) 50%,var(--bg) 100%);}
-.mockup-inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;gap:80px;}
-.mockup-copy{flex:1;}
+.mockup-inner{max-width:1200px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:56px;}
+.mockup-copy{text-align:center;max-width:640px;}
 .mockup-copy .section-tag{font-size:11px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:var(--p);margin-bottom:12px;}
 .mockup-copy h2{font-size:clamp(28px,4vw,42px);font-weight:300;color:var(--t1);line-height:1.2;letter-spacing:-0.5px;margin-bottom:16px;}
 .mockup-copy h2 b{font-weight:700;}
 .mockup-copy p{font-size:16px;color:var(--t2);font-weight:300;line-height:1.8;margin-bottom:28px;}
-.feat-list{list-style:none;display:flex;flex-direction:column;gap:14px;}
+.feat-list{list-style:none;display:flex;flex-direction:column;gap:10px;text-align:left;display:inline-flex;}
 .feat-list li{display:flex;align-items:flex-start;gap:10px;font-size:15px;color:var(--t2);line-height:1.6;}
 .feat-check{width:20px;height:20px;border-radius:50%;background:rgba(61,184,122,0.12);border:1.5px solid rgba(61,184,122,0.35);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px;}
 .feat-check svg{width:10px;height:10px;}
-.phone-wrap{flex-shrink:0;position:relative;}
-.phone{width:280px;background:#F5F2FC;border-radius:40px;border:7px solid #1A1425;overflow:hidden;box-shadow:0 40px 80px rgba(0,0,0,0.20),0 0 0 1px rgba(255,255,255,0.1);position:relative;}
-.phone-notch{width:90px;height:22px;background:#1A1425;border-radius:0 0 14px 14px;margin:0 auto;}
-.phone-screen{padding:12px 14px 20px;}
-.ps-date{font-size:9px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#9B8DC0;margin-bottom:4px;}
-.ps-greet{font-size:16px;font-weight:300;color:#1A1425;line-height:1.2;margin-bottom:2px;}
-.ps-greet b{font-weight:700;}
-.ps-sub{font-size:10px;color:#9B8DC0;margin-bottom:12px;}
-.ps-hero{background:linear-gradient(145deg,#DDD4F5,#CCC0EC);border-radius:14px;padding:12px;margin-bottom:10px;}
-.ps-pill{display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.5);border-radius:20px;padding:3px 8px;font-size:8px;font-weight:500;color:#5B3A9C;margin-bottom:6px;}
-.ps-pill-dot{width:4px;height:4px;border-radius:50%;background:#7B5CC4;}
-.ps-q{font-size:12px;font-weight:500;color:#1A1425;line-height:1.3;margin-bottom:10px;}
-.ps-cta{display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,0.6);color:#5B3A9C;font-size:9px;font-weight:500;padding:6px 10px;border-radius:20px;}
-.ps-nadir{background:#FEF2EA;border-left:2px solid #E09060;border-radius:10px;padding:9px 10px;margin-bottom:10px;}
-.ps-nadir-t{font-size:9px;font-weight:700;color:#E09060;margin-bottom:2px;}
-.ps-nadir-s{font-size:8px;color:#6858A0;line-height:1.5;}
-.ps-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;}
-.ps-card{background:#fff;border-radius:10px;padding:8px;text-align:center;}
-.ps-card-ico{font-size:14px;margin-bottom:3px;}
-.ps-card-lbl{font-size:7.5px;font-weight:500;color:#2A2040;}
-.ps-card-sub{font-size:7px;color:#9B8DC0;}
+
+/* ── 3-phone illustration ── */
+.phones-wrap{display:flex;gap:20px;align-items:flex-end;justify-content:center;flex-wrap:wrap;}
+.ph{border-radius:36px;overflow:hidden;background:#F5F2FC;border:1.5px solid rgba(123,92,196,0.15);box-shadow:0 4px 32px rgba(123,92,196,0.12),0 1px 0 rgba(255,255,255,0.8) inset;display:flex;flex-direction:column;flex-shrink:0;}
+.ph.tall{width:200px;height:420px;}
+.ph.mid{width:185px;height:375px;margin-bottom:22px;}
+.ph-status{display:flex;justify-content:space-between;padding:10px 18px 0;font-size:9px;font-weight:600;color:#6858A0;}
+.ph-notch{width:64px;height:7px;background:#1a1a2e;border-radius:3.5px;margin:4px auto 8px;}
+.ph-date{font-size:9px;color:#B8A8D8;padding:0 16px;letter-spacing:0.6px;text-transform:uppercase;font-weight:500;}
+.ph-greet{font-size:18px;font-weight:600;color:#2A2040;padding:2px 16px 0;line-height:1.2;}
+.ph-sub{font-size:10px;color:#B8A8D8;padding:1px 16px 8px;}
+.ph-hero{margin:0 10px;border-radius:18px;padding:13px 14px;background:linear-gradient(135deg,#D8CCF2 0%,#C8D8F4 50%,#CCE8DC 100%);}
+.ph-pill{display:inline-flex;align-items:center;gap:5px;background:rgba(123,92,196,0.14);border:0.5px solid rgba(123,92,196,0.2);border-radius:20px;padding:3px 9px;font-size:9px;color:#5B3A9C;font-weight:600;margin-bottom:7px;}
+.ph-pill-dot{width:5px;height:5px;border-radius:50%;background:#7B5CC4;display:inline-block;}
+.ph-hero-title{font-size:15px;font-weight:600;color:#2A2040;line-height:1.25;}
+.ph-hero-sub{font-size:9px;color:#6858A0;margin-top:2px;}
+.ph-hero-btn{display:inline-block;margin-top:9px;background:rgba(255,255,255,0.65);border:0.5px solid rgba(255,255,255,0.8);border-radius:20px;padding:5px 13px;font-size:9px;font-weight:600;color:#5B3A9C;}
+.ph-alert{margin:6px 10px 0;border-radius:12px;padding:8px 11px;background:rgba(224,144,96,0.09);border:0.5px solid rgba(224,144,96,0.25);}
+.ph-alert-t{font-size:9px;font-weight:600;color:#E09060;}
+.ph-alert-b{font-size:8px;color:#8A6040;line-height:1.5;margin-top:1px;}
+.ph-phase{margin:6px 10px 0;border-radius:12px;padding:9px 11px;background:#fff;border:0.5px solid #EDE8F8;display:flex;align-items:center;gap:9px;}
+.ph-phase-ico{width:30px;height:30px;border-radius:9px;background:#EDE8F8;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.ph-phase-title{font-size:10px;font-weight:600;color:#2A2040;}
+.ph-phase-sub{font-size:8px;color:#B8A8D8;margin-top:1px;}
+.ph-progress{height:3px;background:#EDE8F8;border-radius:2px;margin-top:5px;overflow:hidden;}
+.ph-progress-fill{height:100%;background:#7B5CC4;border-radius:2px;}
+.ph-nav{display:flex;justify-content:space-around;padding:8px 0 6px;border-top:0.5px solid #EDE8F8;margin-top:auto;}
+.ph-nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:7px;color:#B8A8D8;}
+.ph-nav-item.active{color:#7B5CC4;}
+.ph-nav-ico{width:20px;height:20px;border-radius:10px;background:#EDE8F8;}
+.ph-nav-ico.active{background:#7B5CC4;}
+.ph-nav-plus{width:24px;height:24px;border-radius:12px;background:#7B5CC4;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;font-weight:300;line-height:1;}
+/* checkin */
+.ph-checkin-hd{padding:4px 16px 6px;}
+.ph-checkin-t{font-size:17px;font-weight:600;color:#2A2040;line-height:1.2;}
+.ph-checkin-s{font-size:9px;color:#B8A8D8;margin-top:2px;}
+.ph-phase-pill{display:inline-flex;align-items:center;gap:4px;margin:0 12px 7px;background:rgba(224,144,96,0.1);border:0.5px solid rgba(224,144,96,0.25);border-radius:20px;padding:3px 9px;font-size:8px;color:#E09060;font-weight:600;}
+.ph-mood-row{display:flex;gap:4px;padding:0 10px;margin-bottom:7px;}
+.ph-mood{flex:1;border-radius:10px;padding:6px 2px;text-align:center;border:0.5px solid #EDE8F8;background:#fff;}
+.ph-mood.sel{border-color:#7B5CC4;background:#EDE8F8;}
+.ph-mood-e{font-size:14px;display:block;}
+.ph-mood-l{font-size:7px;color:#B8A8D8;margin-top:1px;}
+.ph-mood-l.sel{color:#7B5CC4;}
+.ph-sym-lbl{font-size:8px;font-weight:600;color:#6858A0;padding:0 14px 4px;letter-spacing:0.4px;text-transform:uppercase;}
+.ph-chips{display:flex;flex-wrap:wrap;gap:4px;padding:0 10px;}
+.ph-chip{border-radius:20px;padding:3px 8px;font-size:8px;border:0.5px solid #EDE8F8;color:#6858A0;background:#fff;}
+.ph-chip.sel{background:#EDE8F8;border-color:#C0B0E0;color:#5B3A9C;font-weight:600;}
+.ph-nadir-warn{margin:6px 10px 0;background:rgba(224,144,96,0.07);border:0.5px solid rgba(224,144,96,0.2);border-radius:12px;padding:8px 10px;}
+.ph-nw-t{font-size:9px;font-weight:600;color:#E09060;margin-bottom:2px;}
+.ph-nw-b{font-size:8px;color:#8A6040;line-height:1.5;}
+.ph-save{margin:9px 10px 0;background:#7B5CC4;border-radius:22px;padding:9px;text-align:center;font-size:10px;font-weight:600;color:#fff;}
+.ph-detail{text-align:center;font-size:8px;color:#B8A8D8;margin-top:5px;}
+/* monitoring */
+.ph-cf{margin:0 10px;border-radius:18px;padding:12px 14px;background:linear-gradient(135deg,#C8E8D8 0%,#C8D8F0 100%);}
+.ph-cf-badge{font-size:8px;font-weight:600;color:#1A6040;letter-spacing:0.4px;text-transform:uppercase;margin-bottom:4px;}
+.ph-cf-num{font-size:30px;font-weight:700;color:#0A3828;line-height:1;}
+.ph-cf-sub{font-size:9px;color:#2E7050;margin-top:2px;}
+.ph-scan{margin:6px 10px 0;border-radius:12px;padding:9px 11px;background:#fff;border:0.5px solid #EDE8F8;}
+.ph-scan-t{font-size:9px;font-weight:600;color:#2A2040;margin-bottom:6px;}
+.ph-cal{display:flex;flex-direction:column;gap:2px;}
+.ph-cal-row{display:flex;gap:2px;}
+.ph-day{width:20px;height:17px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:7px;color:#B8A8D8;}
+.ph-day.opt{background:rgba(61,184,122,0.18);color:#1E6040;font-weight:600;border-radius:0;}
+.ph-day.opt.s{border-radius:4px 0 0 4px;}
+.ph-day.opt.e{border-radius:0 4px 4px 0;}
+.ph-win-lbl{font-size:8px;color:#3DB87A;font-weight:600;margin-top:5px;}
+.ph-cycle{margin:6px 10px 0;border-radius:12px;padding:9px 11px;background:#fff;border:0.5px solid #EDE8F8;}
+.ph-cycle-t{font-size:9px;font-weight:600;color:#2A2040;margin-bottom:6px;}
+.ph-prow{display:flex;gap:3px;flex-wrap:wrap;}
+.pd{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:7px;color:#B8A8D8;}
+.pd.period{background:rgba(192,64,96,0.16);color:#C04060;font-weight:600;}
+.pd.fertile{background:rgba(61,184,122,0.12);color:#2E7050;}
+.pd.ovul{background:rgba(61,184,122,0.30);color:#1A5030;font-weight:700;}
+.pd.today{border:1.5px solid #7B5CC4;color:#7B5CC4;font-weight:600;}
+/* feature badges */
+.feat-badges{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+.feat-badge{display:flex;align-items:center;gap:7px;background:#fff;border:0.5px solid #EDE8F8;border-radius:22px;padding:7px 14px;font-size:13px;color:#6858A0;font-weight:500;box-shadow:0 1px 4px rgba(123,92,196,0.07);}
+.feat-badge-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+@media(max-width:768px){
+  .phones-wrap{gap:10px;}
+  .ph.mid{width:155px;height:315px;margin-bottom:16px;}
+  .ph.tall{width:168px;height:352px;}
+}
 
 /* ── PROBLEM ── */
 .problem{padding:100px 6%;background:#fff;}
@@ -186,8 +248,9 @@ footer{background:#1A1425;padding:60px 6% 32px;}
 .footer-trust{display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,0.25);}
 
 @media(max-width:768px){
-  .mockup-inner{flex-direction:column;}
-  .phone-wrap{order:-1;}
+  .phones-wrap{gap:10px;}
+  .ph.mid{width:155px;height:315px;margin-bottom:16px;}
+  .ph.tall{width:168px;height:352px;}
   .stat-row{grid-template-columns:1fr;}
   .proto-grid{grid-template-columns:1fr;}
   .steps{grid-template-columns:1fr 1fr;}
@@ -255,39 +318,153 @@ footer{background:#1A1425;padding:60px 6% 32px;}
     <div class="mockup-copy">
       <div class="section-tag">The product</div>
       <h2>A companion that<br><b>knows your phase</b></h2>
-      <p>Every day of chemotherapy is different. Rehlah adapts in real time — showing the symptoms that matter today, alerting you before your immune system reaches its lowest point, and preparing your doctor's report automatically.</p>
+      <p>Every day of chemotherapy is different — and so is every survivor's journey. Rehlah adapts in real time, from nadir alerts during chemo to scan timing guidance after treatment ends.</p>
       <ul class="feat-list">
         <li><div class="feat-check"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#3DB87A" stroke-width="1.8" stroke-linecap="round"/></svg></div>Phase-aware daily check-in — symptoms change by protocol, cycle, and day</li>
         <li><div class="feat-check"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#3DB87A" stroke-width="1.8" stroke-linecap="round"/></svg></div>Nadir window alerts — you know before your immune system hits its lowest</li>
+        <li><div class="feat-check"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#3DB87A" stroke-width="1.8" stroke-linecap="round"/></svg></div>Survivorship tracking — cancer-free counter, scan calendar, cycle tracker</li>
         <li><div class="feat-check"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#3DB87A" stroke-width="1.8" stroke-linecap="round"/></svg></div>Pre-visit report generated automatically for your oncologist</li>
         <li><div class="feat-check"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#3DB87A" stroke-width="1.8" stroke-linecap="round"/></svg></div>Arabic-first — language, tone, and culture built in from day one</li>
         <li><div class="feat-check"><svg viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#3DB87A" stroke-width="1.8" stroke-linecap="round"/></svg></div>Free for patients — always. Paid by your hospital or insurer.</li>
       </ul>
     </div>
-    <div class="phone-wrap">
-      <div class="phone">
-        <div class="phone-notch"></div>
-        <div class="phone-screen">
-          <div class="ps-date">Wednesday · 30 April</div>
-          <div class="ps-greet">Good evening,<br><b>Nadia</b></div>
-          <div class="ps-sub">Take it one moment at a time.</div>
-          <div class="ps-hero">
-            <div class="ps-pill"><div class="ps-pill-dot"></div>Daily check-in</div>
-            <div class="ps-q">How are you<br>feeling today?</div>
-            <div class="ps-cta">Begin check-in →</div>
-          </div>
-          <div class="ps-nadir">
-            <div class="ps-nadir-t">⚠ Nadir window approaching</div>
-            <div class="ps-nadir-s">Your WBC count will reach its lowest in 1–2 days. Monitor your temperature twice daily.</div>
-          </div>
-          <div class="ps-grid">
-            <div class="ps-card"><div class="ps-card-ico">✨</div><div class="ps-card-lbl">Ask AI</div><div class="ps-card-sub">Any question</div></div>
-            <div class="ps-card"><div class="ps-card-ico">📅</div><div class="ps-card-lbl">Appointments</div><div class="ps-card-sub">Next visit</div></div>
-            <div class="ps-card"><div class="ps-card-ico">💊</div><div class="ps-card-lbl">Medications</div><div class="ps-card-sub">0 of 3 done</div></div>
+
+    <!-- 3-phone illustration -->
+    <div class="phones-wrap">
+
+      <!-- Phone 1: Chemo home -->
+      <div class="ph mid">
+        <div class="ph-status"><span>9:41</span><span>●●●</span></div>
+        <div class="ph-notch"></div>
+        <div class="ph-date">Wednesday · 30 April</div>
+        <div class="ph-greet">Good evening,<br><strong>Nadia</strong></div>
+        <div class="ph-sub">Take it one moment at a time.</div>
+        <div class="ph-hero">
+          <div class="ph-pill"><span class="ph-pill-dot"></span> Daily check-in</div>
+          <div class="ph-hero-title">How are you<br>feeling today?</div>
+          <div class="ph-hero-sub">AC-T · Cycle 2 · Day 10</div>
+          <div class="ph-hero-btn">Begin check-in →</div>
+        </div>
+        <div class="ph-alert">
+          <div class="ph-alert-t">⚡ Nadir approaching</div>
+          <div class="ph-alert-b">WBC reaches lowest in 1–2 days. Monitor temperature twice daily.</div>
+        </div>
+        <div class="ph-phase">
+          <div class="ph-phase-ico">🌿</div>
+          <div style="flex:1;min-width:0;">
+            <div class="ph-phase-title">Peak nausea window</div>
+            <div class="ph-phase-sub">AC-T · Cycle 2 of 8 · 25% complete</div>
+            <div class="ph-progress"><div class="ph-progress-fill" style="width:25%"></div></div>
           </div>
         </div>
+        <div style="flex:1;"></div>
+        <div class="ph-nav">
+          <div class="ph-nav-item active"><div class="ph-nav-ico active"></div><span style="color:#7B5CC4">Home</span></div>
+          <div class="ph-nav-item"><div class="ph-nav-ico"></div><span>Health</span></div>
+          <div class="ph-nav-item"><div class="ph-nav-plus">+</div></div>
+          <div class="ph-nav-item"><div class="ph-nav-ico"></div><span>Care</span></div>
+          <div class="ph-nav-item"><div class="ph-nav-ico"></div><span>Connect</span></div>
+        </div>
       </div>
+
+      <!-- Phone 2: Check-in (tall, center) -->
+      <div class="ph tall">
+        <div class="ph-status"><span>9:41</span><span>●●●</span></div>
+        <div class="ph-notch"></div>
+        <div class="ph-checkin-hd">
+          <div class="ph-checkin-t">How are you<br>feeling today?</div>
+          <div class="ph-checkin-s">No right answers. Just how you are.</div>
+        </div>
+        <div class="ph-phase-pill">⚠ AC-T · Nadir · Day 10</div>
+        <div class="ph-mood-row">
+          <div class="ph-mood"><span class="ph-mood-e">😣</span><div class="ph-mood-l">Hard</div></div>
+          <div class="ph-mood"><span class="ph-mood-e">😔</span><div class="ph-mood-l">Low</div></div>
+          <div class="ph-mood sel"><span class="ph-mood-e">😐</span><div class="ph-mood-l sel">Okay</div></div>
+          <div class="ph-mood"><span class="ph-mood-e">🙂</span><div class="ph-mood-l">Good</div></div>
+          <div class="ph-mood"><span class="ph-mood-e">😊</span><div class="ph-mood-l">Great</div></div>
+        </div>
+        <div class="ph-sym-lbl">Symptoms · ranked for nadir</div>
+        <div class="ph-chips">
+          <div class="ph-chip sel">🌡 Fever</div>
+          <div class="ph-chip sel">😷 Infection</div>
+          <div class="ph-chip sel">🌙 Fatigue</div>
+          <div class="ph-chip">🤢 Nausea</div>
+          <div class="ph-chip">💊 Mouth sores</div>
+          <div class="ph-chip">😮‍💨 Breathlessness</div>
+        </div>
+        <div class="ph-nadir-warn">
+          <div class="ph-nw-t">⚡ Nadir window active</div>
+          <div class="ph-nw-b">WBC at its lowest. Fever above 38°C — call your team immediately.</div>
+        </div>
+        <div class="ph-save">Save check-in</div>
+        <div class="ph-detail">Rate symptoms in detail →</div>
+      </div>
+
+      <!-- Phone 3: Monitoring -->
+      <div class="ph mid">
+        <div class="ph-status"><span>9:41</span><span>●●●</span></div>
+        <div class="ph-notch"></div>
+        <div class="ph-greet" style="font-size:16px;">Good evening,<br><strong>Amira</strong></div>
+        <div class="ph-sub">Monitoring & surveillance</div>
+        <div class="ph-cf">
+          <div class="ph-cf-badge">🎗️ Cancer-free</div>
+          <div class="ph-cf-num">847</div>
+          <div class="ph-cf-sub">days · Since April 2024</div>
+        </div>
+        <div class="ph-scan">
+          <div class="ph-scan-t">📅 Next scan window · May 2026</div>
+          <div class="ph-cal">
+            <div class="ph-cal-row">
+              <div class="ph-day">1</div><div class="ph-day">2</div><div class="ph-day">3</div>
+              <div class="ph-day">4</div><div class="ph-day">5</div><div class="ph-day">6</div><div class="ph-day">7</div>
+            </div>
+            <div class="ph-cal-row">
+              <div class="ph-day">8</div><div class="ph-day">9</div><div class="ph-day">10</div>
+              <div class="ph-day opt s">11</div><div class="ph-day opt">12</div>
+              <div class="ph-day opt">13</div><div class="ph-day opt">14</div>
+            </div>
+            <div class="ph-cal-row">
+              <div class="ph-day opt">15</div><div class="ph-day opt">16</div>
+              <div class="ph-day opt e">17</div>
+              <div class="ph-day">18</div><div class="ph-day">19</div><div class="ph-day">20</div><div class="ph-day">21</div>
+            </div>
+          </div>
+          <div class="ph-win-lbl">✓ 11–17 May · Best time to book</div>
+        </div>
+        <div class="ph-cycle">
+          <div class="ph-cycle-t">🌸 Cycle tracker</div>
+          <div class="ph-prow">
+            <div class="pd period">16</div><div class="pd period">17</div><div class="pd period">18</div>
+            <div class="pd period">19</div><div class="pd period">20</div>
+            <div class="pd">21</div><div class="pd">22</div><div class="pd">23</div><div class="pd">24</div>
+            <div class="pd fertile">25</div><div class="pd fertile">26</div><div class="pd fertile">27</div>
+            <div class="pd fertile">28</div><div class="pd fertile">29</div>
+            <div class="pd ovul">30</div>
+            <div class="pd today">1</div>
+          </div>
+        </div>
+        <div style="flex:1;"></div>
+        <div class="ph-nav">
+          <div class="ph-nav-item active"><div class="ph-nav-ico active"></div><span style="color:#7B5CC4">Home</span></div>
+          <div class="ph-nav-item"><div class="ph-nav-ico"></div><span>Health</span></div>
+          <div class="ph-nav-item"><div class="ph-nav-plus">+</div></div>
+          <div class="ph-nav-item"><div class="ph-nav-ico"></div><span>Care</span></div>
+          <div class="ph-nav-item"><div class="ph-nav-ico"></div><span>Connect</span></div>
+        </div>
+      </div>
+
     </div>
+
+    <!-- Feature badges -->
+    <div class="feat-badges">
+      <div class="feat-badge"><div class="feat-badge-dot" style="background:#7B5CC4"></div>Phase-aware check-in</div>
+      <div class="feat-badge"><div class="feat-badge-dot" style="background:#E09060"></div>Nadir window alerts</div>
+      <div class="feat-badge"><div class="feat-badge-dot" style="background:#3DB87A"></div>Survivorship tracking</div>
+      <div class="feat-badge"><div class="feat-badge-dot" style="background:#C04060"></div>Cycle & scan planner</div>
+      <div class="feat-badge"><div class="feat-badge-dot" style="background:#4A8EC0"></div>Doctor-ready report</div>
+      <div class="feat-badge"><div class="feat-badge-dot" style="background:#C49030"></div>Arabic-first</div>
+    </div>
+
   </div>
 </section>
 
