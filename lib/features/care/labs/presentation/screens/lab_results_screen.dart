@@ -127,17 +127,55 @@ class _LabResultsScreenState extends State<LabResultsScreen> {
 
           // Empty state
           if (labs.isEmpty)
-            SliverToBoxAdapter(child: Padding(
-              padding: const EdgeInsets.all(40),
+            SliverToBoxAdapter(child: Container(
+              margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: AppRadius.mdBR,
+                border: Border.all(color: AppColors.border, width: 0.5)),
               child: Column(children: [
-                const Text('🧪', style: TextStyle(fontSize: 40)),
-                const SizedBox(height: 12),
+                Container(
+                  width: 56, height: 56,
+                  decoration: BoxDecoration(
+                    color: AppColors.blueLight,
+                    borderRadius: AppRadius.mdBR),
+                  child: const Center(child: Text('🧪',
+                    style: TextStyle(fontSize: 26)))),
+                const SizedBox(height: 16),
                 Text('No lab results yet',
-                  style: AppText.bodySemibold),
-                const SizedBox(height: 4),
-                Text('Tap "Add result" to log your first lab result',
-                  style: AppText.bodySecondary,
+                  style: AppText.bodySemibold.copyWith(fontSize: 15)),
+                const SizedBox(height: 8),
+                Text(
+                  'Log your CBC, metabolic panel, or tumour markers to track trends over time and correlate with your symptoms.',
+                  style: AppText.bodySecondary.copyWith(fontSize: 13),
                   textAlign: TextAlign.center),
+                const SizedBox(height: 20),
+                GestureDetector(
+                  onTap: _showAddLabSheet,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24, vertical: 11),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: AppRadius.fullBR,
+                      boxShadow: [BoxShadow(
+                        color: AppColors.primary.withOpacity(0.25),
+                        blurRadius: 12, offset: const Offset(0, 4))]),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      const Icon(Icons.add_rounded,
+                        size: 16, color: Colors.white),
+                      const SizedBox(width: 6),
+                      Text('Add first result',
+                        style: AppText.bodySemibold.copyWith(
+                          color: Colors.white, fontSize: 13)),
+                    ]),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text('Values appear in your doctor-ready prep report',
+                  style: AppText.caption.copyWith(
+                    color: AppColors.text3, fontSize: 11)),
               ]),
             )),
 

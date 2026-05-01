@@ -336,6 +336,7 @@ class UserSession extends ChangeNotifier {
 
   // ── Lab results ───────────────────────────────────────────────────────────
   final List<LabResult> _labs = [];
+  bool _labsInitialized = false;
 
   List<LabResult> get labs {
     final sorted = [..._labs]..sort((a, b) => b.date.compareTo(a.date));
@@ -356,7 +357,8 @@ class UserSession extends ChangeNotifier {
   }
 
   void initDefaultLabs() {
-    if (_labs.isNotEmpty) return;
+    if (_labsInitialized) return;
+    _labsInitialized = true;
     _labs.addAll([
       LabResult(
         id: 'cbc-1',
@@ -393,11 +395,13 @@ class UserSession extends ChangeNotifier {
 
   // ── Medications ───────────────────────────────────────────────────────────
   final List<Medication> _medications = [];
+  bool _medsInitialized = false;
 
   List<Medication> get medications => List.unmodifiable(_medications);
 
   void initDefaultMedications() {
-    if (_medications.isNotEmpty) return;
+    if (_medsInitialized) return;
+    _medsInitialized = true;
     if (isMonitoring) {
       _medications.addAll([
         Medication(id: 'med1', name: 'Tamoxifen 20mg',

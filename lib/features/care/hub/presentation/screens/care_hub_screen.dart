@@ -12,14 +12,47 @@ class CareHubScreen extends StatefulWidget {
 }
 
 class _CareHubScreenState extends State<CareHubScreen> {
+  final _session = UserSession();
+
+  @override
+  void initState() {
+    super.initState();
+    _session.addListener(_onSessionChanged);
+  }
+
+  @override
+  void dispose() {
+    _session.removeListener(_onSessionChanged);
+    super.dispose();
+  }
+
+  void _onSessionChanged() {
+    if (mounted) setState(() {});
+  }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Rebuild every time we come back to this screen
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) setState(() {});
     });
+  }
+
+  Widget _buildLabsBadge() {
+    final labs = _session.labs;
+    if (labs.isEmpty) {
+      return PillBadge(
+        text: 'Add first',
+        bg: AppColors.background2,
+        textColor: AppColors.text3);
+    }
+    final abnormal = labs.first.metrics.where((m) => !m.isNormal).length;
+    final color = abnormal > 0 ? AppColors.peach : AppColors.teal;
+    return PillBadge(
+      text: abnormal > 0 ? '$abnormal abnormal' : 'All normal ✓',
+      bg: color.withOpacity(0.10),
+      textColor: color,
+      borderColor: color.withOpacity(0.2));
   }
 
   @override
@@ -59,23 +92,7 @@ class _CareHubScreenState extends State<CareHubScreen> {
               iconBg: AppColors.blueLight,
               title: 'Lab results',
               subtitle: 'CBC, metabolic, tumour markers',
-              trailing: Builder(builder: (_) {
-                final labs = UserSession().labs;
-                if (labs.isEmpty) {
-                  return PillBadge(
-                    text: 'Add first',
-                    bg: AppColors.background2,
-                    textColor: AppColors.text3);
-                }
-                final abnormal = labs.first.metrics
-                    .where((m) => !m.isNormal).length;
-                final color = abnormal > 0 ? AppColors.peach : AppColors.teal;
-                return PillBadge(
-                  text: abnormal > 0 ? '$abnormal abnormal' : 'All normal ✓',
-                  bg: color.withOpacity(0.10),
-                  textColor: color,
-                  borderColor: color.withOpacity(0.2));
-              }),
+              trailing: _buildLabsBadge(),
               onTap: () => context.push('/care/labs'),
             )),
             SliverToBoxAdapter(child: ToolRow(

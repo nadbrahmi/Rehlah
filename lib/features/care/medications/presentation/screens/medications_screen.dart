@@ -93,16 +93,55 @@ class _MedicationsScreenState extends State<MedicationsScreen> {
 
           // Medications list
           if (meds.isEmpty)
-            SliverToBoxAdapter(child: Padding(
-              padding: const EdgeInsets.all(40),
+            SliverToBoxAdapter(child: Container(
+              margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: AppRadius.mdBR,
+                border: Border.all(color: AppColors.border, width: 0.5)),
               child: Column(children: [
-                const Text('💊', style: TextStyle(fontSize: 40)),
-                const SizedBox(height: 12),
+                Container(
+                  width: 56, height: 56,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight,
+                    borderRadius: AppRadius.mdBR),
+                  child: const Center(child: Text('💊',
+                    style: TextStyle(fontSize: 26)))),
+                const SizedBox(height: 16),
                 Text('No medications added yet',
-                  style: AppText.bodySemibold),
-                const SizedBox(height: 4),
-                Text('Tap + to add your first medication',
-                  style: AppText.bodySecondary),
+                  style: AppText.bodySemibold.copyWith(fontSize: 15)),
+                const SizedBox(height: 8),
+                Text(
+                  'Add your medications to track daily adherence and include them in your doctor-ready prep report.',
+                  style: AppText.bodySecondary.copyWith(fontSize: 13),
+                  textAlign: TextAlign.center),
+                const SizedBox(height: 20),
+                GestureDetector(
+                  onTap: () => _showAddEditSheet(null),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24, vertical: 11),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: AppRadius.fullBR,
+                      boxShadow: [BoxShadow(
+                        color: AppColors.primary.withOpacity(0.25),
+                        blurRadius: 12, offset: const Offset(0, 4))]),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      const Icon(Icons.add_rounded,
+                        size: 16, color: Colors.white),
+                      const SizedBox(width: 6),
+                      Text('Add first medication',
+                        style: AppText.bodySemibold.copyWith(
+                          color: Colors.white, fontSize: 13)),
+                    ]),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text('You can also scan your prescription later',
+                  style: AppText.caption.copyWith(
+                    color: AppColors.text3, fontSize: 11)),
               ]),
             ))
           else
@@ -212,14 +251,51 @@ class _MedicationsScreenState extends State<MedicationsScreen> {
                   fontWeight: FontWeight.w500, fontSize: 11))),
           ),
           const SizedBox(height: 6),
-          // Edit button
-          GestureDetector(
-            onTap: () => _showAddEditSheet(med),
-            child: Text('Edit',
-              style: AppText.caption.copyWith(
-                color: AppColors.text3, fontSize: 10))),
+          // Edit + delete row
+          Row(mainAxisSize: MainAxisSize.min, children: [
+            GestureDetector(
+              onTap: () => _showAddEditSheet(med),
+              child: Text('Edit',
+                style: AppText.caption.copyWith(
+                  color: AppColors.text3, fontSize: 10))),
+            const SizedBox(width: 8),
+            GestureDetector(
+              onTap: () => _confirmDelete(med),
+              child: Icon(Icons.delete_outline_rounded,
+                size: 14, color: AppColors.text3)),
+          ]),
         ]),
       ]),
+    );
+  }
+
+  void _confirmDelete(Medication med) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text('Remove medication?',
+          style: AppText.sectionHeading.copyWith(fontSize: 15)),
+        content: Text(
+          '${med.name} will be removed from your list.',
+          style: AppText.bodySecondary),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel',
+              style: TextStyle(color: AppColors.text2))),
+          TextButton(
+            onPressed: () {
+              _session.removeMedication(med.id);
+              setState(() {});
+              Navigator.pop(context);
+            },
+            child: Text('Remove',
+              style: TextStyle(
+                color: AppColors.rose,
+                fontWeight: FontWeight.w600))),
+        ],
+      ),
     );
   }
 
