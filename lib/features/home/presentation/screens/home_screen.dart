@@ -117,7 +117,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ],
           )),
           const SizedBox(height: 4),
-          Text('Take it one moment at a time.', style: AppText.bodySecondary),
+          Text(
+            session.isMonitoring && session.daysCancerFree > 0
+                ? '${session.daysCancerFree} days cancer-free and counting. 🎗️'
+                : session.isNadirWindow
+                    ? 'You\'re in nadir — rest is treatment today.'
+                    : 'Take it one moment at a time.',
+            style: AppText.bodySecondary),
         ])),
         GestureDetector(
           onTap: () => context.push('/profile'),
@@ -778,7 +784,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _TileData('Appointments', 'Next visit', Icons.calendar_month_rounded,
           AppColors.peachLight, AppColors.peach, '/care/appointments'),
       _TileData('Medications',
-          '${session.medsTakenTodayCount} of ${session.medications.length} done',
+          session.hasRefillAlert
+              ? '⚠ Refill needed'
+              : '${session.medsTakenTodayCount} of ${session.medications.length} done',
           Icons.medication_rounded,
           AppColors.tealLight, AppColors.teal, '/care/medications'),
     ];

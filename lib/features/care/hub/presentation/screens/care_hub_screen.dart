@@ -38,6 +38,25 @@ class _CareHubScreenState extends State<CareHubScreen> {
     });
   }
 
+  Widget _buildAppointmentsBadge() {
+    _session.initDefaultAppointments();
+    final upcoming = _session.upcomingAppointments;
+    if (upcoming.isEmpty) return const SizedBox.shrink();
+    final days = upcoming.first.daysUntil;
+    final label = days < 0 ? 'Overdue'
+        : days == 0 ? 'Today!'
+        : days == 1 ? 'Tomorrow'
+        : '$days days';
+    final color = days <= 1 ? AppColors.rose
+        : days <= 3 ? AppColors.peach
+        : AppColors.text2;
+    return PillBadge(
+      text: label,
+      bg: color.withOpacity(0.10),
+      textColor: color,
+      borderColor: color.withOpacity(0.2));
+  }
+
   Widget _buildLabsBadge() {
     final labs = _session.labs;
     if (labs.isEmpty) {
@@ -110,24 +129,7 @@ class _CareHubScreenState extends State<CareHubScreen> {
               iconBg: AppColors.peachLight,
               title: 'Appointments',
               subtitle: 'Upcoming visits, prep notes',
-              trailing: Builder(builder: (_) {
-                final upcoming = MockData.appointments
-                    .where((a) => !a.isPast).toList();
-                if (upcoming.isEmpty) return const SizedBox.shrink();
-                final days = upcoming.first.daysUntil;
-                final label = days < 0 ? 'Overdue'
-                    : days == 0 ? 'Today!'
-                    : days == 1 ? 'Tomorrow'
-                    : '$days days';
-                final color = days <= 1 ? AppColors.rose
-                    : days <= 3 ? AppColors.peach
-                    : AppColors.text2;
-                return PillBadge(
-                  text: label,
-                  bg: color.withOpacity(0.10),
-                  textColor: color,
-                  borderColor: color.withOpacity(0.2));
-              }),
+              trailing: _buildAppointmentsBadge(),
               onTap: () => context.push('/care/appointments'),
             )),
             const SliverToBoxAdapter(child: SizedBox(height: 24)),

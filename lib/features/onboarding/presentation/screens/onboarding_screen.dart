@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/utils/models.dart';
 import '../../../../core/utils/user_session.dart';
 import '../../../../core/utils/protocols.dart';
 import '../../../../core/utils/invite_codes.dart';
@@ -20,22 +18,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _nameController = TextEditingController();
   int _typeIndex = 0;
   int _protocolIndex = 0;
-  int _cycleIndex = 0;
-  int _dayIndex = 0;
+  int _cycleIndex = 0; // 0-based index into cycle list
+  int _dayIndex = 0;   // 0-based index (day = _dayIndex + 1)
   int _phaseIndex = 2;
-
-  // Monitoring state
-  DateTime? _treatmentEndDate;
-  String _menstrualStatus = 'unknown';
-  DateTime? _lastPeriodDate;
-  int _cycleLengthIndex = 1; // 0=21d, 1=28d, 2=35d
   final Set<int> _notifSelected = {0, 1};
 
   // Pages: 0=welcome,1=who,2=name,3=type,4=phase,5=protocol,6=cycleday,7=notifs,8=celebration
   static const _totalSteps = 7;
 
-  final _cancerTypes = AppConfig.cancerTypes;
-  final _cancerEmojis = ['🎀','🫁','🫀','♟️','🔬','🔵','💜','🩸','✦'];
+  final _cancerTypes = ['Breast','Lung','Colorectal','Leukemia','Lymphoma','Other'];
+  final _cancerEmojis = ['🎀','🫁','🫀','🩸','💜','✦'];
 
   // Protocol data — shown only when Breast is selected (index 0)
   final _protocols = [
@@ -77,14 +69,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
   ];
 
-  final _phases = AppConfig.phaseNames;
+  final _phases = [
+    'Just diagnosed','Awaiting treatment plan','In chemotherapy',
+    'In radiotherapy','Post-surgery recovery','Monitoring / surveillance'];
 
   bool get _showProtocolStep =>
-      _cancerTypes[_typeIndex] == 'Breast cancer' &&
-      _phases[_phaseIndex] == 'In chemotherapy';
+      _typeIndex == 0 && _phaseIndex == 2; // Breast + In chemotherapy
   bool get _showCycleDayStep => _showProtocolStep;
-  bool get _showMonitoringStep =>
-      _phases[_phaseIndex] == 'Monitoring / surveillance';
 
   String get _firstName {
     final t = _nameController.text.trim();
@@ -92,6 +83,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _loadDemo() {
+    // Load DEMO invite code and go straight to dashboard
     final profile = InviteCodes.validate('DEMO');
     if (profile != null) {
       InviteCodes.apply(profile);
@@ -103,13 +95,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (_page == 2) UserSession().name = _firstName;
     if (_page == 3) UserSession().cancerType = _cancerTypes[_typeIndex];
     if (_page == 4) UserSession().treatmentPhase = _phases[_phaseIndex];
-    if (_page == 5 && _showMonitoringStep) {
-      UserSession().treatmentEndDate = _treatmentEndDate;
-      UserSession().menstrualStatus = _menstrualStatus;
-      UserSession().lastPeriodDate = _lastPeriodDate;
-      final lengths = [21, 28, 35];
-      UserSession().cycleLength = lengths[_cycleLengthIndex];
-    }
     if (_page == 5 && _showProtocolStep) {
       final selected = _protocols[_protocolIndex].protocol;
       UserSession().protocol = selected;
@@ -126,12 +111,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
 
     int nextPage = _page + 1;
-    if (_page == 4 && _showMonitoringStep) nextPage = 5;
-    if (_page == 4 && _showProtocolStep) nextPage = 5;
-    if (_page == 4 && !_showProtocolStep && !_showMonitoringStep) nextPage = 7;
-    if (_page == 5 && _showMonitoringStep) nextPage = 7;
+    // After phase (4): skip protocol+cycleday if not breast+chemo
+    if (_page == 4 && !_showProtocolStep) nextPage = 7;
+    // After protocol (5): go to cycleday
     if (_page == 5 && _showProtocolStep) nextPage = 6;
-    if (_page == 5 && !_showProtocolStep && !_showMonitoringStep) nextPage = 7;
+    if (_page == 5 && !_showProtocolStep) nextPage = 7;
+    // After cycleday (6): go to notifs
     if (_page == 6) nextPage = 7;
 
     if (nextPage <= 8) {
@@ -146,10 +131,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   void _back() {
     if (_page > 0) {
       int prevPage = _page - 1;
+      // From notifs (7): go back to cycleday or phase
       if (_page == 7 && _showCycleDayStep) prevPage = 6;
-      if (_page == 7 && _showMonitoringStep) prevPage = 5;
-      if (_page == 7 && !_showProtocolStep && !_showMonitoringStep) prevPage = 4;
+      if (_page == 7 && !_showProtocolStep) prevPage = 4;
+      // From cycleday (6): go to protocol
       if (_page == 6) prevPage = 5;
+      // From protocol (5): go to phase
       if (_page == 5) prevPage = 4;
       setState(() => _page = prevPage);
       _pageController.animateToPage(prevPage,
@@ -195,8 +182,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               _who(),         // 1
               _name(),        // 2
               _type(),        // 3
-              _phase(),       // 4
-              _monitoringOrProtocol(), // 5 — monitoring OR protocol
+              _phase(),       // 4 ← MOVED UP
+              _protocol(),    // 5
               _cycleDay(),    // 6
               _notifs(),      // 7
               _celebration(), // 8
@@ -419,205 +406,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _next,_back);
 
   // ── Page 4: Protocol (NEW) ────────────────────────────────────────────────
-  // ── Page 5 dispatcher: monitoring OR protocol ────────────────────────────
-  Widget _monitoringOrProtocol() {
-    if (_showMonitoringStep) return _monitoring();
-    if (_showProtocolStep) return _protocol();
-    // Auto skip
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_page == 5) _next();
-    });
-    return const SizedBox.shrink();
-  }
-
-  // ── Page 5a: Monitoring setup ─────────────────────────────────────────────
-  Widget _monitoring() {
-    final menstrualOptions = [
-      ('regular', '🔄', 'Regular cycles', 'My period has returned or was never affected'),
-      ('irregular', '〰️', 'Irregular cycles', 'My period is unpredictable'),
-      ('amenorrhea', '⏸️', 'No period', 'Stopped during treatment, not yet returned'),
-      ('menopause', '🍂', 'Menopause', 'Permanent — confirmed by doctor'),
-    ];
-    final cycleLengths = ['21 days', '28 days', '35 days'];
-
-    return _scaffold('Step 5 of $_totalSteps', 'Your monitoring\n', 'setup',
-      'Helps us calculate your best scan timing.',
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-
-        // Treatment end date
-        Text('WHEN DID YOU FINISH TREATMENT?',
-          style: AppText.label.copyWith(fontSize: 10)),
-        const SizedBox(height: 8),
-        GestureDetector(
-          onTap: () async {
-            final picked = await showDatePicker(
-              context: context,
-              initialDate: _treatmentEndDate ?? DateTime.now().subtract(
-                const Duration(days: 90)),
-              firstDate: DateTime(2015),
-              lastDate: DateTime.now(),
-              builder: (context, child) => Theme(
-                data: Theme.of(context).copyWith(
-                  colorScheme: ColorScheme.light(
-                    primary: AppColors.primary)),
-                child: child!),
-            );
-            if (picked != null) setState(() => _treatmentEndDate = picked);
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: AppRadius.mdBR,
-              border: Border.all(
-                color: _treatmentEndDate != null
-                    ? AppColors.primaryMid : AppColors.border,
-                width: 0.5)),
-            child: Row(children: [
-              const Text('📅', style: TextStyle(fontSize: 16)),
-              const SizedBox(width: 10),
-              Text(
-                _treatmentEndDate != null
-                    ? DateFormat('d MMMM yyyy').format(_treatmentEndDate!)
-                    : 'Select date',
-                style: AppText.bodySemibold.copyWith(
-                  color: _treatmentEndDate != null
-                      ? AppColors.primary : AppColors.text3)),
-              if (_treatmentEndDate != null) ...[
-                const Spacer(),
-                Text(
-                  '${DateTime.now().difference(_treatmentEndDate!).inDays} days ago',
-                  style: AppText.caption.copyWith(color: AppColors.teal)),
-              ],
-            ]),
-          ),
-        ),
-
-        const SizedBox(height: 18),
-
-        // Menstrual status
-        Text('CURRENT MENSTRUAL STATUS',
-          style: AppText.label.copyWith(fontSize: 10)),
-        const SizedBox(height: 8),
-        ...menstrualOptions.map((opt) {
-          final sel = _menstrualStatus == opt.$1;
-          return GestureDetector(
-            onTap: () => setState(() => _menstrualStatus = opt.$1),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 130),
-              margin: const EdgeInsets.only(bottom: 7),
-              padding: const EdgeInsets.all(11),
-              decoration: BoxDecoration(
-                color: sel
-                    ? AppColors.primary.withOpacity(0.06) : AppColors.surface,
-                borderRadius: AppRadius.mdBR,
-                border: Border.all(
-                  color: sel ? AppColors.primaryMid : AppColors.border,
-                  width: 0.5)),
-              child: Row(children: [
-                Text(opt.$2, style: const TextStyle(fontSize: 18)),
-                const SizedBox(width: 10),
-                Expanded(child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(opt.$3, style: AppText.bodySemibold.copyWith(
-                      color: sel ? AppColors.primary : AppColors.text1,
-                      fontSize: 13)),
-                    Text(opt.$4, style: AppText.caption.copyWith(fontSize: 11)),
-                  ],
-                )),
-                Container(width: 18, height: 18,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: sel ? AppColors.primary : Colors.transparent,
-                    border: Border.all(
-                      color: sel ? AppColors.primary : AppColors.border,
-                      width: 1.5)),
-                  child: sel ? const Icon(Icons.check_rounded,
-                    size: 10, color: Colors.white) : null),
-              ]),
-            ),
-          );
-        }),
-
-        // Cycle details if regular/irregular
-        if (_menstrualStatus == 'regular' || _menstrualStatus == 'irregular') ...[
-          const SizedBox(height: 14),
-          Text('LAST PERIOD DATE',
-            style: AppText.label.copyWith(fontSize: 10)),
-          const SizedBox(height: 8),
-          GestureDetector(
-            onTap: () async {
-              final picked = await showDatePicker(
-                context: context,
-                initialDate: _lastPeriodDate ?? DateTime.now().subtract(
-                  const Duration(days: 14)),
-                firstDate: DateTime.now().subtract(const Duration(days: 90)),
-                lastDate: DateTime.now(),
-                builder: (context, child) => Theme(
-                  data: Theme.of(context).copyWith(
-                    colorScheme: ColorScheme.light(
-                      primary: AppColors.primary)),
-                  child: child!),
-              );
-              if (picked != null) setState(() => _lastPeriodDate = picked);
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: AppRadius.mdBR,
-                border: Border.all(
-                  color: _lastPeriodDate != null
-                      ? AppColors.primaryMid : AppColors.border,
-                  width: 0.5)),
-              child: Row(children: [
-                const Text('🗓️', style: TextStyle(fontSize: 16)),
-                const SizedBox(width: 10),
-                Text(
-                  _lastPeriodDate != null
-                      ? DateFormat('d MMMM yyyy').format(_lastPeriodDate!)
-                      : 'Select date',
-                  style: AppText.bodySemibold.copyWith(
-                    color: _lastPeriodDate != null
-                        ? AppColors.primary : AppColors.text3)),
-              ]),
-            ),
-          ),
-
-          if (_menstrualStatus == 'regular') ...[
-            const SizedBox(height: 14),
-            Text('AVERAGE CYCLE LENGTH',
-              style: AppText.label.copyWith(fontSize: 10)),
-            const SizedBox(height: 8),
-            Row(children: List.generate(cycleLengths.length, (i) {
-              final sel = _cycleLengthIndex == i;
-              return Expanded(child: GestureDetector(
-                onTap: () => setState(() => _cycleLengthIndex = i),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 120),
-                  margin: EdgeInsets.only(right: i < 2 ? 8 : 0),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    color: sel ? AppColors.primaryLight : AppColors.surface,
-                    borderRadius: AppRadius.mdBR,
-                    border: Border.all(
-                      color: sel ? AppColors.primaryMid : AppColors.border,
-                      width: 0.5)),
-                  child: Center(child: Text(cycleLengths[i],
-                    style: AppText.bodySemibold.copyWith(
-                      fontSize: 12,
-                      color: sel ? AppColors.primary : AppColors.text2)))),
-              ));
-            })),
-          ],
-        ],
-      ]),
-      _next, _back,
-      showSkip: true, skipLabel: 'Skip for now');
-  }
-
-  // ── Page 5b: Protocol ─────────────────────────────────────────────────────
   Widget _protocol() {
     // If not breast+chemo, skip automatically
     if (!_showProtocolStep) {

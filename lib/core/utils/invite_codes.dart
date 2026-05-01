@@ -1,5 +1,30 @@
 import 'protocols.dart';
 import 'user_session.dart';
+import 'caregiver_session.dart';
+
+// ── Caregiver Code Database ───────────────────────────────────────────────────
+// Each caregiver code links to a patient profile.
+// Format: CARE-[PATIENT_CODE]
+// ─────────────────────────────────────────────────────────────────────────────
+
+class CaregiverCode {
+  final String code;
+  final String patientName;
+  final String patientPhase;
+  final String scenarioLabel;
+  final String scenarioEmoji;
+  // Which patient invite code to load when caregiver connects
+  final String linkedPatientCode;
+
+  const CaregiverCode({
+    required this.code,
+    required this.patientName,
+    required this.patientPhase,
+    required this.scenarioLabel,
+    required this.scenarioEmoji,
+    required this.linkedPatientCode,
+  });
+}
 
 // ── Invite Code Database ──────────────────────────────────────────────────────
 // Hard-coded for now — will be replaced with API call when care team 
@@ -182,6 +207,7 @@ class InviteCodes {
     // Init default medications based on phase
     s.initDefaultMedications();
     s.initDefaultLabs();
+    s.initDefaultAppointments();
     // Simulate 25 doses of Tamoxifen taken (pack of 30 → 5 remaining → low)
     if (s.isMonitoring) {
       for (int i = 0; i < 25; i++) {
@@ -192,4 +218,45 @@ class InviteCodes {
 
   /// All available codes (for dev/debug display)
   static List<InviteProfile> get all => _codes.values.toList();
+
+  // ── Caregiver codes ────────────────────────────────────────────────────────
+  static const _caregiverCodes = <String, CaregiverCode>{
+    'CARE-NADIA': CaregiverCode(
+      code: 'CARE-NADIA',
+      patientName: 'Nadia',
+      patientPhase: 'In chemotherapy',
+      scenarioLabel: 'Nadia · AC-T · Cycle 2 · Day 10',
+      scenarioEmoji: '💜',
+      linkedPatientCode: 'REHLAH-ACT-002',
+    ),
+    'CARE-AMIRA': CaregiverCode(
+      code: 'CARE-AMIRA',
+      patientName: 'Amira',
+      patientPhase: 'Monitoring / surveillance',
+      scenarioLabel: 'Amira · 847 days cancer-free',
+      scenarioEmoji: '🎗️',
+      linkedPatientCode: 'REHLAH-MON-001',
+    ),
+  };
+
+  static CaregiverCode? validateCaregiverCode(String code) =>
+      _caregiverCodes[code.trim().toUpperCase()];
+
+  static void applyAsCaregiver(CaregiverCode careCode) {
+    // Load the linked patient's session data
+    final patientProfile = validate(careCode.linkedPatientCode);
+    if (patientProfile != null) apply(patientProfile);
+
+    // Mark this session as caregiver mode
+    CaregiverSession().linkAsCaregiver(
+      patientName: careCode.patientName,
+      patientPhase: careCode.patientPhase,
+      code: careCode.code,
+    );
+  }
+
+  // Generate a caregiver code from a patient code (simple prefix for demo)
+  static String generateCaregiverCode(String patientName) {
+    return 'CARE-${patientName.toUpperCase().replaceAll(' ', '')}';
+  }
 }

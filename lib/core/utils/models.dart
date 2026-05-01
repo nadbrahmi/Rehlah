@@ -239,17 +239,21 @@ abstract class MockData {
     Appointment(
       id: 'apt1', title: 'Oncology follow-up',
       doctorName: 'Dr. Sarah Chen', location: 'Oncology Clinic',
-      dateTime: DateTime(2026, 4, 28, 10, 30),
+      dateTime: DateTime.now().add(const Duration(days: 4))
+          .copyWith(hour: 10, minute: 30, second: 0),
     ),
     Appointment(
       id: 'apt2', title: 'Chemo session #7',
       doctorName: '', location: 'Infusion Suite B',
-      dateTime: DateTime(2026, 5, 5, 9, 0),
+      dateTime: DateTime.now().add(const Duration(days: 11))
+          .copyWith(hour: 9, minute: 0, second: 0),
     ),
     Appointment(
       id: 'apt3', title: 'Chemo session #6',
       doctorName: '', location: 'Infusion Suite B',
-      dateTime: DateTime(2026, 4, 6, 9, 0), isPast: true,
+      dateTime: DateTime.now().subtract(const Duration(days: 10))
+          .copyWith(hour: 9, minute: 0, second: 0),
+      isPast: true,
     ),
   ];
 

@@ -225,18 +225,19 @@ class UserSession extends ChangeNotifier {
     if (name.isNotEmpty && name != 'there') filled++;
     if (cancerType.isNotEmpty) filled++;
     if (treatmentPhase.isNotEmpty) filled++;
-    if (treatmentPhase == 'In chemotherapy') {
-      filled++; // protocol selected
+    if (isMonitoring) {
+      if (treatmentEndDate != null) filled++;
     } else {
-      filled++; // non-chemo gets credit too
+      filled++; // non-monitoring gets credit for phase alone
     }
-    if (history.isNotEmpty) filled++; // has checked in at least once
+    if (history.isNotEmpty) filled++; // first check-in required for 100%
     return ((filled / total) * 100).round().clamp(0, 100);
   }
 
   List<String> get profileMissingFields {
     final missing = <String>[];
     if (name.isEmpty || name == 'there') missing.add('Your name');
+    if (isMonitoring && treatmentEndDate == null) missing.add('Treatment end date');
     if (history.isEmpty) missing.add('First check-in');
     return missing;
   }
@@ -333,6 +334,92 @@ class UserSession extends ChangeNotifier {
   }
 
   bool get isMonitoring => treatmentPhase == 'Monitoring / surveillance';
+
+  // ── Appointments ──────────────────────────────────────────────────────────
+  final List<Appointment> _appointments = [];
+  bool _appointmentsInitialized = false;
+
+  List<Appointment> get appointments {
+    final sorted = [..._appointments]
+        ..sort((a, b) => a.dateTime.compareTo(b.dateTime));
+    return List.unmodifiable(sorted);
+  }
+
+  List<Appointment> get upcomingAppointments =>
+      appointments.where((a) => !a.isPast).toList();
+
+  List<Appointment> get pastAppointments =>
+      appointments.where((a) => a.isPast).toList();
+
+  void initDefaultAppointments() {
+    if (_appointmentsInitialized) return;
+    _appointmentsInitialized = true;
+    final now = DateTime.now();
+    if (isMonitoring) {
+      _appointments.addAll([
+        Appointment(
+          id: 'mon1', title: 'Oncology surveillance review',
+          doctorName: 'Dr. Sarah Chen', location: 'Oncology Clinic',
+          dateTime: now.add(const Duration(days: 32))
+              .copyWith(hour: 10, minute: 30, second: 0)),
+        Appointment(
+          id: 'mon2', title: 'Annual mammogram',
+          doctorName: 'Radiology Dept', location: 'Breast Imaging Centre',
+          dateTime: now.add(const Duration(days: 65))
+              .copyWith(hour: 9, minute: 0, second: 0)),
+        Appointment(
+          id: 'mon3', title: 'Oncology surveillance review',
+          doctorName: 'Dr. Sarah Chen', location: 'Oncology Clinic',
+          dateTime: now.subtract(const Duration(days: 180))
+              .copyWith(hour: 10, minute: 30, second: 0),
+          isPast: true),
+      ]);
+    } else {
+      _appointments.addAll([
+        Appointment(
+          id: 'apt1', title: 'Oncology follow-up',
+          doctorName: 'Dr. Sarah Chen', location: 'Oncology Clinic',
+          dateTime: now.add(const Duration(days: 4))
+              .copyWith(hour: 10, minute: 30, second: 0)),
+        Appointment(
+          id: 'apt2', title: 'Chemo session',
+          doctorName: '', location: 'Infusion Suite B',
+          dateTime: now.add(const Duration(days: 11))
+              .copyWith(hour: 9, minute: 0, second: 0)),
+        Appointment(
+          id: 'apt3', title: 'Chemo session',
+          doctorName: '', location: 'Infusion Suite B',
+          dateTime: now.subtract(const Duration(days: 10))
+              .copyWith(hour: 9, minute: 0, second: 0),
+          isPast: true),
+      ]);
+    }
+  }
+
+  void addAppointment(Appointment apt) {
+    _appointments.removeWhere((a) => a.id == apt.id);
+    _appointments.add(apt);
+    _saveCount++;
+    notifyListeners();
+  }
+
+  void removeAppointment(String id) {
+    _appointments.removeWhere((a) => a.id == id);
+    _saveCount++;
+    notifyListeners();
+  }
+
+  void markAppointmentPast(String id) {
+    final idx = _appointments.indexWhere((a) => a.id == id);
+    if (idx >= 0) {
+      final a = _appointments[idx];
+      _appointments[idx] = Appointment(
+        id: a.id, title: a.title, doctorName: a.doctorName,
+        location: a.location, dateTime: a.dateTime, isPast: true);
+      _saveCount++;
+      notifyListeners();
+    }
+  }
 
   // ── Lab results ───────────────────────────────────────────────────────────
   final List<LabResult> _labs = [];
@@ -540,6 +627,24 @@ class UserSession extends ChangeNotifier {
   }
 
   String get displayName => name.isEmpty ? 'there' : name;
+
+  void reset() {
+    name = '';
+    cancerType = '';
+    treatmentPhase = '';
+    _medications.clear();
+    _medsInitialized = false;
+    _medsTakenToday.clear();
+    _medsAdherenceCount.clear();
+    _labs.clear();
+    _labsInitialized = false;
+    _history.clear();
+    _controls.clear();
+    treatmentEndDate = null;
+    menstrualStatus = 'unknown';
+    lastPeriodDate = null;
+    notifyListeners();
+  }
 }
 
 class DayMood {

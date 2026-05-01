@@ -1,4 +1,3 @@
-// ── Screen 13: Appointments ───────────────────────────────────────────────────
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -7,279 +6,547 @@ import '../../../../../core/widgets/shared_widgets.dart';
 import '../../../../../core/utils/models.dart';
 import '../../../../../core/utils/user_session.dart';
 
-class AppointmentsScreen extends StatelessWidget {
+class AppointmentsScreen extends StatefulWidget {
   const AppointmentsScreen({super.key});
+  @override
+  State<AppointmentsScreen> createState() => _AppointmentsScreenState();
+}
+
+class _AppointmentsScreenState extends State<AppointmentsScreen> {
+  final _session = UserSession();
+
+  @override
+  void initState() {
+    super.initState();
+    _session.initDefaultAppointments();
+    _session.addListener(_rebuild);
+  }
+
+  @override
+  void dispose() {
+    _session.removeListener(_rebuild);
+    super.dispose();
+  }
+
+  void _rebuild() { if (mounted) setState(() {}); }
 
   @override
   Widget build(BuildContext context) {
-    final session = UserSession();
-    final isMonitoring = session.isMonitoring;
-
-    // Use phase-appropriate appointments
-    final allAppointments = isMonitoring
-        ? _monitoringAppointments()
-        : MockData.appointments;
-
-    final upcoming = allAppointments.where((a) => !a.isPast).toList();
-    final past = allAppointments.where((a) => a.isPast).toList();
+    final upcoming = _session.upcomingAppointments;
+    final past = _session.pastAppointments;
     final next = upcoming.isNotEmpty ? upcoming.first : null;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        child: CustomScrollView(slivers: [
+
+          // Header
+          SliverToBoxAdapter(child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              GestureDetector(
+                onTap: () => context.go('/'),
+                child: Row(children: [
+                  Icon(Icons.arrow_back_ios_new_rounded, size: 15,
+                    color: AppColors.text2.withOpacity(0.4)),
+                  const SizedBox(width: 4),
+                  Text('Home', style: AppText.caption.copyWith(
+                    color: AppColors.text2, fontSize: 11)),
+                ]),
+              ),
+              const SizedBox(height: 10),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                RichText(text: TextSpan(style: AppText.displayTitle,
+                  children: const [
+                    TextSpan(text: 'Appoint', style: TextStyle(fontWeight: FontWeight.w300)),
+                    TextSpan(text: 'ments', style: TextStyle(fontWeight: FontWeight.w700)),
+                  ])),
                 GestureDetector(
-                  onTap: () => context.go('/'),
-                  child: Row(children: [
-                    Icon(Icons.arrow_back_ios_new_rounded, size: 15,
-                      color: AppColors.text2.withOpacity(0.4)),
-                    const SizedBox(width: 4),
-                    Text('Home', style: AppText.caption.copyWith(
-                      color: AppColors.text2, fontSize: 11)),
-                  ]),
+                  onTap: () => _showAddEditSheet(null),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: AppRadius.fullBR),
+                    child: Row(children: [
+                      const Icon(Icons.add_rounded, size: 14, color: Colors.white),
+                      const SizedBox(width: 4),
+                      Text('Add', style: AppText.caption.copyWith(
+                        color: Colors.white, fontWeight: FontWeight.w500)),
+                    ]),
+                  ),
                 ),
-                const SizedBox(height: 10),
-                RichText(text: TextSpan(style: AppText.displayTitle, children: const [
-                  TextSpan(text: '', style: TextStyle(fontWeight: FontWeight.w700)),
-                  TextSpan(text: 'Appointments'),
-                ])),
-                Text('${upcoming.length} upcoming · ${past.length} past',
-                  style: AppText.bodySecondary),
               ]),
-            )),
+              Text('${upcoming.length} upcoming · ${past.length} past',
+                style: AppText.bodySecondary),
+            ]),
+          )),
 
-            // Monitoring controls reminder
-            if (isMonitoring) SliverToBoxAdapter(child: _buildMonitoringSchedule(session)),
-
-            // Next appointment hero
-            if (next != null) SliverToBoxAdapter(child: HeroCard(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const HeroPill('Next appointment'),
-                RichText(text: TextSpan(
-                  style: AppText.statNumber,
-                  children: [
-                    TextSpan(text: '${next!.daysUntil}'),
-                    TextSpan(text: ' days away',
-                      style: AppText.statNumber.copyWith(
-                        fontSize: 13, color: AppColors.text1.withOpacity(0.4))),
-                  ],
-                )),
-                const SizedBox(height: 5),
-                Text(next.title, style: AppText.sectionHeading),
-                Text('${next.doctorName} · ${DateFormat('EEE d MMM · HH:mm').format(next.dateTime)}',
-                  style: AppText.bodySecondary),
-                const SizedBox(height: 13),
-                Row(children: [
-                  Expanded(child: Container(
+          // Next appointment hero
+          if (next != null)
+            SliverToBoxAdapter(child: HeroCard(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start, children: [
+              HeroPill('Next · ${next.daysUntil == 0 ? 'Today' : 'in ${next.daysUntil} days'}'),
+              Text(next.title, style: AppText.statNumber.copyWith(fontSize: 18)),
+              const SizedBox(height: 4),
+              Text(
+                '${DateFormat('EEEE d MMMM').format(next.dateTime)} · '
+                '${DateFormat('HH:mm').format(next.dateTime)}',
+                style: AppText.bodySecondary),
+              if (next.location.isNotEmpty) ...[
+                const SizedBox(height: 2),
+                Text(next.location, style: AppText.bodySecondary),
+              ],
+              const SizedBox(height: 10),
+              Row(children: [
+                Expanded(child: GestureDetector(
+                  onTap: () => context.push('/care/appointments/prep'),
+                  child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.55),
-                      borderRadius: AppRadius.mdBR,
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.7), width: 0.5),
-                    ),
-                    child: Center(child: Text('Add to calendar',
+                      color: Colors.white.withOpacity(0.5),
+                      borderRadius: AppRadius.fullBR),
+                    child: Center(child: Text('Prep report ✨',
                       style: AppText.caption.copyWith(
-                        color: AppColors.text1, fontWeight: FontWeight.w500))),
-                  )),
-                  const SizedBox(width: 6),
-                  Expanded(child: GestureDetector(
-                    onTap: () => context.push('/care/appointments/prep'),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.10),
-                        borderRadius: AppRadius.mdBR,
-                        border: Border.all(
-                          color: AppColors.primary.withOpacity(0.18), width: 0.5),
-                      ),
-                      child: Center(child: Text('Prep report ✨',
-                        style: AppText.caption.copyWith(
-                          color: AppColors.primary, fontWeight: FontWeight.w500))),
-                    ),
-                  )),
-                ]),
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w500))),
+                  ),
+                )),
+              ]),
+            ]))),
+
+          // Empty state
+          if (upcoming.isEmpty)
+            SliverToBoxAdapter(child: Container(
+              margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: AppRadius.mdBR,
+                border: Border.all(color: AppColors.border, width: 0.5)),
+              child: Column(children: [
+                Container(
+                  width: 56, height: 56,
+                  decoration: BoxDecoration(
+                    color: AppColors.peachLight,
+                    borderRadius: AppRadius.mdBR),
+                  child: const Center(child: Text('📅',
+                    style: TextStyle(fontSize: 26)))),
+                const SizedBox(height: 16),
+                Text('No upcoming appointments',
+                  style: AppText.bodySemibold.copyWith(fontSize: 15)),
+                const SizedBox(height: 8),
+                Text('Add your next oncology visit so Rehlah can prepare your doctor-ready report.',
+                  style: AppText.bodySecondary.copyWith(fontSize: 13),
+                  textAlign: TextAlign.center),
+                const SizedBox(height: 20),
+                GestureDetector(
+                  onTap: () => _showAddEditSheet(null),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24, vertical: 11),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: AppRadius.fullBR,
+                      boxShadow: [BoxShadow(
+                        color: AppColors.primary.withOpacity(0.25),
+                        blurRadius: 12, offset: const Offset(0, 4))]),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      const Icon(Icons.add_rounded, size: 16, color: Colors.white),
+                      const SizedBox(width: 6),
+                      Text('Add appointment',
+                        style: AppText.bodySemibold.copyWith(
+                          color: Colors.white, fontSize: 13)),
+                    ]),
+                  ),
+                ),
               ]),
             )),
+
+          // Upcoming list
+          if (upcoming.isNotEmpty) ...[
             SliverToBoxAdapter(child: const SectionLabel('Upcoming')),
             ...upcoming.map((a) => SliverToBoxAdapter(
-              child: _buildApptRow(context, a, false))),
-            SliverToBoxAdapter(child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
-              child: Text('+ Add appointment',
-                style: AppText.bodySemibold.copyWith(
-                  color: AppColors.primary, fontSize: 13)),
-            )),
+              child: _buildApptRow(a, false))),
+          ],
+
+          if (_session.isMonitoring)
+            SliverToBoxAdapter(
+              child: _buildMonitoringSchedule()),
+
+          // Past
+          if (past.isNotEmpty) ...[
             SliverToBoxAdapter(child: const SectionLabel('Past')),
             ...past.map((a) => SliverToBoxAdapter(
-              child: Opacity(opacity: 0.4,
-                child: _buildApptRow(context, a, true)))),
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
+              child: Opacity(opacity: 0.5,
+                child: _buildApptRow(a, true)))),
           ],
-        ),
+
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+        ]),
       ),
     );
   }
 
-  Widget _buildApptRow(BuildContext context, Appointment apt, bool isPast) {
+  Widget _buildApptRow(Appointment apt, bool isPast) {
     return GestureDetector(
-      onTap: isPast ? null : () => context.push('/care/appointments/prep'),
+      onTap: () => isPast ? null : _showAddEditSheet(apt),
       child: Container(
-        margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+        margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: AppRadius.mdBR,
-          border: Border.all(color: AppColors.border, width: 0.5),
-        ),
+          border: Border.all(color: AppColors.border, width: 0.5)),
         child: Row(children: [
+          // Date box
           Container(
-            width: 38,
+            width: 40,
             padding: const EdgeInsets.symmetric(vertical: 6),
             decoration: BoxDecoration(
               color: isPast ? AppColors.background2
-                  : apt.daysUntil <= 7 ? AppColors.primaryLight : AppColors.blueLight,
-              borderRadius: AppRadius.smBR,
-            ),
+                  : apt.daysUntil <= 7
+                      ? AppColors.primaryLight : AppColors.blueLight,
+              borderRadius: AppRadius.smBR),
             child: Column(children: [
               Text('${apt.dateTime.day}',
                 style: AppText.sectionHeading.copyWith(
                   fontSize: 16,
                   color: isPast ? AppColors.text3
-                      : apt.daysUntil <= 7 ? AppColors.primary : AppColors.blue,
-                )),
+                      : apt.daysUntil <= 7
+                          ? AppColors.primary : AppColors.blue)),
               Text(DateFormat('MMM').format(apt.dateTime).toUpperCase(),
                 style: AppText.caption.copyWith(
-                  fontSize: 8, letterSpacing: 0.05, fontWeight: FontWeight.w600,
+                  fontSize: 8, fontWeight: FontWeight.w600,
                   color: (isPast ? AppColors.text3
-                      : apt.daysUntil <= 7 ? AppColors.primary : AppColors.blue)
-                      .withOpacity(0.5),
-                )),
+                      : apt.daysUntil <= 7
+                          ? AppColors.primary : AppColors.blue)
+                      .withOpacity(0.6))),
             ]),
           ),
           const SizedBox(width: 10),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(apt.title, style: AppText.bodySemibold),
-            Text(apt.location.isNotEmpty
-                ? '${apt.doctorName} · ${DateFormat('HH:mm').format(apt.dateTime)}'
-                : apt.location,
-              style: AppText.caption),
+            Text(
+              '${apt.doctorName.isNotEmpty ? '${apt.doctorName} · ' : ''}'
+              '${DateFormat('HH:mm').format(apt.dateTime)}'
+              '${apt.location.isNotEmpty ? ' · ${apt.location}' : ''}',
+              style: AppText.caption.copyWith(fontSize: 11)),
           ])),
+          const SizedBox(width: 8),
           if (isPast)
             PillBadge(text: 'Done ✓',
               bg: AppColors.tealLight, textColor: AppColors.teal)
           else
-            PillBadge(
-              text: '${apt.daysUntil} days',
-              bg: AppColors.peachLight, textColor: AppColors.peach,
-              borderColor: AppColors.peach.withOpacity(0.2)),
+            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              PillBadge(
+                text: apt.daysUntil == 0 ? 'Today!'
+                    : apt.daysUntil == 1 ? 'Tomorrow'
+                    : '${apt.daysUntil} days',
+                bg: apt.daysUntil <= 1
+                    ? AppColors.roseLight : AppColors.peachLight,
+                textColor: apt.daysUntil <= 1
+                    ? AppColors.rose : AppColors.peach,
+                borderColor: (apt.daysUntil <= 1
+                    ? AppColors.rose : AppColors.peach).withOpacity(0.2)),
+              const SizedBox(height: 4),
+              Row(children: [
+                GestureDetector(
+                  onTap: () => _showAddEditSheet(apt),
+                  child: Text('Edit',
+                    style: AppText.caption.copyWith(
+                      color: AppColors.text3, fontSize: 10))),
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: () => _confirmDelete(apt),
+                  child: Icon(Icons.delete_outline_rounded,
+                    size: 13, color: AppColors.text3)),
+              ]),
+            ]),
         ]),
       ),
     );
   }
 
-  List<Appointment> _monitoringAppointments() {
-    final now = DateTime.now();
-    return [
-      Appointment(
-        id: 'mon1', title: 'Oncology surveillance review',
-        doctorName: 'Dr. Sarah Chen', location: 'Oncology Clinic',
-        dateTime: DateTime(now.year, now.month + 1, 15, 10, 30),
-      ),
-      Appointment(
-        id: 'mon2', title: 'Annual mammogram',
-        doctorName: 'Radiology Dept', location: 'Breast Imaging Centre',
-        dateTime: DateTime(now.year, now.month + 2, 8, 9, 0),
-      ),
-      Appointment(
-        id: 'mon3', title: 'Gynecology review',
-        doctorName: 'Dr. Layla Hassan', location: 'Outpatient Clinic',
-        dateTime: DateTime(now.year, now.month + 3, 20, 11, 0),
-      ),
-      Appointment(
-        id: 'mon4', title: 'Oncology surveillance review',
-        doctorName: 'Dr. Sarah Chen', location: 'Oncology Clinic',
-        dateTime: DateTime(now.year - 1, now.month, 15, 10, 30),
-        isPast: true,
-      ),
-      Appointment(
-        id: 'mon5', title: 'Breast MRI',
-        doctorName: 'Radiology Dept', location: 'MRI Suite',
-        dateTime: DateTime(now.year - 1, now.month + 2, 8, 9, 0),
-        isPast: true,
-      ),
-    ];
-  }
-
-  Widget _buildMonitoringSchedule(UserSession session) {
+  Widget _buildMonitoringSchedule() {
     final scheduleItems = [
       ('mammogram', '🎗️', 'Mammogram', 'Annual · Both breasts'),
       ('mri', '🧲', 'Breast MRI', 'Annual if high risk'),
-      ('oncology', '👨‍⚕️', 'Oncology review', 'Every 3–6 months'),
-      ('gynecology', '👩‍⚕️', 'Gynecology review', 'Annual · Important on Tamoxifen'),
-      ('dexa', '🦴', 'Bone density (DEXA)', 'Every 1–2 years on AI'),
+      ('onco', '👩‍⚕️', 'Oncology review', 'Every 6 months for 5 years'),
+      ('gynae', '🩺', 'Gynaecology', 'Annual · Tamoxifen monitoring'),
+      ('bone', '🦴', 'Bone density', 'Every 2 years'),
     ];
-
     return Container(
       margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-      padding: const EdgeInsets.all(13),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.teal.withOpacity(0.05),
+        color: AppColors.surface,
         borderRadius: AppRadius.mdBR,
-        border: Border.all(color: AppColors.teal.withOpacity(0.2), width: 0.5)),
+        border: Border.all(color: AppColors.border, width: 0.5)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text('MONITORING SCHEDULE',
-            style: AppText.label.copyWith(fontSize: 10, color: AppColors.teal)),
-          Text('Log a control →',
-            style: AppText.caption.copyWith(
-              color: AppColors.teal, fontWeight: FontWeight.w500, fontSize: 11)),
-        ]),
+        Text('SURVEILLANCE SCHEDULE', style: AppText.label),
         const SizedBox(height: 10),
-        ...scheduleItems.map((item) {
-          final last = session.lastControlOfType(item.$1);
-          final overdue = last?.nextScheduled != null &&
-              last!.nextScheduled!.isBefore(DateTime.now());
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Row(children: [
-              Text(item.$2, style: const TextStyle(fontSize: 16)),
-              const SizedBox(width: 10),
-              Expanded(child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(item.$3, style: AppText.bodySemibold.copyWith(fontSize: 12)),
-                  Text(item.$4, style: AppText.caption.copyWith(fontSize: 10)),
-                ],
-              )),
-              last != null
-                  ? Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                      Text(DateFormat('MMM yyyy').format(last.date),
-                        style: AppText.caption.copyWith(fontSize: 10)),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: overdue
-                              ? AppColors.roseLight : AppColors.tealLight,
-                          borderRadius: AppRadius.fullBR),
-                        child: Text(overdue ? 'Due' : '✓',
-                          style: AppText.caption.copyWith(
-                            fontSize: 9,
-                            color: overdue ? AppColors.rose : AppColors.teal))),
-                    ])
-                  : Text('Not logged',
-                      style: AppText.caption.copyWith(
-                        color: AppColors.text3, fontSize: 10)),
-            ]),
-          );
-        }),
+        ...scheduleItems.map((s) => Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(children: [
+            Text(s.$2, style: const TextStyle(fontSize: 14)),
+            const SizedBox(width: 10),
+            Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(s.$3, style: AppText.bodySemibold.copyWith(fontSize: 12)),
+              Text(s.$4, style: AppText.bodySecondary.copyWith(fontSize: 11)),
+            ])),
+          ]),
+        )),
       ]),
     );
   }
-}
 
+  void _showAddEditSheet(Appointment? existing) {
+    final isEdit = existing != null;
+    final titleCtrl = TextEditingController(text: existing?.title ?? '');
+    final doctorCtrl = TextEditingController(text: existing?.doctorName ?? '');
+    final locationCtrl = TextEditingController(text: existing?.location ?? '');
+    DateTime selectedDate = existing?.dateTime ??
+        DateTime.now().add(const Duration(days: 7));
+    TimeOfDay selectedTime = existing != null
+        ? TimeOfDay(hour: existing.dateTime.hour,
+            minute: existing.dateTime.minute)
+        : const TimeOfDay(hour: 10, minute: 0);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setS) => Padding(
+          padding: EdgeInsets.fromLTRB(20, 16, 20,
+            MediaQuery.of(context).viewInsets.bottom + 32),
+          child: SingleChildScrollView(child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Container(width: 36, height: 4,
+                decoration: BoxDecoration(color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2)))),
+              const SizedBox(height: 12),
+              Text(isEdit ? 'EDIT APPOINTMENT' : 'ADD APPOINTMENT',
+                style: AppText.label.copyWith(fontSize: 10)),
+              const SizedBox(height: 14),
+
+              // Title
+              _field('Appointment title', titleCtrl,
+                'e.g. Oncology follow-up'),
+              const SizedBox(height: 8),
+              _field('Doctor / department', doctorCtrl,
+                'e.g. Dr. Sarah Chen'),
+              const SizedBox(height: 8),
+              _field('Location', locationCtrl,
+                'e.g. Oncology Clinic'),
+              const SizedBox(height: 12),
+
+              // Date picker
+              Text('Date', style: AppText.bodySecondary),
+              const SizedBox(height: 6),
+              GestureDetector(
+                onTap: () async {
+                  final p = await showDatePicker(
+                    context: context,
+                    initialDate: selectedDate,
+                    firstDate: DateTime.now()
+                        .subtract(const Duration(days: 365)),
+                    lastDate: DateTime.now()
+                        .add(const Duration(days: 730)),
+                    builder: (ctx, child) => Theme(
+                      data: Theme.of(ctx).copyWith(
+                        colorScheme: ColorScheme.light(
+                          primary: AppColors.primary)),
+                      child: child!),
+                  );
+                  if (p != null) setS(() => selectedDate = p);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: AppRadius.mdBR,
+                    border: Border.all(
+                      color: AppColors.primaryMid, width: 0.5)),
+                  child: Row(children: [
+                    const Text('📅', style: TextStyle(fontSize: 14)),
+                    const SizedBox(width: 8),
+                    Text(DateFormat('EEEE, d MMMM yyyy')
+                        .format(selectedDate),
+                      style: AppText.bodySemibold.copyWith(
+                        color: AppColors.primary)),
+                  ]),
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // Time picker
+              Text('Time', style: AppText.bodySecondary),
+              const SizedBox(height: 6),
+              GestureDetector(
+                onTap: () async {
+                  final t = await showTimePicker(
+                    context: context,
+                    initialTime: selectedTime,
+                    builder: (ctx, child) => Theme(
+                      data: Theme.of(ctx).copyWith(
+                        colorScheme: ColorScheme.light(
+                          primary: AppColors.primary)),
+                      child: child!),
+                  );
+                  if (t != null) setS(() => selectedTime = t);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: AppRadius.mdBR,
+                    border: Border.all(
+                      color: AppColors.primaryMid, width: 0.5)),
+                  child: Row(children: [
+                    const Text('⏰', style: TextStyle(fontSize: 14)),
+                    const SizedBox(width: 8),
+                    Text(selectedTime.format(context),
+                      style: AppText.bodySemibold.copyWith(
+                        color: AppColors.primary)),
+                  ]),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Save / delete
+              Row(children: [
+                if (isEdit) ...[
+                  Expanded(child: GestureDetector(
+                    onTap: () {
+                      _session.removeAppointment(existing.id);
+                      Navigator.pop(context);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.roseLight,
+                        borderRadius: AppRadius.mdBR,
+                        border: Border.all(
+                          color: AppColors.rose.withOpacity(0.2),
+                          width: 0.5)),
+                      child: Center(child: Text('Delete',
+                        style: AppText.caption.copyWith(
+                          color: AppColors.rose,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 13)))))),
+                  const SizedBox(width: 8),
+                ],
+                Expanded(flex: 2, child: GestureDetector(
+                  onTap: () {
+                    if (titleCtrl.text.trim().isEmpty) return;
+                    final dt = DateTime(
+                      selectedDate.year, selectedDate.month,
+                      selectedDate.day, selectedTime.hour,
+                      selectedTime.minute);
+                    final apt = Appointment(
+                      id: isEdit
+                          ? existing.id
+                          : DateTime.now()
+                              .millisecondsSinceEpoch.toString(),
+                      title: titleCtrl.text.trim(),
+                      doctorName: doctorCtrl.text.trim(),
+                      location: locationCtrl.text.trim(),
+                      dateTime: dt,
+                      isPast: dt.isBefore(DateTime.now()),
+                    );
+                    _session.addAppointment(apt);
+                    Navigator.pop(context);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: AppRadius.mdBR,
+                      boxShadow: [BoxShadow(
+                        color: AppColors.primary.withOpacity(0.3),
+                        blurRadius: 8, offset: const Offset(0, 3))]),
+                    child: Center(child: Text(
+                      isEdit ? 'Save changes' : 'Add appointment',
+                      style: const TextStyle(fontFamily: 'Inter',
+                        fontSize: 14, fontWeight: FontWeight.w500,
+                        color: Colors.white)))))),
+              ]),
+            ],
+          )),
+        ),
+      ),
+    );
+  }
+
+  void _confirmDelete(Appointment apt) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        title: Text('Delete appointment?',
+          style: AppText.sectionHeading.copyWith(fontSize: 15)),
+        content: Text(
+          '${apt.title} on ${DateFormat('d MMM').format(apt.dateTime)} will be removed.',
+          style: AppText.bodySecondary),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel',
+              style: TextStyle(color: AppColors.text2))),
+          TextButton(
+            onPressed: () {
+              _session.removeAppointment(apt.id);
+              Navigator.pop(context);
+            },
+            child: Text('Delete',
+              style: TextStyle(
+                color: AppColors.rose,
+                fontWeight: FontWeight.w600))),
+        ],
+      ),
+    );
+  }
+
+  Widget _field(String label, TextEditingController ctrl, String hint) {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(label, style: AppText.bodySecondary),
+      const SizedBox(height: 6),
+      TextField(
+        controller: ctrl,
+        style: const TextStyle(fontFamily: 'Inter',
+          fontSize: 14, color: AppColors.text1),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: const TextStyle(color: AppColors.text3),
+          filled: true, fillColor: AppColors.background,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 12, vertical: 10),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(
+              color: AppColors.border, width: 0.5)),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(
+              color: AppColors.border, width: 0.5)),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: BorderSide(
+              color: AppColors.primaryMid, width: 1.5))),
+      ),
+    ]);
+  }
+}

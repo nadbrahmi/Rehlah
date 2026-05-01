@@ -83,104 +83,9 @@ Rules:
     final s = _session;
     final phase = s.currentPhase;
     final name = s.displayName;
-    final history = s.history;
+    final protocol = s.protocol.name;
 
-    // ── Monitoring phase insights ─────────────────────────────────────────
-    if (s.isMonitoring) {
-      // Scanxiety
-      if (s.isScanxietyPeriod) {
-        final next = s.nextControl;
-        final days = next?.nextScheduled?.difference(DateTime.now()).inDays ?? 0;
-        return '$name, with your ${next?.typeLabel ?? 'scan'} $days day${days != 1 ? 's' : ''} away, '
-            'it\'s completely normal to feel anxious. Scanxiety is real and valid. '
-            'Tracking your feelings here helps your care team understand how you\'re doing. '
-            'If anxiety is affecting your sleep or daily life, mention it at your next appointment. 💜';
-      }
-      // Severe anxiety/mood for monitoring
-      final severeAnxiety = s.symptomScores.entries
-          .where((e) => (e.key == 'anxiety' || e.key == 'mood') && e.value >= 7)
-          .toList();
-      if (severeAnxiety.isNotEmpty) {
-        return '$name, high anxiety or low mood after cancer treatment is very common '
-            'and doesn\'t mean anything is wrong medically. '
-            'Post-treatment emotional challenges deserve the same attention as physical ones. '
-            'Consider mentioning this to your care team — support is available. 💜';
-      }
-      // Trend: improving mood
-      if (history.length >= 3) {
-        final recent = history.take(3).toList();
-        final moodValues = recent.map((r) => _moodValue(r.moodEmoji)).toList();
-        if (moodValues.every((v) => v > 0) && moodValues.first >= moodValues.last + 0.5) {
-          return '$name, your mood has been improving over the last few check-ins — '
-              'that\'s a meaningful sign of recovery. '
-              'Staying consistent with tracking gives your team the full picture. '
-              'Every check-in matters. 💜';
-        }
-      }
-      // Cancer-free milestone
-      final days = s.daysCancerFree;
-      if (days > 0) {
-        final milestone = days >= 1825 ? '5 years'
-            : days >= 1095 ? '3 years'
-            : days >= 730 ? '2 years'
-            : days >= 365 ? '1 year'
-            : days >= 180 ? '6 months'
-            : days >= 90 ? '3 months' : null;
-        if (milestone != null) {
-          return '$name, $milestone cancer-free is a milestone worth acknowledging. '
-              'Long-term monitoring is part of staying well — and you\'re doing it. '
-              'Keep tracking how you feel. Your data tells a story worth sharing with your team. 💜';
-        }
-      }
-      return '$name, staying consistent with check-ins during monitoring '
-          'helps your care team spot patterns early. '
-          'Joint pain, fatigue, and mood changes from hormone therapy are worth tracking. '
-          'You\'re doing the right thing. 💜';
-    }
-
-    // ── Trend-based insights (needs history) ─────────────────────────────
-    if (history.length >= 3) {
-      final recent = history.take(3).toList();
-
-      // Same symptom high for 3 days
-      final topSymptom = s.symptomScores.entries
-          .where((e) => e.value >= 5)
-          .toList()
-          ..sort((a, b) => b.value.compareTo(a.value));
-
-      if (topSymptom.isNotEmpty) {
-        final key = topSymptom.first.key;
-        final daysHigh = recent.where((r) =>
-            (r.symptomScores[key] ?? 0) >= 5).length;
-        if (daysHigh >= 2) {
-          final label = key.replaceAll('_', ' ');
-          return '$name, $label has been consistently high for the last $daysHigh check-ins. '
-              'This pattern is worth mentioning to your care team — '
-              'it may indicate something that needs attention or a management adjustment. '
-              'Your doctor-ready report captures this automatically. 💜';
-        }
-      }
-
-      // Mood improving
-      final moodValues = recent.map((r) => _moodValue(r.moodEmoji)).toList();
-      if (moodValues.every((v) => v > 0) &&
-          moodValues.first > moodValues.last) {
-        return '$name, your mood has been improving since your last check-in. '
-            'Even small improvements matter during treatment. '
-            'Keep noting what helps on the days you feel better. 💜';
-      }
-
-      // Mood declining
-      if (moodValues.every((v) => v > 0) &&
-          moodValues.first < moodValues.last - 0.5) {
-        return '$name, your mood has been lower these past few days. '
-            'This is completely expected during ${phase.name.toLowerCase()}. '
-            'If it continues or feels overwhelming, please let your care team know — '
-            'emotional support is part of your treatment. 💜';
-      }
-    }
-
-    // ── Nadir window — highest priority ──────────────────────────────────
+    // Nadir window — highest priority
     if (s.isNadirWindow) {
       return '$name, you\'re in the nadir window — days when your immune system '
           'is at its lowest. Rest is genuinely part of your treatment right now. '
@@ -217,6 +122,7 @@ Rules:
         .toList();
     if (moderate.isNotEmpty) {
       final sym = moderate.first;
+      // Find tip for this symptom
       final symptom = phase.primarySymptoms
           .where((p) => p.key == moderate.first.replaceAll(' ', '_'))
           .firstOrNull;
@@ -234,28 +140,10 @@ Rules:
           'counts recover faster. You\'re almost through this cycle. 💜';
     }
 
-    // Streak milestone
-    if (s.streak == 7) {
-      return '$name, 7 days in a row — a full week of check-ins. '
-          'Consistency like this gives your care team a much clearer picture '
-          'of how you\'re doing. Keep it going. 💜';
-    }
-    if (s.streak == 14) {
-      return '$name, 14 consecutive check-ins. '
-          'That\'s remarkable commitment to your own care. '
-          'Your prep report now has two weeks of real data to share with your team. 💜';
-    }
-
-    // Default
-    return '$name, you completed today\'s check-in for ${s.protocol.name} '
+    // Protocol-specific phase note
+    return '$name, you completed today\'s check-in for $protocol '
         '${phase.name.toLowerCase()}. ${phase.phaseNote} '
         'Your care team sees every entry you make. 💜';
-  }
-
-  double _moodValue(String emoji) {
-    const map = {'😣': 1.0, '😔': 2.0, '😐': 3.0, '🙂': 4.0, '😊': 5.0,
-                 '😄': 5.0, '😢': 1.0, '😕': 2.0, '🙁': 2.0};
-    return map[emoji] ?? 0.0;
   }
 
   @override

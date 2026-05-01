@@ -601,13 +601,21 @@ class _ConnectScreenState extends State<ConnectScreen> {
               if (m.arabicSpeaker) ...[
                 const SizedBox(width: 6),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.background2,
+                    color: AppColors.tealLight,
                     borderRadius: AppRadius.fullBR,
-                    border: Border.all(color: AppColors.border, width: 0.5)),
-                  child: Text('🌍 عربي',
-                    style: AppText.caption.copyWith(fontSize: 11))),
+                    border: Border.all(
+                      color: AppColors.teal.withOpacity(0.25), width: 0.5)),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Text('🌐', style: const TextStyle(fontSize: 10)),
+                    const SizedBox(width: 3),
+                    Text('Arabic · عربي',
+                      style: AppText.caption.copyWith(
+                        color: AppColors.teal,
+                        fontSize: 10, fontWeight: FontWeight.w500)),
+                  ])),
               ],
             ]),
           ],
