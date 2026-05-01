@@ -56,7 +56,8 @@ const _mentors = [
     quote: 'أنا هنا لأدعمك بالعربي والإنجليزي. لستِ وحدكِ في هذه الرحلة.',
     avBg: Color(0xFFEAF8F0), avColor: Color(0xFF3DB87A),
     matchPhaseKeys: ['Nadir window', 'Peak nausea window', 'Joint pain peak',
-                     'Infusion day', 'Recovery week'],
+                     'Infusion day', 'Recovery week',
+                     'monitoring', 'scanxiety'],
     arabicSpeaker: true,
   ),
   _Mentor(
@@ -65,6 +66,29 @@ const _mentors = [
     quote: 'I finished chemo. Here\'s what no one told me about recovery.',
     avBg: Color(0xFFFEF0F3), avColor: Color(0xFFC04060),
     matchPhaseKeys: ['Recovery week', 'Post-infusion week'],
+  ),
+  // ── Monitoring-specific mentors ──
+  _Mentor(
+    initials: 'HB', name: 'Hana B.', status: 'Survivor · 5 years free',
+    protocol: 'AC-T · Breast · Monitoring',
+    quote: 'Five years out. Scanxiety still hits before every mammogram — but it gets easier. I\'ll tell you how.',
+    avBg: Color(0xFFE8F8F0), avColor: Color(0xFF3DB87A),
+    matchPhaseKeys: ['monitoring', 'scanxiety'],
+  ),
+  _Mentor(
+    initials: 'NM', name: 'Nadia M.', status: 'Survivor · 3 years free',
+    protocol: 'TC · Breast · Monitoring',
+    quote: 'Hormone therapy side effects are real. Joint pain, hot flashes — I found ways to manage them all.',
+    avBg: Color(0xFFFBF4E0), avColor: Color(0xFFC49030),
+    matchPhaseKeys: ['monitoring'],
+  ),
+  _Mentor(
+    initials: 'FA', name: 'Fatima A.', status: 'Survivor · 7 years free · متحدثة عربية',
+    protocol: 'AC-T · Breast · Abu Dhabi',
+    quote: 'سبع سنوات منذ انتهيت من العلاج. الحياة بعد السرطان ممكنة وجميلة.',
+    avBg: Color(0xFFEDE8F8), avColor: Color(0xFF7B5CC4),
+    matchPhaseKeys: ['monitoring', 'scanxiety'],
+    arabicSpeaker: true,
   ),
 ];
 
@@ -77,60 +101,87 @@ const _coaches = [
     verified: '✓ Verified professional',
     avBg: Color(0xFFEDE8F8), avColor: Color(0xFF7B5CC4),
     matchPhaseKeys: ['Nadir window', 'Peak nausea window', 'Infusion day',
-                     'Recovery week'],
-    whyNow: 'Nadir and peak nausea often bring heightened anxiety. '
-        'A session can help you prepare mentally and emotionally.',
+                     'Recovery week', 'monitoring', 'scanxiety'],
+    whyNow: 'Scanxiety before scans is very common and very real. '
+        'A session focused on scan anxiety can make a significant difference.',
   ),
   _Coach(
     initials: 'NR', name: 'Nour R.',
     specialty: 'Oncology Dietitian · Abu Dhabi',
     location: 'Abu Dhabi',
-    description: 'Helping patients eat and recover well during chemotherapy.',
+    description: 'Helping patients eat and recover well during and after treatment.',
     verified: '✓ Verified professional',
     avBg: Color(0xFFEAF8F0), avColor: Color(0xFF3DB87A),
     matchPhaseKeys: ['Peak nausea window', 'Nadir window', 'Fluid & pain window',
-                     'Post-infusion week', 'Infusion day'],
-    whyNow: 'Nausea and appetite loss are highest right now. '
-        'A dietitian can help you find foods that are tolerable and nourishing.',
+                     'Post-infusion week', 'Infusion day', 'monitoring'],
+    whyNow: 'Weight management and nutrition are important during hormone therapy. '
+        'A dietitian can help with strategies specific to Tamoxifen and aromatase inhibitors.',
   ),
   _Coach(
     initials: 'MA', name: 'Mohammed A.',
     specialty: 'Physiotherapist · Dubai',
     location: 'Dubai',
-    description: 'Movement therapy for joint pain, fatigue, and post-chemo recovery.',
+    description: 'Movement therapy for joint pain, fatigue, and post-treatment recovery.',
     verified: '✓ Verified professional',
     avBg: Color(0xFFE8F2F8), avColor: Color(0xFF4A8EC0),
-    matchPhaseKeys: ['Joint pain peak', 'Recovery week', 'Fluid & pain window'],
-    whyNow: 'Joint and muscle pain peaks in the days after Taxol. '
-        'Gentle guided movement can significantly reduce discomfort.',
+    matchPhaseKeys: ['Joint pain peak', 'Recovery week', 'Fluid & pain window',
+                     'monitoring'],
+    whyNow: 'Joint pain from aromatase inhibitors affects up to 50% of survivors. '
+        'Targeted physiotherapy can significantly reduce discomfort and improve mobility.',
+  ),
+  _Coach(
+    initials: 'LK', name: 'Dr. Layla K.',
+    specialty: 'Oncology Nurse Specialist · Dubai',
+    location: 'Dubai',
+    description: 'Long-term survivorship care, hormone therapy side effects, and surveillance planning.',
+    verified: '✓ Verified professional',
+    avBg: Color(0xFFFEF0F3), avColor: Color(0xFFC04060),
+    matchPhaseKeys: ['monitoring', 'scanxiety'],
+    whyNow: 'A survivorship specialist can help you understand your surveillance schedule, '
+        'manage long-term side effects, and know what to watch for.',
   ),
 ];
 
 // ── Phase matching logic ──────────────────────────────────────────────────────
 class _PhaseMatch {
-  static String _currentPhaseName() => UserSession().currentPhase.name;
+  static String _currentPhaseName() {
+    final session = UserSession();
+    if (session.isMonitoring) {
+      return session.isScanxietyPeriod ? 'scanxiety' : 'monitoring';
+    }
+    return session.currentPhase.name;
+  }
 
   static List<_Mentor> matchedMentors() {
     final phase = _currentPhaseName();
-    final matched = _mentors
-        .where((m) => m.matchPhaseKeys.contains(phase))
-        .toList();
-    return matched.isEmpty
-        ? _mentors.take(2).cast<_Mentor>().toList()
-        : matched;
+    final session = UserSession();
+    final matched = _mentors.where((m) {
+      if (m.matchPhaseKeys.contains(phase)) return true;
+      // Also match by cancer type for monitoring
+      if (session.isMonitoring && m.matchPhaseKeys.contains('monitoring')) return true;
+      return false;
+    }).toList();
+    return matched.isEmpty ? _mentors.take(2).toList() : matched;
   }
 
   static List<_Coach> matchedCoaches() {
     final phase = _currentPhaseName();
-    final matched = _coaches
-        .where((c) => c.matchPhaseKeys.contains(phase))
-        .toList();
-    return matched.isEmpty
-        ? _coaches.take(2).cast<_Coach>().toList()
-        : matched;
+    final session = UserSession();
+    final matched = _coaches.where((c) {
+      if (c.matchPhaseKeys.contains(phase)) return true;
+      if (session.isMonitoring && c.matchPhaseKeys.contains('monitoring')) return true;
+      return false;
+    }).toList();
+    return matched.isEmpty ? _coaches.take(2).toList() : matched;
   }
 
   static String matchBadge(_Mentor m) {
+    final session = UserSession();
+    if (session.isMonitoring) {
+      if (session.isScanxietyPeriod && m.matchPhaseKeys.contains('scanxiety'))
+        return 'Knows scan anxiety well';
+      return 'Fellow survivor · Long-term monitoring';
+    }
     final phase = _currentPhaseName();
     if (m.matchPhaseKeys.contains(phase)) {
       if (phase.toLowerCase().contains('nadir')) return 'Has been through nadir';
@@ -143,12 +194,26 @@ class _PhaseMatch {
   }
 
   static String coachBadge(_Coach c) {
+    final session = UserSession();
+    if (session.isMonitoring) {
+      if (session.isScanxietyPeriod) return 'Relevant for scan anxiety';
+      return 'Relevant for survivorship';
+    }
     final phase = _currentPhaseName();
     if (phase.toLowerCase().contains('nadir')) return 'Relevant for nadir';
     if (phase.toLowerCase().contains('nausea')) return 'Relevant for nausea';
     if (phase.toLowerCase().contains('joint')) return 'Relevant for joint pain';
     if (phase.toLowerCase().contains('recovery')) return 'Relevant for recovery';
     return 'Relevant for your phase';
+  }
+
+  static String whyNowText(_Coach c) {
+    final session = UserSession();
+    if (session.isMonitoring && session.isScanxietyPeriod &&
+        c.matchPhaseKeys.contains('scanxiety')) {
+      return c.whyNow ?? 'Relevant to your current situation.';
+    }
+    return c.whyNow ?? 'Relevant to your current phase.';
   }
 }
 
@@ -244,6 +309,8 @@ class _ConnectScreenState extends State<ConnectScreen> {
     final phase = session.currentPhase;
     final isNadir = session.isNadirWindow;
     final isNadirApproaching = session.isNadirApproaching;
+    final isMonitoring = session.isMonitoring;
+    final isScanxiety = session.isScanxietyPeriod;
     final matchedMentors = _PhaseMatch.matchedMentors();
     final matchedCoaches = _PhaseMatch.matchedCoaches();
 
@@ -255,45 +322,65 @@ class _ConnectScreenState extends State<ConnectScreen> {
         margin: const EdgeInsets.fromLTRB(14, 0, 14, 0),
         padding: const EdgeInsets.all(13),
         decoration: BoxDecoration(
-          color: isNadir
-              ? AppColors.peach.withOpacity(0.06)
-              : isNadirApproaching
+          color: isMonitoring
+              ? isScanxiety
                   ? AppColors.gold.withOpacity(0.06)
-                  : AppColors.primary.withOpacity(0.05),
+                  : AppColors.teal.withOpacity(0.05)
+              : isNadir
+                  ? AppColors.peach.withOpacity(0.06)
+                  : isNadirApproaching
+                      ? AppColors.gold.withOpacity(0.06)
+                      : AppColors.primary.withOpacity(0.05),
           borderRadius: AppRadius.mdBR,
           border: Border.all(
-            color: isNadir
-                ? AppColors.peach.withOpacity(0.2)
-                : isNadirApproaching
+            color: isMonitoring
+                ? isScanxiety
                     ? AppColors.gold.withOpacity(0.2)
-                    : AppColors.primaryMid,
+                    : AppColors.teal.withOpacity(0.2)
+                : isNadir
+                    ? AppColors.peach.withOpacity(0.2)
+                    : isNadirApproaching
+                        ? AppColors.gold.withOpacity(0.2)
+                        : AppColors.primaryMid,
             width: 0.5)),
         child: Row(children: [
           Text(
-            isNadir ? '⚠' : isNadirApproaching ? '⚡' : '💜',
+            isMonitoring
+                ? isScanxiety ? '⚡' : '🎗️'
+                : isNadir ? '⚠' : isNadirApproaching ? '⚡' : '💜',
             style: const TextStyle(fontSize: 18)),
           const SizedBox(width: 10),
           Expanded(child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                isNadir
-                    ? 'You\'re in your nadir window'
-                    : isNadirApproaching
-                        ? 'Nadir window approaching'
-                        : '${session.protocol.name} · ${phase.name}',
+                isMonitoring
+                    ? isScanxiety
+                        ? 'Scan approaching — scanxiety is real'
+                        : 'Monitoring & surveillance · ${session.daysCancerFree} days cancer-free'
+                    : isNadir
+                        ? 'You\'re in your nadir window'
+                        : isNadirApproaching
+                            ? 'Nadir window approaching'
+                            : '${session.protocol.name} · ${phase.name}',
                 style: AppText.bodySemibold.copyWith(
                   fontSize: 13,
-                  color: isNadir ? AppColors.peach
-                      : isNadirApproaching ? AppColors.gold
-                      : AppColors.primary)),
+                  color: isMonitoring
+                      ? isScanxiety ? AppColors.gold : AppColors.teal
+                      : isNadir ? AppColors.peach
+                          : isNadirApproaching ? AppColors.gold
+                          : AppColors.primary)),
               const SizedBox(height: 2),
               Text(
-                isNadir
-                    ? 'These mentors and coaches have been through exactly this.'
-                    : isNadirApproaching
-                        ? 'Connect with someone who knows what\'s coming.'
-                        : 'People matched to your current phase.',
+                isMonitoring
+                    ? isScanxiety
+                        ? 'Connect with survivors who know exactly how scan week feels.'
+                        : 'Survivors and specialists who understand life after treatment.'
+                    : isNadir
+                        ? 'These mentors and coaches have been through exactly this.'
+                        : isNadirApproaching
+                            ? 'Connect with someone who knows what\'s coming.'
+                            : 'People matched to your current phase.',
                 style: AppText.bodySecondary.copyWith(fontSize: 12)),
             ],
           )),
@@ -301,11 +388,11 @@ class _ConnectScreenState extends State<ConnectScreen> {
       ),
 
       // Matched mentors
-      const SectionLabel('Mentors for your phase'),
-      ...matchedMentors.take(2).map((m) => _buildMentorCard(m, showBadge: true)),
+      SectionLabel(isMonitoring ? 'Survivors in monitoring' : 'Mentors for your phase'),
+      ...matchedMentors.take(3).map((m) => _buildMentorCard(m, showBadge: true)),
 
       // Matched coaches
-      const SectionLabel('Coaches for right now'),
+      SectionLabel(isMonitoring ? 'Specialists for survivorship' : 'Coaches for right now'),
       ...matchedCoaches.take(2).map((c) => _buildCoachCard(c, showWhyNow: true)),
 
       // Weekly prompt
