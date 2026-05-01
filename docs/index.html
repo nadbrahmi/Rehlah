@@ -196,11 +196,16 @@ footer{background:#1A1425;padding:60px 6% 32px;}
   .nav-links{display:none;}
 }
 
-/* ── WHY SECTION ── */
-.why-section{padding:100px 6%;background:var(--bg);}
-.why-inner{max-width:760px;margin:0 auto;text-align:center;}
-.why-lead{font-size:18px;line-height:1.75;color:var(--t1);margin:28px 0 20px;font-weight:400;}
-.why-body{font-size:16px;line-height:1.8;color:var(--t2);margin-bottom:16px;}
+/* ── HOSPITALS SECTION ── */
+.hospitals-section{padding:100px 6%;background:linear-gradient(160deg,#F0EBF9 0%,#FAF8FF 100%);}
+.hospitals-inner{max-width:1100px;margin:0 auto;text-align:center;}
+.hospitals-lead{font-size:17px;line-height:1.8;color:var(--t2);max-width:680px;margin:20px auto 48px;}
+.hosp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;text-align:left;}
+.hosp-card{background:#fff;border:0.5px solid var(--brd);border-radius:16px;padding:28px 24px;box-shadow:0 4px 20px rgba(123,92,196,0.07);}
+.hosp-ico{font-size:28px;margin-bottom:12px;}
+.hosp-card h4{font-size:15px;font-weight:600;color:var(--t1);margin-bottom:8px;}
+.hosp-card p{font-size:13px;line-height:1.7;color:var(--t2);}
+@media(max-width:768px){.hosp-grid{grid-template-columns:1fr;}}
 
 </style>
 </head>
@@ -218,6 +223,7 @@ footer{background:#1A1425;padding:60px 6% 32px;}
       <a href="#how">How it works</a>
       <a href="#protocols">Protocols</a>
       <a href="#clinical">Clinical</a>
+      <a href="#hospitals">For hospitals</a>
       <a href="#about">About</a>
     </div>
     <a class="nav-cta" href="#waitlist">Join waitlist</a>
@@ -228,12 +234,13 @@ footer{background:#1A1425;padding:60px 6% 32px;}
 <section class="hero">
   <div class="hero-orb orb1"></div>
   <div class="hero-orb orb2"></div>
-  <div class="hero-badge"><div class="hero-badge-dot"></div>Built by a cancer survivor · for Arabic-speaking patients</div>
+  <div class="hero-badge"><div class="hero-badge-dot"></div>For patients · hospitals · oncology centers</div>
   <h1>You are not alone<br>between <b>appointments</b></h1>
-  <p class="hero-sub">The first Arabic cancer companion that knows your protocol, your phase, and your language. Built for <b>who you truly are</b>.</p>
+  <p class="hero-sub">The first Arabic cancer companion that knows your protocol, your phase, and your language — designed for patients, and built to integrate with the hospitals and oncology centers that care for them.</p>
   <div class="hero-actions">
     <a class="btn-primary" href="#waitlist">Join the waitlist</a>
-    <a class="btn-secondary" href="https://nadbrahmi.github.io/Rehlah/#/welcome" target="_blank">See the app →</a>
+    <a class="btn-secondary" href="https://nadbrahmi.github.io/Rehlah/app/" target="_blank">See the app →</a>
+    <a class="btn-secondary" href="#hospitals">For hospitals →</a>
   </div>
   <div class="hero-stat">
     <div class="hs"><div class="hs-num col-p">8h</div><div class="hs-lbl">with oncologist per year</div></div>
@@ -298,18 +305,6 @@ footer{background:#1A1425;padding:60px 6% 32px;}
   </div>
 </section>
 
-
-<!-- WHY REHLAH EXISTS -->
-<section class="why-section" id="why">
-  <div class="why-inner">
-    <div class="section-tag">Why Rehlah exists</div>
-    <h2>Cancer does not pause<br><b>between appointments</b></h2>
-    <p class="why-lead">Patients spend less than 8 hours a year with their oncologist — and over 8,700 hours managing their illness alone. In those hours, symptoms go untracked. Questions go unasked. Care teams make decisions with incomplete information. And patients navigate one of the most difficult experiences of their lives without any structured support.</p>
-    <p class="why-body">Rehlah was built to close that gap. Not from research alone, but from watching people we care about go through treatment — and noticing what was missing. Not inside the hospital. The clinical care in the GCC is world-class. What was missing was everything in between: the daily check-in no one made, the symptom that went untracked, the question the patient was too afraid to raise.</p>
-    <p class="why-body">Rehlah is present in those gaps. Protocol-aware, phase-sensitive, and designed for the Arabic-speaking patient — in her language, in her culture, at every hour the healthcare system cannot reach her.</p>
-  </div>
-</section>
-
 <!-- PROTOCOLS -->
 <section class="protocols" id="protocols">
   <div class="protocols-inner">
@@ -370,6 +365,33 @@ footer{background:#1A1425;padding:60px 6% 32px;}
   </div>
 </section>
 
+<!-- FOR HOSPITALS -->
+<section class="hospitals-section" id="hospitals">
+  <div class="hospitals-inner">
+    <div class="section-tag">For care providers</div>
+    <h2>Built for patients.<br><b>Designed to integrate with your team.</b></h2>
+    <p class="hospitals-lead">Rehlah is free for patients. It is paid for by the hospitals, oncology centers, and cancer care programs that deploy it — because the data it generates is as valuable to your care team as it is to the patient.</p>
+    <div class="hosp-grid">
+      <div class="hosp-card">
+        <div class="hosp-ico">🏥</div>
+        <h4>Oncology centers</h4>
+        <p>Deploy Rehlah as a between-visit monitoring layer. Receive structured PRO data before every appointment. Catch deterioration before it becomes an emergency.</p>
+      </div>
+      <div class="hosp-card">
+        <div class="hosp-ico">📊</div>
+        <h4>Cancer care programs</h4>
+        <p>Give your patients a culturally and linguistically appropriate companion that reduces ER visits, improves medication adherence, and keeps your team informed — in Arabic.</p>
+      </div>
+      <div class="hosp-card">
+        <div class="hosp-ico">🤝</div>
+        <h4>Hospital partnerships</h4>
+        <p>Rehlah integrates with your existing patient journey. White-label options available. Pilot programs open for GCC oncology departments in Q3 2026.</p>
+      </div>
+    </div>
+    <a class="btn-primary" href="mailto:hello@rehlah.app" style="display:inline-block;margin-top:36px;">Contact us about a partnership →</a>
+  </div>
+</section>
+
 <!-- CLINICAL TRUST -->
 <section class="trust" id="clinical">
   <div class="trust-inner">
@@ -400,8 +422,8 @@ footer{background:#1A1425;padding:60px 6% 32px;}
 <section class="quote-section">
   <div class="quote-inner">
     <div class="q-mark">"</div>
-    <blockquote>I watched someone I love struggle to communicate what he was feeling to his doctors — not because he lacked words, but because nothing was designed to help him. The system never asked between visits. Rehlah is the product I could not find when I needed it.</blockquote>
-    <div class="q-attr"><b>Nadia</b> · CEO and Co-Founder</div>
+    <blockquote>Cancer does not pause between appointments. But for most patients, the support system does. Patients spend less than 8 hours a year with their oncologist — and over 8,700 hours managing their illness alone. I watched someone I love struggle to communicate what he was feeling to his doctors — not because he lacked words, but because nothing was designed to help him. Rehlah is the product I could not find when I needed it. Built not from research alone, but from lived experience of sitting in the gap.</blockquote>
+    <div class="q-attr"><b>Nadia</b> · Founder, Rehlah</div>
   </div>
 </section>
 
@@ -428,14 +450,14 @@ footer{background:#1A1425;padding:60px 6% 32px;}
           <span class="nav-logo-text" style="color:#fff;">Rehlah</span>
           <span class="nav-logo-ar" style="color:rgba(255,255,255,0.35);">رحلة</span>
         </a>
-        <p>The Arabic cancer companion. Free for patients. Built by a survivor, for survivors.</p>
+        <p>The Arabic cancer companion. Free for patients. For patients, hospitals, and oncology centers across the Arab world.</p>
       </div>
       <div class="footer-links">
         <div class="fl-col">
           <h4>Product</h4>
           <a href="#product">How it works</a>
           <a href="#protocols">Protocols</a>
-          <a href="https://nadbrahmi.github.io/Rehlah/#/welcome" target="_blank">Live app</a>
+          <a href="https://nadbrahmi.github.io/Rehlah/app/" target="_blank">Live app</a>
         </div>
         <div class="fl-col">
           <h4>Clinical</h4>
@@ -445,7 +467,8 @@ footer{background:#1A1425;padding:60px 6% 32px;}
         </div>
         <div class="fl-col">
           <h4>Company</h4>
-          <a href="#about">About</a>
+          <a href="#hospitals">For hospitals</a>
+      <a href="#about">About</a>
           <a href="mailto:hello@rehlah.app">Contact</a>
           <a href="#waitlist">Join waitlist</a>
         </div>
