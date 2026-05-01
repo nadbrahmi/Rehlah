@@ -157,7 +157,39 @@ class UserProfile {
       currentDayInCycle >= 8 && currentDayInCycle <= 14;
 }
 
-// ── Sample / Mock Data ────────────────────────────────────────────────────────
+// ── App configuration — single source of truth ───────────────────────────────
+class AppConfig {
+  static const treatmentPhases = [
+    ('Just diagnosed',          '🌱'),
+    ('Awaiting treatment plan', '📋'),
+    ('In chemotherapy',         '💊'),
+    ('In radiotherapy',         '⚡'),
+    ('Post-surgery recovery',   '🌿'),
+    ('Monitoring / surveillance','🎗️'),
+  ];
+
+  static const cancerTypes = [
+    'Breast cancer',
+    'Lung cancer',
+    'Colorectal cancer',
+    'Prostate cancer',
+    'Cervical cancer',
+    'Ovarian cancer',
+    'Lymphoma',
+    'Leukaemia',
+    'Other',
+  ];
+
+  static List<String> get phaseNames =>
+      treatmentPhases.map((p) => p.$1).toList();
+
+  static String emojiForPhase(String phase) =>
+      treatmentPhases.firstWhere(
+        (p) => p.$1 == phase,
+        orElse: () => (phase, '💜')).$2;
+}
+
+
 abstract class MockData {
   static final profile = UserProfile.sample;
 

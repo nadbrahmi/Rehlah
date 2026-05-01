@@ -59,11 +59,23 @@ class _CareHubScreenState extends State<CareHubScreen> {
               iconBg: AppColors.blueLight,
               title: 'Lab results',
               subtitle: 'CBC, metabolic, tumour markers',
-              trailing: PillBadge(
-                text: 'Caution',
-                bg: AppColors.peachLight,
-                textColor: AppColors.peach,
-              ),
+              trailing: Builder(builder: (_) {
+                final labs = UserSession().labs;
+                if (labs.isEmpty) {
+                  return PillBadge(
+                    text: 'Add first',
+                    bg: AppColors.background2,
+                    textColor: AppColors.text3);
+                }
+                final abnormal = labs.first.metrics
+                    .where((m) => !m.isNormal).length;
+                final color = abnormal > 0 ? AppColors.peach : AppColors.teal;
+                return PillBadge(
+                  text: abnormal > 0 ? '$abnormal abnormal' : 'All normal ✓',
+                  bg: color.withOpacity(0.10),
+                  textColor: color,
+                  borderColor: color.withOpacity(0.2));
+              }),
               onTap: () => context.push('/care/labs'),
             )),
             SliverToBoxAdapter(child: ToolRow(

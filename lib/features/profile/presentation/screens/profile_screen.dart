@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/shared_widgets.dart';
+import '../../../../core/utils/models.dart';
 import '../../../../core/utils/user_session.dart';
 import '../../../../core/utils/protocols.dart';
 
@@ -30,6 +31,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   int get _maxCycle => _session.totalCycles;
+
+  void _showPhasePicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+        child: Column(mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Center(child: Container(width: 36, height: 4,
+            decoration: BoxDecoration(color: AppColors.border,
+              borderRadius: BorderRadius.circular(2)))),
+          const SizedBox(height: 14),
+          Text('TREATMENT PHASE',
+            style: AppText.label.copyWith(fontSize: 10)),
+          const SizedBox(height: 10),
+          ...AppConfig.treatmentPhases.map((p) => GestureDetector(
+            onTap: () {
+              setState(() => _session.treatmentPhase = p.$1);
+              Navigator.pop(context);
+            },
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 7),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _session.treatmentPhase == p.$1
+                    ? AppColors.primaryLight : AppColors.surface,
+                borderRadius: AppRadius.mdBR,
+                border: Border.all(
+                  color: _session.treatmentPhase == p.$1
+                      ? AppColors.primaryMid : AppColors.border,
+                  width: 0.5)),
+              child: Row(children: [
+                Text(p.$2, style: const TextStyle(fontSize: 18)),
+                const SizedBox(width: 10),
+                Expanded(child: Text(p.$1,
+                  style: AppText.bodySemibold.copyWith(
+                    color: _session.treatmentPhase == p.$1
+                        ? AppColors.primary : AppColors.text1,
+                    fontSize: 13))),
+                if (_session.treatmentPhase == p.$1)
+                  const Icon(Icons.check_rounded,
+                    size: 16, color: AppColors.primary),
+              ]),
+            ),
+          )),
+        ]),
+      ),
+    );
+  }
 
   void _showNameEditor() {
     final controller = TextEditingController(text: _session.name);
@@ -167,6 +220,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final phase = _session.currentPhase;
     final isNadir = _session.isNadirWindow;
     final isMonitoring = _session.isMonitoring;
+    final isInChemo = _session.treatmentPhase == 'In chemotherapy';
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -213,14 +267,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 decoration: BoxDecoration(
                   color: isMonitoring
                       ? AppColors.teal.withOpacity(0.06)
-                      : isNadir
+                      : isInChemo && isNadir
                           ? AppColors.peach.withOpacity(0.06)
                           : AppColors.primary.withOpacity(0.05),
                   borderRadius: AppRadius.mdBR,
                   border: Border.all(
                     color: isMonitoring
                         ? AppColors.teal.withOpacity(0.25)
-                        : isNadir
+                        : isInChemo && isNadir
                             ? AppColors.peach.withOpacity(0.25)
                             : AppColors.primaryMid,
                     width: 0.5)),
@@ -230,12 +284,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     decoration: BoxDecoration(
                       color: isMonitoring
                           ? AppColors.tealLight
-                          : isNadir
+                          : isInChemo && isNadir
                               ? AppColors.peachLight
                               : AppColors.primaryLight,
                       borderRadius: AppRadius.smBR),
                     child: Center(child: Text(
-                      isMonitoring ? '🎗️' : isNadir ? '⚠' : '💊',
+                      isMonitoring ? '🎗️' : isInChemo && isNadir ? '⚠' : '💊',
                       style: const TextStyle(fontSize: 16)))),
                   const SizedBox(width: 11),
                   Expanded(child: Column(
@@ -244,17 +298,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       Text(
                         isMonitoring
                             ? '${_session.daysCancerFree} days cancer-free'
-                            : '${_session.protocol.name} · Cycle ${_session.currentCycle} of ${_session.totalCycles} · Day ${_session.dayInCycle}',
+                            : isInChemo
+                                ? '${_session.protocol.name} · Cycle ${_session.currentCycle} of ${_session.totalCycles} · Day ${_session.dayInCycle}'
+                                : _session.treatmentPhase,
                         style: AppText.bodySemibold.copyWith(
                           color: isMonitoring
                               ? AppColors.teal
-                              : isNadir ? AppColors.peach : AppColors.primary,
+                              : isInChemo && isNadir
+                                  ? AppColors.peach : AppColors.primary,
                           fontSize: 13)),
                       const SizedBox(height: 2),
                       Text(
                         isMonitoring
                             ? 'Monitoring & surveillance'
-                            : phase.name,
+                            : isInChemo
+                                ? phase.name
+                                : _session.treatmentPhase,
                         style: AppText.bodySecondary.copyWith(fontSize: 12)),
                     ],
                   )),
@@ -275,7 +334,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
               // ── Treatment — editable ──────────────────────────────────
               const SectionLabel('Treatment journey'),
-              _infoRow('Treatment phase', _session.treatmentPhase),
+              _editableRow(
+                label: 'Treatment phase',
+                value: _session.treatmentPhase,
+                subtitle: 'Tap to update',
+                onTap: _showPhasePicker,
+                color: AppColors.primary,
+                highlight: false,
+              ),
 
               // Monitoring-specific fields
               if (isMonitoring) ...[
@@ -326,7 +392,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
 
               // Chemo-specific fields
-              if (!isMonitoring) ...[
+              if (isInChemo) ...[
                 _editableRow(
                   label: 'Protocol',
                   value: '${_session.protocol.name}${_session.isTaxolPhase ? ' (Taxol phase)' : ''}',

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/utils/models.dart';
 import '../../../../core/utils/user_session.dart';
 import '../../../../core/utils/protocols.dart';
 import '../../../../core/utils/invite_codes.dart';
@@ -33,8 +34,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   // Pages: 0=welcome,1=who,2=name,3=type,4=phase,5=protocol,6=cycleday,7=notifs,8=celebration
   static const _totalSteps = 7;
 
-  final _cancerTypes = ['Breast','Lung','Colorectal','Leukemia','Lymphoma','Other'];
-  final _cancerEmojis = ['🎀','🫁','🫀','🩸','💜','✦'];
+  final _cancerTypes = AppConfig.cancerTypes;
+  final _cancerEmojis = ['🎀','🫁','🫀','♟️','🔬','🔵','💜','🩸','✦'];
 
   // Protocol data — shown only when Breast is selected (index 0)
   final _protocols = [
@@ -76,12 +77,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     ),
   ];
 
-  final _phases = [
-    'Just diagnosed','Awaiting treatment plan','In chemotherapy',
-    'In radiotherapy','Post-surgery recovery','Monitoring / surveillance'];
+  final _phases = AppConfig.phaseNames;
 
   bool get _showProtocolStep =>
-      _typeIndex == 0 && _phaseIndex == 2; // Breast + In chemotherapy
+      _cancerTypes[_typeIndex] == 'Breast cancer' &&
+      _phases[_phaseIndex] == 'In chemotherapy';
   bool get _showCycleDayStep => _showProtocolStep;
   bool get _showMonitoringStep =>
       _phases[_phaseIndex] == 'Monitoring / surveillance';
