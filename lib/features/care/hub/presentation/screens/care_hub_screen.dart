@@ -162,12 +162,28 @@ class _MedBadgeState extends State<_MedBadge> {
 
   @override
   Widget build(BuildContext context) {
-    final taken = UserSession().medsTakenTodayCount;
-    final total = UserSession().medications.length;
+    final session = UserSession();
+    final taken = session.medsTakenTodayCount;
+    final total = session.medications.length;
+
+    // Refill alert takes priority
+    if (session.hasRefillAlert) {
+      return PillBadge(
+        text: '⚠ Refill needed',
+        bg: AppColors.peachLight,
+        textColor: AppColors.peach,
+        borderColor: AppColors.peach.withOpacity(0.2));
+    }
+    if (total == 0) {
+      return PillBadge(
+        text: 'Add first',
+        bg: AppColors.background2,
+        textColor: AppColors.text3);
+    }
     return PillBadge(
-      text: taken == total && total > 0 ? 'All done ✓' : '$taken of $total',
-      bg: taken == total && total > 0 ? AppColors.tealLight : AppColors.peachLight,
-      textColor: taken == total && total > 0 ? AppColors.teal : AppColors.peach,
+      text: taken == total ? 'All done ✓' : '$taken of $total',
+      bg: taken == total ? AppColors.tealLight : AppColors.peachLight,
+      textColor: taken == total ? AppColors.teal : AppColors.peach,
     );
   }
 }

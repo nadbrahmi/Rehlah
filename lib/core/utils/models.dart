@@ -85,15 +85,25 @@ class Medication {
   final String dose;
   final String frequency;
   final String emoji;
-  final String category; // 'hormone_therapy', 'chemo', 'supplement', 'symptomatic', 'other'
+  final String category;
   final String? notes;
   final DateTime? startDate;
+  final int? totalSupply; // total doses in pack (e.g. 30 tablets)
 
   const Medication({
     required this.id, required this.name, required this.dose,
     required this.frequency, required this.emoji,
     this.category = 'other', this.notes, this.startDate,
+    this.totalSupply,
   });
+
+  // Doses per day derived from frequency string
+  int get dosesPerDay {
+    final f = frequency.toLowerCase();
+    if (f.contains('twice') || f.contains('2x') || f.contains('two')) return 2;
+    if (f.contains('three') || f.contains('3x')) return 3;
+    return 1;
+  }
 }
 
 class Appointment {

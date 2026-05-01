@@ -91,6 +91,51 @@ class _MedicationsScreenState extends State<MedicationsScreen> {
             ]),
           )),
 
+          // Refill alert banner
+          if (_session.hasRefillAlert)
+            SliverToBoxAdapter(child: Container(
+              margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.peachLight,
+                borderRadius: AppRadius.mdBR,
+                border: Border.all(
+                  color: AppColors.peach.withOpacity(0.3), width: 0.5)),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    const Text('⚠', style: TextStyle(fontSize: 14)),
+                    const SizedBox(width: 8),
+                    Text('Refill needed',
+                      style: AppText.bodySemibold.copyWith(
+                        color: AppColors.peach, fontSize: 13)),
+                  ]),
+                  const SizedBox(height: 6),
+                  ..._session.medsRunningLow.map((m) => Padding(
+                    padding: const EdgeInsets.only(top: 3),
+                    child: Row(children: [
+                      Text(m.emoji, style: const TextStyle(fontSize: 12)),
+                      const SizedBox(width: 6),
+                      Text(m.name,
+                        style: AppText.bodySecondary.copyWith(fontSize: 12)),
+                      const Spacer(),
+                      Text(
+                        _session.isMedOutOfStock(m.id)
+                            ? 'Out of stock'
+                            : '${_session.remainingDoses(m.id)} doses left'
+                              '${_session.daysRemainingForMed(m.id) != null ? ' · ${_session.daysRemainingForMed(m.id)}d' : ''}',
+                        style: AppText.caption.copyWith(
+                          color: _session.isMedOutOfStock(m.id)
+                              ? AppColors.rose : AppColors.peach,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500)),
+                    ]),
+                  )),
+                ],
+              ),
+            )),
+
           // Medications list
           if (meds.isEmpty)
             SliverToBoxAdapter(child: Container(
@@ -222,6 +267,35 @@ class _MedicationsScreenState extends State<MedicationsScreen> {
                   color: AppColors.text3, fontSize: 11,
                   fontStyle: FontStyle.italic)),
             ],
+            if (med.totalSupply != null) ...[
+              const SizedBox(height: 4),
+              Builder(builder: (_) {
+                final rem = _session.remainingDoses(med.id);
+                final days = _session.daysRemainingForMed(med.id);
+                final isLow = _session.isMedRunningLow(med.id);
+                final isOut = _session.isMedOutOfStock(med.id);
+                return Row(children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: isOut ? AppColors.roseLight
+                          : isLow ? AppColors.peachLight
+                          : AppColors.tealLight,
+                      borderRadius: AppRadius.fullBR),
+                    child: Text(
+                      isOut ? 'Out of stock'
+                          : '$rem doses left'
+                            '${days != null ? ' · ~${days}d' : ''}',
+                      style: AppText.caption.copyWith(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                        color: isOut ? AppColors.rose
+                            : isLow ? AppColors.peach
+                            : AppColors.teal))),
+                ]);
+              }),
+            ],
           ],
         )),
 
@@ -307,6 +381,8 @@ class _MedicationsScreenState extends State<MedicationsScreen> {
     final notesCtrl = TextEditingController(text: existing?.notes ?? '');
     String emoji = existing?.emoji ?? '💊';
     String category = existing?.category ?? 'other';
+    int? totalSupply = existing?.totalSupply;
+    DateTime? startDate = existing?.startDate;
 
     final emojis = ['💊', '🌤️', '🦴', '🩹', '🧬', '💉', '🫀', '🧪', '🌿'];
     final categories = [
@@ -395,6 +471,155 @@ class _MedicationsScreenState extends State<MedicationsScreen> {
                         fontSize: 11))));
                 }).toList()),
 
+              const SizedBox(height: 12),
+
+              // Supply tracking
+              Text('Supply tracking (optional)',
+                style: AppText.bodySecondary),
+              const SizedBox(height: 4),
+              Text('Rehlah counts down automatically each time you mark a dose taken.',
+                style: AppText.caption.copyWith(
+                  fontSize: 11, color: AppColors.text3)),
+              const SizedBox(height: 8),
+              Row(crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                // Pack size
+                Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Pack size (doses)',
+                      style: AppText.caption.copyWith(
+                        fontSize: 11, color: AppColors.text3)),
+                    const SizedBox(height: 4),
+                    Row(children: [
+                      GestureDetector(
+                        onTap: () => setS(() {
+                          if (totalSupply != null && totalSupply! > 1)
+                            totalSupply = totalSupply! - 1;
+                        }),
+                        child: Container(width: 28, height: 28,
+                          decoration: BoxDecoration(
+                            color: AppColors.background2,
+                            borderRadius: AppRadius.smBR),
+                          child: const Icon(Icons.remove_rounded, size: 14))),
+                      const SizedBox(width: 8),
+                      Text(totalSupply != null ? '$totalSupply' : '—',
+                        style: AppText.bodySemibold.copyWith(fontSize: 15)),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: () => setS(() =>
+                            totalSupply = (totalSupply ?? 0) + 1),
+                        child: Container(width: 28, height: 28,
+                          decoration: BoxDecoration(
+                            color: AppColors.background2,
+                            borderRadius: AppRadius.smBR),
+                          child: const Icon(Icons.add_rounded, size: 14))),
+                      const SizedBox(width: 8),
+                      if (totalSupply != null)
+                        GestureDetector(
+                          onTap: () => setS(() => totalSupply = null),
+                          child: Text('Clear',
+                            style: AppText.caption.copyWith(
+                              color: AppColors.text3, fontSize: 10))),
+                    ]),
+                  ],
+                )),
+                const SizedBox(width: 16),
+                // Start date
+                Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Started taking',
+                      style: AppText.caption.copyWith(
+                        fontSize: 11, color: AppColors.text3)),
+                    const SizedBox(height: 4),
+                    GestureDetector(
+                      onTap: () async {
+                        final p = await showDatePicker(
+                          context: context,
+                          initialDate: startDate ?? DateTime.now(),
+                          firstDate: DateTime.now()
+                              .subtract(const Duration(days: 3650)),
+                          lastDate: DateTime.now(),
+                          builder: (ctx, child) => Theme(
+                            data: Theme.of(ctx).copyWith(
+                              colorScheme: ColorScheme.light(
+                                primary: AppColors.primary)),
+                            child: child!),
+                        );
+                        if (p != null) setS(() => startDate = p);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: AppColors.background,
+                          borderRadius: AppRadius.smBR,
+                          border: Border.all(
+                            color: AppColors.border, width: 0.5)),
+                        child: Row(children: [
+                          const Text('📅',
+                            style: TextStyle(fontSize: 12)),
+                          const SizedBox(width: 6),
+                          Text(
+                            startDate != null
+                                ? '${startDate!.day}/${startDate!.month}/${startDate!.year}'
+                                : 'Set date',
+                            style: AppText.caption.copyWith(
+                              fontSize: 11,
+                              color: startDate != null
+                                  ? AppColors.primary : AppColors.text3)),
+                        ]),
+                      ),
+                    ),
+                    if (startDate != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 3),
+                        child: GestureDetector(
+                          onTap: () => setS(() => startDate = null),
+                          child: Text('Clear',
+                            style: AppText.caption.copyWith(
+                              color: AppColors.text3, fontSize: 10)))),
+                  ],
+                )),
+              ]),
+
+              // Preview remaining if both set
+              if (totalSupply != null && startDate != null) ...[
+                const SizedBox(height: 8),
+                Builder(builder: (_) {
+                  // Estimate days since start (approximate taken count)
+                  final daysSinceStart =
+                      DateTime.now().difference(startDate!).inDays;
+                  final freq = existing?.dosesPerDay ?? 1;
+                  final estimated = (daysSinceStart * freq)
+                      .clamp(0, totalSupply!);
+                  final remaining = totalSupply! - estimated;
+                  final isLow = remaining <= 7;
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: isLow
+                          ? AppColors.peachLight : AppColors.tealLight,
+                      borderRadius: AppRadius.smBR),
+                    child: Row(children: [
+                      Text(isLow ? '⚠' : '✓',
+                        style: const TextStyle(fontSize: 12)),
+                      const SizedBox(width: 6),
+                      Text(
+                        remaining <= 0
+                            ? 'Pack likely finished — request refill'
+                            : 'Approx. $remaining doses remaining',
+                        style: AppText.caption.copyWith(
+                          fontSize: 11,
+                          color: isLow ? AppColors.peach : AppColors.teal,
+                          fontWeight: FontWeight.w500)),
+                    ]),
+                  );
+                }),
+              ],
+
               const SizedBox(height: 16),
 
               Row(children: [
@@ -436,6 +661,8 @@ class _MedicationsScreenState extends State<MedicationsScreen> {
                       category: category,
                       notes: notesCtrl.text.trim().isEmpty
                           ? null : notesCtrl.text.trim(),
+                      startDate: startDate ?? existing?.startDate,
+                      totalSupply: totalSupply,
                     );
                     if (isEdit) {
                       _session.updateMedication(med);

@@ -182,6 +182,12 @@ class InviteCodes {
     // Init default medications based on phase
     s.initDefaultMedications();
     s.initDefaultLabs();
+    // Simulate 25 doses of Tamoxifen taken (pack of 30 → 5 remaining → low)
+    if (s.isMonitoring) {
+      for (int i = 0; i < 25; i++) {
+        s.medsAdherenceSimulate('med1');
+      }
+    }
   }
 
   /// All available codes (for dev/debug display)

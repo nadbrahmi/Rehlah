@@ -410,7 +410,8 @@ class UserSession extends ChangeNotifier {
         Medication(id: 'med1', name: 'Tamoxifen 20mg',
           dose: '1 tablet', frequency: 'Daily · Morning',
           emoji: '💊', category: 'hormone_therapy',
-          startDate: tamoxStart),
+          startDate: tamoxStart,
+          totalSupply: 30),
         Medication(id: 'med2', name: 'Vitamin D 1000 IU',
           dose: '1 capsule', frequency: 'Daily · With food',
           emoji: '🌤️', category: 'supplement'),
@@ -464,6 +465,47 @@ class UserSession extends ChangeNotifier {
   // % progress toward recommended 5 years
   double get hormoneTherapyProgress =>
       (hormoneTherapyDays / 1825).clamp(0.0, 1.0);
+
+  // Remaining doses for a medication (computed from pack size minus taken count)
+  int? remainingDoses(String medId) {
+    final med = _medications.firstWhere((m) => m.id == medId,
+        orElse: () => Medication(id: '', name: '', dose: '',
+            frequency: '', emoji: ''));
+    if (med.totalSupply == null) return null;
+    final taken = _medsAdherenceCount[medId] ?? 0;
+    return (med.totalSupply! - taken).clamp(0, med.totalSupply!);
+  }
+
+  bool isMedRunningLow(String medId) {
+    final rem = remainingDoses(medId);
+    return rem != null && rem <= 7 && rem > 0;
+  }
+
+  bool isMedOutOfStock(String medId) {
+    final rem = remainingDoses(medId);
+    return rem != null && rem <= 0;
+  }
+
+  int? daysRemainingForMed(String medId) {
+    final rem = remainingDoses(medId);
+    final med = _medications.firstWhere((m) => m.id == medId,
+        orElse: () => Medication(id: '', name: '', dose: '',
+            frequency: '', emoji: ''));
+    if (rem == null) return null;
+    return (rem / med.dosesPerDay).floor();
+  }
+
+  // Medications running low or out of stock
+  List<Medication> get medsRunningLow =>
+      _medications.where((m) =>
+          isMedRunningLow(m.id) || isMedOutOfStock(m.id)).toList();
+
+  bool get hasRefillAlert => medsRunningLow.isNotEmpty;
+
+  /// For demo/invite codes only — simulates doses taken without triggering UI
+  void medsAdherenceSimulate(String medId) {
+    _medsAdherenceCount[medId] = (_medsAdherenceCount[medId] ?? 0) + 1;
+  }
 
   void addMedication(Medication med) {
     _medications.removeWhere((m) => m.id == med.id);
