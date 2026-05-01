@@ -403,10 +403,14 @@ class UserSession extends ChangeNotifier {
     if (_medsInitialized) return;
     _medsInitialized = true;
     if (isMonitoring) {
+      // Use treatmentEndDate as Tamoxifen start if available
+      final tamoxStart = treatmentEndDate ??
+          DateTime.now().subtract(const Duration(days: 847));
       _medications.addAll([
         Medication(id: 'med1', name: 'Tamoxifen 20mg',
           dose: '1 tablet', frequency: 'Daily · Morning',
-          emoji: '💊', category: 'hormone_therapy'),
+          emoji: '💊', category: 'hormone_therapy',
+          startDate: tamoxStart),
         Medication(id: 'med2', name: 'Vitamin D 1000 IU',
           dose: '1 capsule', frequency: 'Daily · With food',
           emoji: '🌤️', category: 'supplement'),
@@ -418,7 +422,8 @@ class UserSession extends ChangeNotifier {
       _medications.addAll([
         Medication(id: 'med1', name: 'Tamoxifen 20mg',
           dose: '1 tablet', frequency: 'Daily',
-          emoji: '💊', category: 'hormone_therapy'),
+          emoji: '💊', category: 'hormone_therapy',
+          startDate: DateTime.now().subtract(const Duration(days: 30))),
         Medication(id: 'med2', name: 'Vitamin D 1000 IU',
           dose: '1 capsule', frequency: 'Daily',
           emoji: '🌤️', category: 'supplement'),
@@ -428,6 +433,37 @@ class UserSession extends ChangeNotifier {
       ]);
     }
   }
+
+  // Hormone therapy streak — days since earliest hormone_therapy med start date
+  Medication? get hormoneTherapyMed => _medications
+      .where((m) => m.category == 'hormone_therapy' && m.startDate != null)
+      .fold<Medication?>(null, (prev, m) =>
+          prev == null || m.startDate!.isBefore(prev.startDate!)
+              ? m : prev);
+
+  int get hormoneTherapyDays {
+    final med = hormoneTherapyMed;
+    if (med?.startDate == null) return 0;
+    return DateTime.now().difference(med!.startDate!).inDays;
+  }
+
+  // Milestone label for hormone therapy
+  String? get hormoneTherapyMilestone {
+    final days = hormoneTherapyDays;
+    if (days >= 1825) return '5 years';   // 5yr — major milestone
+    if (days >= 1460) return '4 years';
+    if (days >= 1095) return '3 years';
+    if (days >= 730)  return '2 years';
+    if (days >= 365)  return '1 year';
+    if (days >= 180)  return '6 months';
+    if (days >= 90)   return '3 months';
+    if (days >= 30)   return '1 month';
+    return null;
+  }
+
+  // % progress toward recommended 5 years
+  double get hormoneTherapyProgress =>
+      (hormoneTherapyDays / 1825).clamp(0.0, 1.0);
 
   void addMedication(Medication med) {
     _medications.removeWhere((m) => m.id == med.id);

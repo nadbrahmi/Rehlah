@@ -87,11 +87,12 @@ class Medication {
   final String emoji;
   final String category; // 'hormone_therapy', 'chemo', 'supplement', 'symptomatic', 'other'
   final String? notes;
+  final DateTime? startDate;
 
   const Medication({
     required this.id, required this.name, required this.dose,
     required this.frequency, required this.emoji,
-    this.category = 'other', this.notes,
+    this.category = 'other', this.notes, this.startDate,
   });
 }
 

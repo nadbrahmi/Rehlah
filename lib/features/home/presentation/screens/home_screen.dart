@@ -67,6 +67,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             if (isMonitoring) ...[
               if (session.daysCancerFree > 0)
                 SliverToBoxAdapter(child: _buildCancerFreeCard(session)),
+              if (session.hormoneTherapyDays > 0)
+                SliverToBoxAdapter(child: _buildHormoneStreakCard(session)),
               if (session.isScanxietyPeriod)
                 SliverToBoxAdapter(child: _buildScanxietyCard(session)),
               SliverToBoxAdapter(child: _buildLastControlsCard(session)),
@@ -205,6 +207,155 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           Text('Your WBC count will reach its lowest in 1–2 days. Start monitoring your temperature twice daily.',
             style: AppText.bodySecondary),
         ])),
+      ]),
+    );
+  }
+
+  // ── Hormone therapy streak card ───────────────────────────────────────────
+  Widget _buildHormoneStreakCard(UserSession session) {
+    final days = session.hormoneTherapyDays;
+    final med = session.hormoneTherapyMed;
+    final progress = session.hormoneTherapyProgress;
+    final milestone = session.hormoneTherapyMilestone;
+    final remaining = (1825 - days).clamp(0, 1825);
+    final pct = (progress * 100).round();
+
+    // Days label
+    String daysLabel;
+    final years = days ~/ 365;
+    final months = (days % 365) ~/ 30;
+    if (years > 0 && months > 0) {
+      daysLabel = '$years yr $months mo';
+    } else if (years > 0) {
+      daysLabel = '$years year${years > 1 ? 's' : ''}';
+    } else if (months > 0) {
+      daysLabel = '$months month${months > 1 ? 's' : ''}';
+    } else {
+      daysLabel = '$days days';
+    }
+
+    // Clinical message based on progress
+    String clinicalNote;
+    if (days >= 1825) {
+      clinicalNote = 'You\'ve completed the full 5-year course. Outstanding.';
+    } else if (days >= 1460) {
+      clinicalNote = 'One year left. Completing the full course matters most now.';
+    } else if (days >= 730) {
+      clinicalNote = 'Studies show completing 5 years reduces recurrence risk by up to 40%.';
+    } else if (days >= 365) {
+      clinicalNote = 'After 1 year, many patients stop early. You\'re still going. That matters.';
+    } else if (days >= 180) {
+      clinicalNote = 'Consistent daily use is the key to effectiveness.';
+    } else {
+      clinicalNote = 'Starting strong. Daily consistency is what makes this medication work.';
+    }
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: AppRadius.mdBR,
+        border: Border.all(
+          color: AppColors.primary.withOpacity(0.15), width: 0.5)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(
+              color: AppColors.primaryLight,
+              borderRadius: AppRadius.smBR),
+            child: const Center(child: Text('💊',
+              style: TextStyle(fontSize: 17)))),
+          const SizedBox(width: 10),
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(children: [
+                Text(med?.name ?? 'Hormone therapy',
+                  style: AppText.bodySemibold.copyWith(fontSize: 13)),
+                if (milestone != null) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.teal.withOpacity(0.12),
+                      borderRadius: AppRadius.fullBR),
+                    child: Text('🎉 $milestone',
+                      style: AppText.caption.copyWith(
+                        color: AppColors.teal,
+                        fontSize: 9, fontWeight: FontWeight.w600))),
+                ],
+              ]),
+              Text('$daysLabel · $pct% of 5-year course',
+                style: AppText.bodySecondary.copyWith(fontSize: 11)),
+            ],
+          )),
+          // Day counter
+          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            Text('$days', style: AppText.statNumber.copyWith(
+              color: AppColors.primary.withOpacity(0.5), fontSize: 18)),
+            Text('days', style: AppText.caption.copyWith(
+              color: AppColors.text3, fontSize: 9)),
+          ]),
+        ]),
+
+        const SizedBox(height: 10),
+
+        // Progress bar toward 5 years
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            Text('Progress to 5-year course',
+              style: AppText.caption.copyWith(
+                fontSize: 10, color: AppColors.text3)),
+            Text(days >= 1825
+                ? 'Complete ✓'
+                : '$remaining days remaining',
+              style: AppText.caption.copyWith(
+                fontSize: 10,
+                color: days >= 1825 ? AppColors.teal : AppColors.text3)),
+          ]),
+          const SizedBox(height: 5),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 5,
+              backgroundColor: AppColors.primaryLight,
+              valueColor: AlwaysStoppedAnimation(
+                days >= 1825 ? AppColors.teal : AppColors.primary),
+            ),
+          ),
+          // Year markers
+          Padding(
+            padding: const EdgeInsets.only(top: 3),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: ['Yr 1', 'Yr 2', 'Yr 3', 'Yr 4', 'Yr 5'].map((y) =>
+                Text(y, style: AppText.caption.copyWith(
+                  fontSize: 8, color: AppColors.text3))).toList(),
+            ),
+          ),
+        ]),
+
+        const SizedBox(height: 8),
+
+        // Clinical note
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          decoration: BoxDecoration(
+            color: AppColors.primaryLight.withOpacity(0.5),
+            borderRadius: AppRadius.smBR),
+          child: Row(children: [
+            const Text('💡', style: TextStyle(fontSize: 11)),
+            const SizedBox(width: 6),
+            Expanded(child: Text(clinicalNote,
+              style: AppText.caption.copyWith(
+                fontSize: 11, color: AppColors.text2,
+                fontStyle: FontStyle.italic))),
+          ]),
+        ),
       ]),
     );
   }
