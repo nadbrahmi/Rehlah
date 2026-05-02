@@ -256,7 +256,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ],
                     )),
                     const SizedBox(height: 10),
-                    _buildCompletionBar(),
+                    _buildLastCheckinRow(),
                   ],
                 ),
               ),
@@ -638,38 +638,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  Widget _buildCompletionBar() {
-    final pct = _session.profileCompletionPct;
-    final missing = _session.profileMissingFields;
-    final color = pct >= 80 ? AppColors.teal
-        : pct >= 50 ? AppColors.primary
-        : AppColors.peach;
-
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text('Profile complete',
-          style: AppText.bodySecondary.copyWith(fontSize: 12)),
-        Text('$pct%', style: AppText.bodySemibold.copyWith(
-          color: color, fontSize: 12)),
-      ]),
-      const SizedBox(height: 5),
-      Stack(children: [
-        Container(height: 5,
-          decoration: BoxDecoration(
-            color: AppColors.background2,
-            borderRadius: AppRadius.fullBR)),
-        FractionallySizedBox(
-          widthFactor: pct / 100,
-          child: Container(height: 5,
+  Widget _buildLastCheckinRow() {
+    final streak = _session.streak;
+    final checkedToday = _session.checkedInToday;
+    return Row(children: [
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: checkedToday ? AppColors.tealLight : AppColors.background2,
+          borderRadius: AppRadius.fullBR),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Container(width: 6, height: 6,
             decoration: BoxDecoration(
-              color: color,
-              borderRadius: AppRadius.fullBR))),
-      ]),
-      if (missing.isNotEmpty) ...[
-        const SizedBox(height: 5),
-        Text('Missing: ${missing.join(' · ')}',
+              color: checkedToday ? AppColors.teal : AppColors.text3,
+              shape: BoxShape.circle)),
+          const SizedBox(width: 5),
+          Text(
+            checkedToday
+                ? 'Checked in today'
+                : 'Not checked in today',
+            style: AppText.caption.copyWith(
+              fontSize: 11,
+              color: checkedToday ? AppColors.teal : AppColors.text3,
+              fontWeight: FontWeight.w500)),
+        ]),
+      ),
+      if (streak > 1) ...[
+        const SizedBox(width: 8),
+        Text('$streak day streak 🔥',
           style: AppText.caption.copyWith(
-            fontSize: 10, color: AppColors.text3)),
+            fontSize: 11, color: AppColors.text3)),
       ],
     ]);
   }

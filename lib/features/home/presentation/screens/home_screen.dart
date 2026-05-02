@@ -69,17 +69,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 !session.isScanxietyPeriod)
               SliverToBoxAdapter(child: _buildMicroEducationCard(session)),
             if (isMonitoring) ...[
-              if (session.daysCancerFree > 0)
-                SliverToBoxAdapter(child: _buildCancerFreeCard(session)),
-              if (session.hormoneTherapyDays > 0)
-                SliverToBoxAdapter(child: _buildHormoneStreakCard(session)),
+              // Combined wellness hero — cancer-free + hormone streak in one card
+              SliverToBoxAdapter(child: _buildMonitoringWellnessCard(session)),
+              // Scanxiety only when scan is within 14 days
               if (session.isScanxietyPeriod)
                 SliverToBoxAdapter(child: _buildScanxietyCard(session)),
-              SliverToBoxAdapter(child: _buildLastControlsCard(session)),
-              SliverToBoxAdapter(child: _buildCycleTrackerCard(context, session)),
-              if (session.menstrualStatus == 'regular' &&
-                  session.nextOptimalWindowStart != null)
-                SliverToBoxAdapter(child: _buildScanWindowCard(session)),
+              // Cycle + scan window combined
+              SliverToBoxAdapter(
+                  child: _buildCycleAndScanCard(context, session)),
             ],
             // Chemo-specific cards
             if (isInChemo && session.isNadirWindow)
@@ -454,6 +451,154 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             fontSize: 12, height: 1.55)),
         ])),
       ]),
+    );
+  }
+
+  // ── Combined monitoring wellness card ────────────────────────────────────
+  Widget _buildMonitoringWellnessCard(UserSession session) {
+    final days = session.daysCancerFree;
+    final years = days ~/ 365;
+    final months = (days % 365) ~/ 30;
+    final hormDays = session.hormoneTherapyDays;
+    final hormProgress = session.hormoneTherapyProgress;
+    final milestone = session.hormoneTherapyMilestone;
+    final med = session.hormoneTherapyMed;
+
+    String cancerFreeLabel;
+    if (years > 0 && months > 0) {
+      cancerFreeLabel = '$years yr $months mo cancer-free';
+    } else if (years > 0) {
+      cancerFreeLabel = '$years year${years > 1 ? 's' : ''} cancer-free';
+    } else if (months > 0) {
+      cancerFreeLabel = '$months month${months > 1 ? 's' : ''} cancer-free';
+    } else {
+      cancerFreeLabel = '$days days cancer-free';
+    }
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.teal.withOpacity(0.08),
+            AppColors.primary.withOpacity(0.06),
+          ]),
+        borderRadius: AppRadius.mdBR,
+        border: Border.all(
+          color: AppColors.teal.withOpacity(0.18), width: 0.5)),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // Cancer-free row
+          Row(children: [
+            const Text('🎗️', style: TextStyle(fontSize: 18)),
+            const SizedBox(width: 10),
+            Expanded(child: Text(cancerFreeLabel,
+              style: AppText.bodySemibold.copyWith(
+                color: AppColors.teal, fontSize: 14))),
+            Text('$days',
+              style: AppText.statNumber.copyWith(
+                color: AppColors.teal.withOpacity(0.5),
+                fontSize: 20)),
+          ]),
+
+          // Hormone therapy streak (if applicable)
+          if (hormDays > 0) ...[
+            const SizedBox(height: 10),
+            Divider(color: AppColors.teal.withOpacity(0.12), height: 1),
+            const SizedBox(height: 10),
+            Row(children: [
+              const Text('💊', style: TextStyle(fontSize: 14)),
+              const SizedBox(width: 8),
+              Expanded(child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    Text(med?.name ?? 'Hormone therapy',
+                      style: AppText.bodySemibold.copyWith(fontSize: 12)),
+                    if (milestone != null) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: AppColors.teal.withOpacity(0.12),
+                          borderRadius: AppRadius.fullBR),
+                        child: Text('🎉 $milestone',
+                          style: AppText.caption.copyWith(
+                            color: AppColors.teal, fontSize: 9,
+                            fontWeight: FontWeight.w600))),
+                    ],
+                  ]),
+                  const SizedBox(height: 3),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(3),
+                    child: LinearProgressIndicator(
+                      value: hormProgress,
+                      minHeight: 4,
+                      backgroundColor: AppColors.teal.withOpacity(0.1),
+                      valueColor: AlwaysStoppedAnimation(AppColors.teal))),
+                  const SizedBox(height: 2),
+                  Text('${(hormProgress * 100).round()}% of 5-year course',
+                    style: AppText.caption.copyWith(
+                      fontSize: 10, color: AppColors.text3)),
+                ],
+              )),
+            ]),
+          ],
+        ]),
+      ),
+    );
+  }
+
+  // ── Combined cycle + scan window card ─────────────────────────────────────
+  Widget _buildCycleAndScanCard(BuildContext context, UserSession session) {
+    final hasOptimalWindow = session.menstrualStatus == 'regular' &&
+        session.nextOptimalWindowStart != null;
+    final windowStart = session.nextOptimalWindowStart;
+    final windowEnd = session.nextOptimalWindowEnd;
+
+    return GestureDetector(
+      onTap: () => context.push('/monitoring/cycle-tracker'),
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: AppRadius.mdBR,
+          border: Border.all(color: AppColors.border, width: 0.5)),
+        child: Row(children: [
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.roseLight,
+              borderRadius: AppRadius.smBR),
+            child: const Center(child: Text('🌸',
+              style: TextStyle(fontSize: 18)))),
+          const SizedBox(width: 12),
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Cycle & scan tracker',
+                style: AppText.bodySemibold.copyWith(fontSize: 13)),
+              const SizedBox(height: 2),
+              if (hasOptimalWindow && windowStart != null)
+                Text(
+                  'Best scan window: ${DateFormat('d MMM').format(windowStart)}'
+                  '${windowEnd != null ? ' – ${DateFormat('d MMM').format(windowEnd)}' : ''}',
+                  style: AppText.bodySecondary.copyWith(
+                    fontSize: 11, color: AppColors.teal))
+              else
+                Text('Tap to view calendar',
+                  style: AppText.bodySecondary.copyWith(fontSize: 11)),
+            ],
+          )),
+          Icon(Icons.arrow_forward_ios_rounded,
+            size: 12, color: AppColors.text3),
+        ]),
+      ),
     );
   }
 
