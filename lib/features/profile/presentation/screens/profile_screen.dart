@@ -6,6 +6,7 @@ import '../../../../core/widgets/shared_widgets.dart';
 import '../../../../core/utils/models.dart';
 import '../../../../core/utils/user_session.dart';
 import '../../../../core/utils/protocols.dart';
+import '../../../../core/utils/invite_codes.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -423,11 +424,86 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   'Notifications', '2 of 3 enabled', null),
               _actionRow(Icons.shield_outlined,
                   'Privacy & data', 'View', '/profile/privacy'),
+              const SectionLabel('Family & caregivers'),
+              _buildCaregiverCodeRow(),
               const SizedBox(height: 24),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildCaregiverCodeRow() {
+    final code = InviteCodes.generateCaregiverCode(_session.name);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: AppRadius.mdBR,
+        border: Border.all(color: AppColors.border, width: 0.5)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(
+            width: 32, height: 32,
+            decoration: BoxDecoration(
+              color: AppColors.tealLight,
+              borderRadius: AppRadius.smBR),
+            child: const Center(child: Text('🫂',
+              style: TextStyle(fontSize: 15)))),
+          const SizedBox(width: 10),
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Caregiver code',
+                style: AppText.bodySemibold.copyWith(fontSize: 13)),
+              Text('Share with a family member or caregiver',
+                style: AppText.bodySecondary.copyWith(fontSize: 11)),
+            ],
+          )),
+        ]),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.tealLight,
+            borderRadius: AppRadius.mdBR,
+            border: Border.all(
+              color: AppColors.teal.withOpacity(0.2), width: 0.5)),
+          child: Row(children: [
+            Expanded(child: Text(code,
+              style: TextStyle(
+                fontFamily: 'Courier', fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: AppColors.teal,
+                letterSpacing: 1.5))),
+            GestureDetector(
+              onTap: () {
+                // Copy to clipboard
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                  content: Text('Code copied: $code'),
+                  duration: const Duration(seconds: 2),
+                  backgroundColor: AppColors.teal));
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: AppColors.teal,
+                  borderRadius: AppRadius.fullBR),
+                child: Text('Copy',
+                  style: AppText.caption.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500, fontSize: 11)))),
+          ]),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'They enter this on the welcome screen to see your daily updates.',
+          style: AppText.caption.copyWith(
+            fontSize: 11, color: AppColors.text3)),
+      ]),
     );
   }
 

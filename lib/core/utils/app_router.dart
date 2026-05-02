@@ -21,6 +21,7 @@ import '../../features/connect/presentation/screens/connect_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/monitoring/presentation/screens/cycle_tracker_screen.dart';
 import '../../features/profile/presentation/screens/privacy_screen.dart';
+import '../../features/caregiver/presentation/screens/caregiver_home_screen.dart';
 import 'shell_screen.dart';
 
 final appRouter = GoRouter(
@@ -40,6 +41,7 @@ final appRouter = GoRouter(
     GoRoute(path: '/care/appointments/prep', builder: (c, s) => const PrepReportScreen()),
     GoRoute(path: '/monitoring/cycle-tracker',
       builder: (c, s) => const CycleTrackerScreen()),
+    GoRoute(path: '/caregiver', builder: (c, s) => const CaregiverHomeScreen()),
     ShellRoute(
       builder: (context, state, child) => ShellScreen(child: child),
       routes: [

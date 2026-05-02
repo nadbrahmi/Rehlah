@@ -52,6 +52,91 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     }
   }
 
+  void _showCaregiverEntry() {
+    final ctrl = TextEditingController();
+    String? error;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (_) => StatefulBuilder(
+        builder: (ctx, setS) => Padding(
+          padding: EdgeInsets.fromLTRB(20, 16, 20,
+              MediaQuery.of(context).viewInsets.bottom + 32),
+          child: Column(mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Center(child: Container(width: 36, height: 4,
+              decoration: BoxDecoration(color: AppColors.border,
+                borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 16),
+            Text('I\'M A CAREGIVER',
+              style: AppText.label.copyWith(fontSize: 10)),
+            const SizedBox(height: 8),
+            Text('Enter the code shared by your patient.',
+              style: AppText.bodySecondary),
+            const SizedBox(height: 12),
+            TextField(
+              controller: ctrl,
+              autofocus: true,
+              textCapitalization: TextCapitalization.characters,
+              style: const TextStyle(
+                fontFamily: 'Inter', fontSize: 16,
+                letterSpacing: 1.5, color: AppColors.text1),
+              decoration: InputDecoration(
+                hintText: 'CARE-XXXXX',
+                hintStyle: TextStyle(
+                  color: AppColors.text3, letterSpacing: 1),
+                filled: true, fillColor: AppColors.background,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14, vertical: 12),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(
+                    color: AppColors.border, width: 0.5)),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(
+                    color: AppColors.border, width: 0.5)),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(
+                    color: AppColors.primaryMid, width: 1.5)),
+                errorText: error),
+            ),
+            const SizedBox(height: 16),
+            GestureDetector(
+              onTap: () {
+                final code = ctrl.text.trim().toUpperCase();
+                final careCode = InviteCodes.validateCaregiverCode(code);
+                if (careCode == null) {
+                  setS(() => error =
+                      'Code not recognised. Ask your patient for their caregiver code.');
+                } else {
+                  InviteCodes.applyAsCaregiver(careCode);
+                  Navigator.pop(context);
+                  context.go('/caregiver');
+                }
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                decoration: BoxDecoration(
+                  color: AppColors.teal,
+                  borderRadius: AppRadius.fullBR,
+                  boxShadow: [BoxShadow(
+                    color: AppColors.teal.withOpacity(0.25),
+                    blurRadius: 10, offset: const Offset(0, 3))]),
+                child: const Center(child: Text('Connect',
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 14,
+                    fontWeight: FontWeight.w500, color: Colors.white))))),
+          ]),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -161,6 +246,33 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                       Text('Fill in your own information',
                         style: TextStyle(fontFamily: 'Inter', fontSize: 11,
                           color: AppColors.text3,
+                          fontWeight: FontWeight.w300)),
+                    ]),
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                // ── Caregiver entry ───────────────────────────────────────
+                GestureDetector(
+                  onTap: _showCaregiverEntry,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      color: AppColors.tealLight,
+                      borderRadius: BorderRadius.circular(13),
+                      border: Border.all(
+                        color: AppColors.teal.withOpacity(0.2), width: 0.5)),
+                    child: Column(children: [
+                      Text('I\'m a caregiver',
+                        style: TextStyle(fontFamily: 'Inter', fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.teal)),
+                      const SizedBox(height: 2),
+                      Text('Enter the code shared by your patient',
+                        style: TextStyle(fontFamily: 'Inter', fontSize: 11,
+                          color: AppColors.teal.withOpacity(0.6),
                           fontWeight: FontWeight.w300)),
                     ]),
                   ),

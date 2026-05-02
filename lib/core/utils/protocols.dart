@@ -176,13 +176,14 @@ class SymptomLibrary {
 class ChemoPhase {
   final String name;
   final String description;
-  final int cycleDay;        // which day range this applies to
+  final int cycleDay;
   final int cycleDayEnd;
   final bool isNadir;
   final bool isNadirApproaching;
-  final List<ProtocolSymptom> primarySymptoms;   // show first, sliders
-  final List<ProtocolSymptom> watchSymptoms;     // show with warning logic
-  final String phaseNote;   // shown at top of check-in
+  final List<ProtocolSymptom> primarySymptoms;
+  final List<ProtocolSymptom> watchSymptoms;
+  final String phaseNote;
+  final String caregiverNote; // plain language for caregiver view
 
   const ChemoPhase({
     required this.name,
@@ -194,6 +195,7 @@ class ChemoPhase {
     required this.primarySymptoms,
     required this.watchSymptoms,
     required this.phaseNote,
+    this.caregiverNote = '',
   });
 }
 
