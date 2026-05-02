@@ -310,10 +310,21 @@ class UserSession extends ChangeNotifier {
     return start.add(const Duration(days: 7));
   }
 
+  static const _scanAppointmentKeywords = [
+    'mammogram', 'mri', 'ultrasound', 'scan', 'ct ', 'pet ',
+    'imaging', 'radiology', 'x-ray', 'biopsy', 'echo',
+  ];
+
   bool get isScanxietyPeriod {
-    final next = nextControl;
-    if (next?.nextScheduled == null) return false;
-    return next!.nextScheduled!.difference(DateTime.now()).inDays <= 14;
+    if (!isMonitoring) return false;
+    final nextApt = upcomingAppointments
+        .where((a) {
+          final title = a.title.toLowerCase();
+          return _scanAppointmentKeywords.any((k) => title.contains(k));
+        })
+        .firstOrNull;
+    if (nextApt == null) return false;
+    return nextApt.daysUntil <= 14;
   }
 
   ControlRecord? get nextControl {
@@ -358,15 +369,15 @@ class UserSession extends ChangeNotifier {
     if (isMonitoring) {
       _appointments.addAll([
         Appointment(
-          id: 'mon1', title: 'Oncology surveillance review',
+          id: 'mon1', title: 'Annual mammogram',
+          doctorName: 'Radiology Dept', location: 'Breast Imaging Centre',
+          dateTime: now.add(const Duration(days: 11))
+              .copyWith(hour: 9, minute: 0, second: 0)),
+        Appointment(
+          id: 'mon2', title: 'Oncology surveillance review',
           doctorName: 'Dr. Sarah Chen', location: 'Oncology Clinic',
           dateTime: now.add(const Duration(days: 32))
               .copyWith(hour: 10, minute: 30, second: 0)),
-        Appointment(
-          id: 'mon2', title: 'Annual mammogram',
-          doctorName: 'Radiology Dept', location: 'Breast Imaging Centre',
-          dateTime: now.add(const Duration(days: 65))
-              .copyWith(hour: 9, minute: 0, second: 0)),
         Appointment(
           id: 'mon3', title: 'Oncology surveillance review',
           doctorName: 'Dr. Sarah Chen', location: 'Oncology Clinic',
@@ -632,6 +643,8 @@ class UserSession extends ChangeNotifier {
     name = '';
     cancerType = '';
     treatmentPhase = '';
+    _appointments.clear();
+    _appointmentsInitialized = false;
     _medications.clear();
     _medsInitialized = false;
     _medsTakenToday.clear();

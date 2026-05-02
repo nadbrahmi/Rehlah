@@ -93,9 +93,11 @@ class _CheckInScreenState extends State<CheckInScreen> {
                   style: AppText.bodySecondary),
                 const SizedBox(height: 16),
 
-                // Phase note card
-                _buildPhaseNote(),
-                const SizedBox(height: 16),
+                // Phase note card — only show when not in nadir (nadir card is more specific)
+                if (!_session.isNadirWindow && !_session.isNadirApproaching)
+                  _buildPhaseNote(),
+                if (!_session.isNadirWindow && !_session.isNadirApproaching)
+                  const SizedBox(height: 16),
 
                 // Nadir warning (chemo only)
                 if (!_session.isMonitoring && _session.isNadirWindow) ...[

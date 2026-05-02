@@ -63,7 +63,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           child: CustomScrollView(slivers: [
             SliverToBoxAdapter(child: _buildHeader(context, session, dateStr)),
             SliverToBoxAdapter(child: _buildHeroCard(context, session)),
-            // Monitoring cards
+            // Micro-education — hide when a more specific card already shows
+            if (!session.isNadirWindow &&
+                !session.isNadirApproaching &&
+                !session.isScanxietyPeriod)
+              SliverToBoxAdapter(child: _buildMicroEducationCard(session)),
             if (isMonitoring) ...[
               if (session.daysCancerFree > 0)
                 SliverToBoxAdapter(child: _buildCancerFreeCard(session)),
@@ -366,6 +370,93 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  // ── Micro-education card ─────────────────────────────────────────────────
+  Widget _buildMicroEducationCard(UserSession session) {
+    final String? title;
+    final String? body;
+    final String emoji;
+    final Color color;
+
+    if (session.isMonitoring) {
+      if (session.isScanxietyPeriod) {
+        title = 'Scan anxiety is real';
+        body = 'Feeling anxious before a scan is completely normal — '
+            'studies show up to 70% of survivors experience it. '
+            'Tracking your mood this week helps your care team support you.';
+        emoji = '⚡';
+        color = AppColors.gold;
+      } else if (session.hormoneTherapyDays > 0 &&
+          session.hormoneTherapyDays < 365) {
+        title = 'Why Tamoxifen for 5 years?';
+        body = 'Hormone therapy works by blocking oestrogen that can fuel '
+            'cancer regrowth. Completing the full 5-year course reduces '
+            'recurrence risk by up to 40% — even when you feel well.';
+        emoji = '💊';
+        color = AppColors.primary;
+      } else if (session.hormoneTherapyDays >= 1460) {
+        title = 'The final stretch matters most';
+        body = 'Research shows the protective effect of Tamoxifen continues '
+            'to build in years 4 and 5. Stopping early — even at this stage — '
+            'reduces the long-term benefit significantly.';
+        emoji = '🏁';
+        color = AppColors.teal;
+      } else {
+        title = 'Monitoring is active protection';
+        body = 'Regular surveillance catches changes early — '
+            'when they\'re most treatable. '
+            'Each check-in helps your care team spot patterns before symptoms appear.';
+        emoji = '🎗️';
+        color = AppColors.teal;
+      }
+    } else if (session.isNadirWindow) {
+      title = 'Why nadir monitoring matters';
+      body = 'During nadir, your neutrophil count is at its lowest — '
+          'meaning bacteria your body normally clears can cause serious infection. '
+          'A temperature above 38°C is a medical emergency during this window.';
+      emoji = '🌡️';
+      color = AppColors.peach;
+    } else if (session.isNadirApproaching) {
+      title = 'Nadir window in 1–2 days';
+      body = 'Your WBC count will reach its lowest point soon. '
+          'Start monitoring your temperature now, twice daily. '
+          'Avoid crowded spaces and wash hands frequently.';
+      emoji = '⚡';
+      color = AppColors.gold;
+    } else {
+      // Phase-specific education
+      final phase = session.currentPhase;
+      final note = phase.phaseNote;
+      if (note.isEmpty) return const SizedBox.shrink();
+      title = phase.description;
+      body = note;
+      emoji = '💡';
+      color = AppColors.primary;
+    }
+
+    if (title == null || body == null) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05),
+        borderRadius: AppRadius.mdBR,
+        border: Border.all(color: color.withOpacity(0.18), width: 0.5)),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(emoji, style: const TextStyle(fontSize: 16)),
+        const SizedBox(width: 10),
+        Expanded(child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(title, style: AppText.bodySemibold.copyWith(
+            fontSize: 12, color: color)),
+          const SizedBox(height: 4),
+          Text(body, style: AppText.bodySecondary.copyWith(
+            fontSize: 12, height: 1.55)),
+        ])),
+      ]),
+    );
+  }
+
   // ── Cancer-free counter card ───────────────────────────────────────────────
   Widget _buildCancerFreeCard(UserSession session) {
     final days = session.daysCancerFree;
@@ -420,8 +511,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   // ── Scanxiety card ────────────────────────────────────────────────────────
   Widget _buildScanxietyCard(UserSession session) {
-    final next = session.nextControl;
-    final days = next?.nextScheduled?.difference(DateTime.now()).inDays ?? 0;
+    // Find the next scan-type appointment
+    const scanKeywords = [
+      'mammogram', 'mri', 'ultrasound', 'scan', 'ct ',
+      'pet ', 'imaging', 'radiology', 'biopsy', 'echo',
+    ];
+    final nextScan = session.upcomingAppointments
+        .where((a) {
+          final title = a.title.toLowerCase();
+          return scanKeywords.any((k) => title.contains(k));
+        })
+        .firstOrNull;
+
+    final days = nextScan?.daysUntil ?? 0;
+    final title = nextScan?.title ?? 'Scan';
+
     return Container(
       margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
       padding: const EdgeInsets.all(13),
@@ -437,7 +541,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              '${next?.typeLabel ?? 'Scan'} in $days day${days != 1 ? 's' : ''}',
+              '$title in $days day${days != 1 ? 's' : ''}',
               style: AppText.bodySemibold.copyWith(color: AppColors.gold)),
             const SizedBox(height: 3),
             Text(
@@ -839,11 +943,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Widget _buildNextAppointment(BuildContext context) {
     final session = UserSession();
-    // Use monitoring appointments for monitoring patients
-    final appointments = session.isMonitoring
-        ? _monitoringAppointments()
-        : MockData.appointments;
-    final upcoming = appointments.where((a) => !a.isPast).toList();
+    session.initDefaultAppointments();
+    final upcoming = session.upcomingAppointments;
     if (upcoming.isEmpty) return const SizedBox.shrink();
     final apt = upcoming.first;
 
