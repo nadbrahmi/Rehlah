@@ -83,44 +83,21 @@ class _CareHubScreenState extends State<CareHubScreen> {
           slivers: [
             SliverToBoxAdapter(child: AppHeader(
               title: 'Care |hub',
-              subtitle: 'Your health tools, all in one place',
+              subtitle: 'Your health tools',
             )),
-            SliverToBoxAdapter(child: const SectionLabel('AI-powered')),
+            SliverToBoxAdapter(child: const SectionLabel('Daily')),
             SliverToBoxAdapter(child: ToolRow(
-              icon: const Icon(Icons.auto_awesome_rounded,
-                size: 17, color: AppColors.primary),
-              iconBg: AppColors.primaryLight,
-              title: 'Ask AI assistant',
-              subtitle: 'Symptoms, side effects, treatment',
-              aiTinted: true,
-              onTap: () => context.push('/ai-chat'),
-            )),
-            SliverToBoxAdapter(child: ToolRow(
-              icon: const Icon(Icons.description_outlined,
-                size: 17, color: AppColors.primary),
-              iconBg: AppColors.primaryLight,
-              title: 'AI lab analyzer',
-              subtitle: 'Plain-language lab explanations',
-              aiTinted: true,
-              onTap: () => context.push('/care/labs'),
-            )),
-            SliverToBoxAdapter(child: const SectionLabel('Clinical tools')),
-            SliverToBoxAdapter(child: ToolRow(
-              icon: const Icon(Icons.biotech_outlined,
-                size: 17, color: AppColors.blue),
-              iconBg: AppColors.blueLight,
-              title: 'Lab results',
-              subtitle: 'CBC, metabolic, tumour markers',
-              trailing: _buildLabsBadge(),
-              onTap: () => context.push('/care/labs'),
-            )),
-            SliverToBoxAdapter(child: ToolRow(
-              icon: const Icon(Icons.medication_rounded,
-                size: 17, color: AppColors.teal),
-              iconBg: AppColors.tealLight,
+              icon: Icon(Icons.medication_rounded, size: 17,
+                color: _session.hasRefillAlert ? AppColors.peach : AppColors.teal),
+              iconBg: _session.hasRefillAlert
+                  ? AppColors.peachLight : AppColors.tealLight,
               title: 'Medications',
-              subtitle: 'Daily doses, adherence, history',
+              subtitle: 'Daily doses, adherence, supply',
               trailing: _MedBadge(),
+              alertTinted: _session.hasRefillAlert,
+              successTinted: !_session.hasRefillAlert &&
+                  _session.medications.isNotEmpty &&
+                  _session.medsTakenTodayCount == _session.medications.length,
               onTap: () => context.push('/care/medications'),
             )),
             SliverToBoxAdapter(child: ToolRow(
@@ -131,6 +108,53 @@ class _CareHubScreenState extends State<CareHubScreen> {
               subtitle: 'Upcoming visits, prep notes',
               trailing: _buildAppointmentsBadge(),
               onTap: () => context.push('/care/appointments'),
+            )),
+            SliverToBoxAdapter(child: const SectionLabel('Clinical')),
+            SliverToBoxAdapter(child: ToolRow(
+              icon: Icon(Icons.biotech_outlined, size: 17,
+                color: () {
+                  final labs = _session.labs;
+                  if (labs.isEmpty) return AppColors.blue;
+                  final abnormal = labs.first.metrics
+                      .where((m) => !m.isNormal).length;
+                  return abnormal > 0 ? AppColors.peach : AppColors.blue;
+                }()),
+              iconBg: () {
+                final labs = _session.labs;
+                if (labs.isEmpty) return AppColors.blueLight;
+                final abnormal = labs.first.metrics
+                    .where((m) => !m.isNormal).length;
+                return abnormal > 0 ? AppColors.peachLight : AppColors.blueLight;
+              }(),
+              title: 'Lab results',
+              subtitle: 'CBC, metabolic, tumour markers',
+              trailing: _buildLabsBadge(),
+              alertTinted: _session.labs.isNotEmpty &&
+                  _session.labs.first.metrics.any((m) => !m.isNormal),
+              onTap: () => context.push('/care/labs'),
+            )),
+            SliverToBoxAdapter(child: const SectionLabel('AI assistant')),
+            SliverToBoxAdapter(child: ToolRow(
+              icon: const Icon(Icons.auto_awesome_rounded,
+                size: 17, color: AppColors.primary),
+              iconBg: AppColors.primaryLight,
+              title: 'Ask AI',
+              subtitle: 'Symptoms, side effects, any question',
+              aiTinted: true,
+              onTap: () => context.push('/ai-chat'),
+            )),
+            SliverToBoxAdapter(child: ToolRow(
+              icon: const Icon(Icons.biotech_outlined,
+                size: 17, color: AppColors.primary),
+              iconBg: AppColors.primaryLight,
+              title: 'AI lab analyzer',
+              subtitle: 'Plain-language explanations of your results',
+              aiTinted: true,
+              trailing: PillBadge(
+                text: 'Coming soon',
+                bg: AppColors.primaryLight,
+                textColor: AppColors.primary.withOpacity(0.6)),
+              onTap: () => context.push('/care/labs'),
             )),
             const SliverToBoxAdapter(child: SizedBox(height: 24)),
           ],

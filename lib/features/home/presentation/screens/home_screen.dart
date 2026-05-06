@@ -1026,46 +1026,107 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   // ── Quick tiles ───────────────────────────────────────────────────────────
   Widget _buildQuickTiles(BuildContext context, UserSession session) {
-    final phase = session.currentPhase;
+    final hasRefill = session.hasRefillAlert;
+    final medsSubLabel = hasRefill
+        ? '⚠ Refill needed'
+        : session.medications.isEmpty
+            ? 'Add medications'
+            : '${session.medsTakenTodayCount} of ${session.medications.length} done';
+    final medsTaken = !hasRefill &&
+        session.medications.isNotEmpty &&
+        session.medsTakenTodayCount == session.medications.length;
+
     final tiles = [
-      _TileData('Ask AI', 'Any question', Icons.auto_awesome_rounded,
-          AppColors.primaryLight, AppColors.primary, '/ai-chat'),
-      _TileData('Appointments', 'Next visit', Icons.calendar_month_rounded,
-          AppColors.peachLight, AppColors.peach, '/care/appointments'),
-      _TileData('Medications',
-          session.hasRefillAlert
-              ? '⚠ Refill needed'
-              : '${session.medsTakenTodayCount} of ${session.medications.length} done',
-          Icons.medication_rounded,
-          AppColors.tealLight, AppColors.teal, '/care/medications'),
+      (
+        label: 'Ask AI',
+        sub: 'Any question',
+        icon: Icons.auto_awesome_rounded,
+        iconBg: AppColors.primaryLight,
+        iconColor: AppColors.primary,
+        route: '/ai-chat',
+        alert: false,
+        done: false,
+      ),
+      (
+        label: 'Appointments',
+        sub: session.upcomingAppointments.isNotEmpty
+            ? 'In ${session.upcomingAppointments.first.daysUntil} days'
+            : 'No upcoming',
+        icon: Icons.calendar_month_rounded,
+        iconBg: AppColors.peachLight,
+        iconColor: AppColors.peach,
+        route: '/care/appointments',
+        alert: false,
+        done: false,
+      ),
+      (
+        label: 'Medications',
+        sub: medsSubLabel,
+        icon: Icons.medication_rounded,
+        iconBg: hasRefill
+            ? AppColors.peachLight
+            : medsTaken ? AppColors.tealLight : AppColors.tealLight,
+        iconColor: hasRefill ? AppColors.peach : AppColors.teal,
+        route: '/care/medications',
+        alert: hasRefill,
+        done: medsTaken,
+      ),
     ];
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14),
-      child: Row(
-        children: tiles.map((t) => Expanded(
-          child: GestureDetector(
-            onTap: () => context.push(t.route),
-            child: Container(
-              margin: EdgeInsets.only(right: t == tiles.last ? 0 : 7),
-              padding: const EdgeInsets.all(11),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: AppRadius.mdBR,
-                border: Border.all(color: AppColors.border, width: 0.5)),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Container(width: 30, height: 30,
-                  decoration: BoxDecoration(
-                    color: t.iconBg, borderRadius: AppRadius.smBR),
-                  child: Icon(t.icon, color: t.iconColor, size: 15)),
-                const SizedBox(height: 7),
-                Text(t.label, style: AppText.bodySemibold.copyWith(fontSize: 11)),
-                Text(t.sublabel, style: AppText.caption.copyWith(fontSize: 10)),
-              ]),
-            ),
+      child: Row(children: tiles.map((t) {
+        final idx = tiles.indexOf(t);
+        return Expanded(child: GestureDetector(
+          onTap: () => context.push(t.route),
+          child: Container(
+            margin: EdgeInsets.only(right: idx < tiles.length - 1 ? 7 : 0),
+            padding: const EdgeInsets.all(13),
+            decoration: BoxDecoration(
+              color: t.alert
+                  ? AppColors.peach.withOpacity(0.07)
+                  : t.done
+                      ? AppColors.teal.withOpacity(0.05)
+                      : AppColors.surface,
+              borderRadius: AppRadius.mdBR,
+              border: Border.all(
+                color: t.alert
+                    ? AppColors.peach.withOpacity(0.30)
+                    : t.done
+                        ? AppColors.teal.withOpacity(0.25)
+                        : AppColors.border,
+                width: t.alert ? 1.0 : 0.5),
+              boxShadow: t.alert ? [
+                BoxShadow(
+                  color: AppColors.peach.withOpacity(0.08),
+                  blurRadius: 8, offset: const Offset(0, 2))
+              ] : null),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+              Container(width: 34, height: 34,
+                decoration: BoxDecoration(
+                  color: t.iconBg,
+                  borderRadius: AppRadius.smBR),
+                child: Icon(t.icon, color: t.iconColor, size: 16)),
+              const SizedBox(height: 9),
+              Text(t.label,
+                style: AppText.bodySemibold.copyWith(
+                  fontSize: 12,
+                  color: t.alert ? AppColors.peach : AppColors.text1)),
+              const SizedBox(height: 2),
+              Text(t.sub,
+                style: AppText.caption.copyWith(
+                  fontSize: 10,
+                  color: t.alert ? AppColors.peach.withOpacity(0.8)
+                      : t.done ? AppColors.teal
+                      : AppColors.text3),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis),
+            ]),
           ),
-        )).toList(),
-      ),
+        ));
+      }).toList()),
     );
   }
 

@@ -10,7 +10,7 @@ class CheckInRecord {
   final String moodEmoji;
   final String moodLabel;
   final Map<String, double> symptomScores;
-  final Map<String, String> interferenceAnswers;
+  final Map<String, bool> interferenceAnswers;
   final String note;
   final int dayInCycle;
   final int cycle;
@@ -83,7 +83,7 @@ class UserSession extends ChangeNotifier {
   String moodEmoji = '';
   String moodLabel = '';
   Map<String, double> symptomScores = {};
-  Map<String, String> interferenceAnswers = {};
+  Map<String, bool> interferenceAnswers = {};
   String checkInNote = '';
   DateTime? lastCheckIn;
 
@@ -96,7 +96,7 @@ class UserSession extends ChangeNotifier {
   int _saveCount = 0;
   int get saveCount => _saveCount;
 
-  void saveCheckIn() {
+  Future<void> saveCheckIn() async {
     final emoji = moodEmoji.isNotEmpty ? moodEmoji : '😐';
     final label = moodLabel.isNotEmpty ? moodLabel : 'Okay';
 
@@ -110,7 +110,7 @@ class UserSession extends ChangeNotifier {
       moodEmoji: emoji,
       moodLabel: label,
       symptomScores: Map.from(symptomScores),
-      interferenceAnswers: Map.from(interferenceAnswers),
+      interferenceAnswers: Map<String, bool>.from(interferenceAnswers),
       note: checkInNote,
       dayInCycle: dayInCycle,
       cycle: currentCycle,
@@ -174,6 +174,8 @@ class UserSession extends ChangeNotifier {
         lastCheckIn!.month == now.month &&
         lastCheckIn!.day == now.day;
   }
+
+  bool get hasCheckedInToday => checkedInToday;
 
   // ── Medications ───────────────────────────────────────────────────────────
   // Key: med id, Value: time taken today (null = not taken)
@@ -590,7 +592,7 @@ class UserSession extends ChangeNotifier {
         orElse: () => Medication(id: '', name: '', dose: '',
             frequency: '', emoji: ''));
     if (rem == null) return null;
-    return (rem / med.dosesPerDay).floor();
+    return (rem / med.dosesPerDay.toDouble()).floor();
   }
 
   // Medications running low or out of stock

@@ -16,12 +16,9 @@ extension ProtocolLabel on BreastProtocol {
   }
   String get fullName {
     switch (this) {
-      case BreastProtocol.act:
-        return 'Adriamycin + Cyclophosphamide → Taxol';
-      case BreastProtocol.tc:
-        return 'Docetaxel + Cyclophosphamide';
-      case BreastProtocol.cmf:
-        return 'Cyclophosphamide + Methotrexate + Fluorouracil';
+      case BreastProtocol.act: return 'Adriamycin + Cyclophosphamide → Taxol';
+      case BreastProtocol.tc:  return 'Docetaxel + Cyclophosphamide';
+      case BreastProtocol.cmf: return 'Cyclophosphamide + Methotrexate + Fluorouracil';
     }
   }
   String get cycleLength {
@@ -183,7 +180,7 @@ class ChemoPhase {
   final List<ProtocolSymptom> primarySymptoms;
   final List<ProtocolSymptom> watchSymptoms;
   final String phaseNote;
-  final String caregiverNote; // plain language for caregiver view
+  final String caregiverNote;
 
   const ChemoPhase({
     required this.name,
@@ -201,408 +198,180 @@ class ChemoPhase {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // PROTOCOL 1: AC-T
-// AC phase: 4 cycles × 21 days
-// T (Taxol) phase: 4 cycles × 21 days (or weekly × 12)
 // ─────────────────────────────────────────────────────────────────────────────
 class ACTProtocol {
   static const String name = 'AC-T';
 
-  // AC sub-phase phases (days 1–21)
   static List<ChemoPhase> acPhases = [
     ChemoPhase(
-      name: 'Infusion day',
-      description: 'AC · Infusion day',
+      name: 'Infusion day', description: 'AC · Infusion day',
       cycleDay: 1, cycleDayEnd: 2,
       phaseNote: 'AC infusion day. Nausea often starts within a few hours — take your anti-nausea medication as prescribed.',
-      primarySymptoms: [
-        SymptomLibrary.nausea,
-        SymptomLibrary.fatigue,
-        SymptomLibrary.vomiting,
-        SymptomLibrary.appetite,
-        SymptomLibrary.mood,
-      ],
-      watchSymptoms: [
-        SymptomLibrary.fever,
-        SymptomLibrary.heartPalpitations,
-      ],
+      primarySymptoms: [SymptomLibrary.nausea, SymptomLibrary.fatigue, SymptomLibrary.vomiting, SymptomLibrary.appetite, SymptomLibrary.mood],
+      watchSymptoms: [SymptomLibrary.fever, SymptomLibrary.heartPalpitations],
     ),
     ChemoPhase(
-      name: 'Peak nausea window',
-      description: 'AC · Days 2–7',
+      name: 'Peak nausea window', description: 'AC · Days 2–7',
       cycleDay: 3, cycleDayEnd: 7,
       phaseNote: 'Nausea and fatigue typically peak this week. Small frequent meals, rest, and staying hydrated are your main tools.',
-      primarySymptoms: [
-        SymptomLibrary.nausea,
-        SymptomLibrary.fatigue,
-        SymptomLibrary.vomiting,
-        SymptomLibrary.appetite,
-        SymptomLibrary.constipation,
-        SymptomLibrary.mouthSores,
-        SymptomLibrary.mood,
-        SymptomLibrary.sleep,
-      ],
-      watchSymptoms: [
-        SymptomLibrary.fever,
-        SymptomLibrary.breathlessness,
-      ],
+      primarySymptoms: [SymptomLibrary.nausea, SymptomLibrary.fatigue, SymptomLibrary.vomiting, SymptomLibrary.appetite, SymptomLibrary.constipation, SymptomLibrary.mouthSores, SymptomLibrary.mood, SymptomLibrary.sleep],
+      watchSymptoms: [SymptomLibrary.fever, SymptomLibrary.breathlessness],
     ),
     ChemoPhase(
-      name: 'Nadir window',
-      description: 'AC · Nadir days 8–14',
-      cycleDay: 8, cycleDayEnd: 14,
-      isNadir: true,
+      name: 'Nadir window', description: 'AC · Nadir days 8–14',
+      cycleDay: 8, cycleDayEnd: 14, isNadir: true,
       phaseNote: 'Your white blood cell count is at its lowest. Avoid crowds, wash hands frequently, and monitor your temperature twice daily.',
-      primarySymptoms: [
-        SymptomLibrary.fever,
-        SymptomLibrary.infection,
-        SymptomLibrary.breathlessness,
-        SymptomLibrary.fatigue,
-        SymptomLibrary.mouthSores,
-        SymptomLibrary.appetite,
-        SymptomLibrary.mood,
-        SymptomLibrary.sleep,
-      ],
-      watchSymptoms: [
-        SymptomLibrary.fever,
-        SymptomLibrary.infection,
-        SymptomLibrary.breathlessness,
-      ],
+      primarySymptoms: [SymptomLibrary.fever, SymptomLibrary.infection, SymptomLibrary.breathlessness, SymptomLibrary.fatigue, SymptomLibrary.mouthSores, SymptomLibrary.appetite, SymptomLibrary.mood, SymptomLibrary.sleep],
+      watchSymptoms: [SymptomLibrary.fever, SymptomLibrary.infection, SymptomLibrary.breathlessness],
     ),
     ChemoPhase(
-      name: 'Recovery week',
-      description: 'AC · Recovery days 15–21',
+      name: 'Recovery week', description: 'AC · Recovery days 15–21',
       cycleDay: 15, cycleDayEnd: 21,
       phaseNote: 'Your counts are recovering. Energy usually improves this week. Hair loss may begin or intensify.',
-      primarySymptoms: [
-        SymptomLibrary.fatigue,
-        SymptomLibrary.hairLoss,
-        SymptomLibrary.mood,
-        SymptomLibrary.appetite,
-        SymptomLibrary.mouthSores,
-        SymptomLibrary.sleep,
-        SymptomLibrary.nausea,
-      ],
-      watchSymptoms: [
-        SymptomLibrary.fever,
-      ],
+      primarySymptoms: [SymptomLibrary.fatigue, SymptomLibrary.hairLoss, SymptomLibrary.mood, SymptomLibrary.appetite, SymptomLibrary.mouthSores, SymptomLibrary.sleep, SymptomLibrary.nausea],
+      watchSymptoms: [SymptomLibrary.fever],
     ),
   ];
 
-  // Taxol sub-phase phases (days 1–21)
   static List<ChemoPhase> taxolPhases = [
     ChemoPhase(
-      name: 'Taxol infusion',
-      description: 'Taxol · Infusion day',
+      name: 'Taxol infusion', description: 'Taxol · Infusion day',
       cycleDay: 1, cycleDayEnd: 2,
       phaseNote: 'Taxol infusion day. Joint and muscle pain usually starts 2–4 days after. Watch for any allergic reaction during infusion.',
-      primarySymptoms: [
-        SymptomLibrary.fatigue,
-        SymptomLibrary.nausea,
-        SymptomLibrary.neuropathy,
-        SymptomLibrary.mood,
-        SymptomLibrary.appetite,
-        SymptomLibrary.sleep,
-      ],
-      watchSymptoms: [
-        SymptomLibrary.fever,
-        SymptomLibrary.breathlessness,
-      ],
+      primarySymptoms: [SymptomLibrary.fatigue, SymptomLibrary.nausea, SymptomLibrary.neuropathy, SymptomLibrary.mood, SymptomLibrary.appetite, SymptomLibrary.sleep],
+      watchSymptoms: [SymptomLibrary.fever, SymptomLibrary.breathlessness],
     ),
     ChemoPhase(
-      name: 'Joint pain peak',
-      description: 'Taxol · Days 2–7',
+      name: 'Joint pain peak', description: 'Taxol · Days 2–7',
       cycleDay: 3, cycleDayEnd: 7,
       phaseNote: 'Joint and muscle pain typically peaks days 2–4 after Taxol. Gentle movement and warm compresses can help.',
-      primarySymptoms: [
-        SymptomLibrary.jointPain,
-        SymptomLibrary.fatigue,
-        SymptomLibrary.neuropathy,
-        SymptomLibrary.nausea,
-        SymptomLibrary.mood,
-        SymptomLibrary.sleep,
-        SymptomLibrary.appetite,
-      ],
-      watchSymptoms: [
-        SymptomLibrary.fever,
-        SymptomLibrary.neuropathy,
-      ],
+      primarySymptoms: [SymptomLibrary.jointPain, SymptomLibrary.fatigue, SymptomLibrary.neuropathy, SymptomLibrary.nausea, SymptomLibrary.mood, SymptomLibrary.sleep, SymptomLibrary.appetite],
+      watchSymptoms: [SymptomLibrary.fever, SymptomLibrary.neuropathy],
     ),
     ChemoPhase(
-      name: 'Nadir window',
-      description: 'Taxol · Nadir days 8–14',
-      cycleDay: 8, cycleDayEnd: 14,
-      isNadir: true,
+      name: 'Nadir window', description: 'Taxol · Nadir days 8–14',
+      cycleDay: 8, cycleDayEnd: 14, isNadir: true,
       phaseNote: 'Immune system at its lowest. Temperature monitoring is essential. Neuropathy symptoms may linger.',
-      primarySymptoms: [
-        SymptomLibrary.fever,
-        SymptomLibrary.infection,
-        SymptomLibrary.breathlessness,
-        SymptomLibrary.fatigue,
-        SymptomLibrary.neuropathy,
-        SymptomLibrary.swelling,
-        SymptomLibrary.skinNails,
-        SymptomLibrary.mood,
-        SymptomLibrary.sleep,
-      ],
-      watchSymptoms: [
-        SymptomLibrary.fever,
-        SymptomLibrary.infection,
-        SymptomLibrary.neuropathy,
-      ],
+      primarySymptoms: [SymptomLibrary.fever, SymptomLibrary.infection, SymptomLibrary.breathlessness, SymptomLibrary.fatigue, SymptomLibrary.neuropathy, SymptomLibrary.swelling, SymptomLibrary.skinNails, SymptomLibrary.mood, SymptomLibrary.sleep],
+      watchSymptoms: [SymptomLibrary.fever, SymptomLibrary.infection, SymptomLibrary.neuropathy],
     ),
     ChemoPhase(
-      name: 'Recovery week',
-      description: 'Taxol · Recovery days 15–21',
+      name: 'Recovery week', description: 'Taxol · Recovery days 15–21',
       cycleDay: 15, cycleDayEnd: 21,
       phaseNote: 'Energy returns. Neuropathy may linger — track it carefully. Nail changes can appear.',
-      primarySymptoms: [
-        SymptomLibrary.fatigue,
-        SymptomLibrary.neuropathy,
-        SymptomLibrary.skinNails,
-        SymptomLibrary.hairLoss,
-        SymptomLibrary.mood,
-        SymptomLibrary.sleep,
-        SymptomLibrary.appetite,
-      ],
-      watchSymptoms: [
-        SymptomLibrary.fever,
-        SymptomLibrary.neuropathy,
-      ],
+      primarySymptoms: [SymptomLibrary.fatigue, SymptomLibrary.neuropathy, SymptomLibrary.skinNails, SymptomLibrary.hairLoss, SymptomLibrary.mood, SymptomLibrary.sleep, SymptomLibrary.appetite],
+      watchSymptoms: [SymptomLibrary.fever, SymptomLibrary.neuropathy],
     ),
   ];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PROTOCOL 2: TC (Docetaxel + Cyclophosphamide)
-// 4–6 cycles × 21 days
+// PROTOCOL 2: TC
 // ─────────────────────────────────────────────────────────────────────────────
 class TCProtocol {
   static const String name = 'TC';
 
   static List<ChemoPhase> phases = [
     ChemoPhase(
-      name: 'Infusion day',
-      description: 'TC · Infusion day',
+      name: 'Infusion day', description: 'TC · Infusion day',
       cycleDay: 1, cycleDayEnd: 2,
       phaseNote: 'TC infusion day. Fluid retention and joint pain often develop over the next few days.',
-      primarySymptoms: [
-        SymptomLibrary.fatigue,
-        SymptomLibrary.nausea,
-        SymptomLibrary.mood,
-        SymptomLibrary.appetite,
-        SymptomLibrary.sleep,
-      ],
-      watchSymptoms: [
-        SymptomLibrary.fever,
-        SymptomLibrary.breathlessness,
-      ],
+      primarySymptoms: [SymptomLibrary.fatigue, SymptomLibrary.nausea, SymptomLibrary.mood, SymptomLibrary.appetite, SymptomLibrary.sleep],
+      watchSymptoms: [SymptomLibrary.fever, SymptomLibrary.breathlessness],
     ),
     ChemoPhase(
-      name: 'Fluid & pain window',
-      description: 'TC · Days 3–7',
+      name: 'Fluid & pain window', description: 'TC · Days 3–7',
       cycleDay: 3, cycleDayEnd: 7,
       phaseNote: 'Joint pain and fluid retention peak this week. Weigh yourself daily — report a 2kg+ gain.',
-      primarySymptoms: [
-        SymptomLibrary.jointPain,
-        SymptomLibrary.fatigue,
-        SymptomLibrary.fluidRetention,
-        SymptomLibrary.nausea,
-        SymptomLibrary.diarrhea,
-        SymptomLibrary.mouthSores,
-        SymptomLibrary.mood,
-        SymptomLibrary.appetite,
-        SymptomLibrary.sleep,
-      ],
-      watchSymptoms: [
-        SymptomLibrary.fever,
-        SymptomLibrary.diarrhea,
-        SymptomLibrary.fluidRetention,
-      ],
+      primarySymptoms: [SymptomLibrary.jointPain, SymptomLibrary.fatigue, SymptomLibrary.fluidRetention, SymptomLibrary.nausea, SymptomLibrary.diarrhea, SymptomLibrary.mouthSores, SymptomLibrary.mood, SymptomLibrary.appetite, SymptomLibrary.sleep],
+      watchSymptoms: [SymptomLibrary.fever, SymptomLibrary.diarrhea, SymptomLibrary.fluidRetention],
     ),
     ChemoPhase(
-      name: 'Nadir window',
-      description: 'TC · Nadir days 7–14',
-      cycleDay: 7, cycleDayEnd: 14,
-      isNadir: true,
+      name: 'Nadir window', description: 'TC · Nadir days 7–14',
+      cycleDay: 7, cycleDayEnd: 14, isNadir: true,
       phaseNote: 'WBC at lowest point. Infection risk is highest now. Take temperature morning and evening.',
-      primarySymptoms: [
-        SymptomLibrary.fever,
-        SymptomLibrary.infection,
-        SymptomLibrary.breathlessness,
-        SymptomLibrary.fatigue,
-        SymptomLibrary.fluidRetention,
-        SymptomLibrary.mouthSores,
-        SymptomLibrary.neuropathy,
-        SymptomLibrary.mood,
-        SymptomLibrary.sleep,
-      ],
-      watchSymptoms: [
-        SymptomLibrary.fever,
-        SymptomLibrary.infection,
-        SymptomLibrary.breathlessness,
-      ],
+      primarySymptoms: [SymptomLibrary.fever, SymptomLibrary.infection, SymptomLibrary.breathlessness, SymptomLibrary.fatigue, SymptomLibrary.fluidRetention, SymptomLibrary.mouthSores, SymptomLibrary.neuropathy, SymptomLibrary.mood, SymptomLibrary.sleep],
+      watchSymptoms: [SymptomLibrary.fever, SymptomLibrary.infection, SymptomLibrary.breathlessness],
     ),
     ChemoPhase(
-      name: 'Recovery week',
-      description: 'TC · Recovery days 15–21',
+      name: 'Recovery week', description: 'TC · Recovery days 15–21',
       cycleDay: 15, cycleDayEnd: 21,
       phaseNote: 'Counts recovering. Fluid retention usually starts to reduce. Energy improves.',
-      primarySymptoms: [
-        SymptomLibrary.fatigue,
-        SymptomLibrary.fluidRetention,
-        SymptomLibrary.hairLoss,
-        SymptomLibrary.neuropathy,
-        SymptomLibrary.skinNails,
-        SymptomLibrary.mood,
-        SymptomLibrary.sleep,
-        SymptomLibrary.appetite,
-      ],
-      watchSymptoms: [
-        SymptomLibrary.fever,
-        SymptomLibrary.neuropathy,
-      ],
+      primarySymptoms: [SymptomLibrary.fatigue, SymptomLibrary.fluidRetention, SymptomLibrary.hairLoss, SymptomLibrary.neuropathy, SymptomLibrary.skinNails, SymptomLibrary.mood, SymptomLibrary.sleep, SymptomLibrary.appetite],
+      watchSymptoms: [SymptomLibrary.fever, SymptomLibrary.neuropathy],
     ),
   ];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PROTOCOL 3: CMF (Cyclophosphamide + Methotrexate + 5-Fluorouracil)
-// 6 cycles × 28 days
+// PROTOCOL 3: CMF
 // ─────────────────────────────────────────────────────────────────────────────
 class CMFProtocol {
   static const String name = 'CMF';
 
   static List<ChemoPhase> phases = [
     ChemoPhase(
-      name: 'Infusion days',
-      description: 'CMF · Days 1 & 8 (infusion)',
+      name: 'Infusion days', description: 'CMF · Days 1 & 8 (infusion)',
       cycleDay: 1, cycleDayEnd: 3,
       phaseNote: 'CMF is given on days 1 and 8. Nausea is usually milder than AC. Mouth sores and fatigue are the main side effects.',
-      primarySymptoms: [
-        SymptomLibrary.nausea,
-        SymptomLibrary.fatigue,
-        SymptomLibrary.appetite,
-        SymptomLibrary.mouthSores,
-        SymptomLibrary.mood,
-        SymptomLibrary.sleep,
-      ],
-      watchSymptoms: [
-        SymptomLibrary.fever,
-        SymptomLibrary.breathlessness,
-      ],
+      primarySymptoms: [SymptomLibrary.nausea, SymptomLibrary.fatigue, SymptomLibrary.appetite, SymptomLibrary.mouthSores, SymptomLibrary.mood, SymptomLibrary.sleep],
+      watchSymptoms: [SymptomLibrary.fever, SymptomLibrary.breathlessness],
     ),
     ChemoPhase(
-      name: 'Post-infusion week',
-      description: 'CMF · Days 4–7',
+      name: 'Post-infusion week', description: 'CMF · Days 4–7',
       cycleDay: 4, cycleDayEnd: 7,
       phaseNote: 'Fatigue and mouth sores are most noticeable this week. Good oral hygiene reduces mouth sore severity.',
-      primarySymptoms: [
-        SymptomLibrary.fatigue,
-        SymptomLibrary.mouthSores,
-        SymptomLibrary.nausea,
-        SymptomLibrary.appetite,
-        SymptomLibrary.constipation,
-        SymptomLibrary.mood,
-        SymptomLibrary.sleep,
-        SymptomLibrary.hairLoss,
-      ],
-      watchSymptoms: [
-        SymptomLibrary.fever,
-        SymptomLibrary.mouthSores,
-      ],
+      primarySymptoms: [SymptomLibrary.fatigue, SymptomLibrary.mouthSores, SymptomLibrary.nausea, SymptomLibrary.appetite, SymptomLibrary.constipation, SymptomLibrary.mood, SymptomLibrary.sleep, SymptomLibrary.hairLoss],
+      watchSymptoms: [SymptomLibrary.fever, SymptomLibrary.mouthSores],
     ),
     ChemoPhase(
-      name: 'Second infusion',
-      description: 'CMF · Day 8 infusion',
+      name: 'Second infusion', description: 'CMF · Day 8 infusion',
       cycleDay: 8, cycleDayEnd: 10,
       phaseNote: 'Second CMF infusion of the cycle. Same patterns as day 1 — nausea and fatigue in the following days.',
-      primarySymptoms: [
-        SymptomLibrary.nausea,
-        SymptomLibrary.fatigue,
-        SymptomLibrary.mouthSores,
-        SymptomLibrary.appetite,
-        SymptomLibrary.mood,
-        SymptomLibrary.sleep,
-      ],
-      watchSymptoms: [
-        SymptomLibrary.fever,
-      ],
+      primarySymptoms: [SymptomLibrary.nausea, SymptomLibrary.fatigue, SymptomLibrary.mouthSores, SymptomLibrary.appetite, SymptomLibrary.mood, SymptomLibrary.sleep],
+      watchSymptoms: [SymptomLibrary.fever],
     ),
     ChemoPhase(
-      name: 'Nadir window',
-      description: 'CMF · Nadir days 10–18',
-      cycleDay: 10, cycleDayEnd: 18,
-      isNadir: true,
+      name: 'Nadir window', description: 'CMF · Nadir days 10–18',
+      cycleDay: 10, cycleDayEnd: 18, isNadir: true,
       phaseNote: 'WBC at lowest point after day 8 infusion. Nadir is usually milder than AC but still requires temperature monitoring.',
-      primarySymptoms: [
-        SymptomLibrary.fever,
-        SymptomLibrary.infection,
-        SymptomLibrary.breathlessness,
-        SymptomLibrary.fatigue,
-        SymptomLibrary.mouthSores,
-        SymptomLibrary.appetite,
-        SymptomLibrary.mood,
-        SymptomLibrary.sleep,
-      ],
-      watchSymptoms: [
-        SymptomLibrary.fever,
-        SymptomLibrary.infection,
-      ],
+      primarySymptoms: [SymptomLibrary.fever, SymptomLibrary.infection, SymptomLibrary.breathlessness, SymptomLibrary.fatigue, SymptomLibrary.mouthSores, SymptomLibrary.appetite, SymptomLibrary.mood, SymptomLibrary.sleep],
+      watchSymptoms: [SymptomLibrary.fever, SymptomLibrary.infection],
     ),
     ChemoPhase(
-      name: 'Recovery / rest week',
-      description: 'CMF · Recovery days 19–28',
+      name: 'Recovery / rest week', description: 'CMF · Recovery days 19–28',
       cycleDay: 19, cycleDayEnd: 28,
       phaseNote: 'Long recovery window — 10 days before next cycle. Energy returns. Good time to rebuild appetite.',
-      primarySymptoms: [
-        SymptomLibrary.fatigue,
-        SymptomLibrary.appetite,
-        SymptomLibrary.hairLoss,
-        SymptomLibrary.mouthSores,
-        SymptomLibrary.mood,
-        SymptomLibrary.sleep,
-        SymptomLibrary.nausea,
-      ],
-      watchSymptoms: [
-        SymptomLibrary.fever,
-      ],
+      primarySymptoms: [SymptomLibrary.fatigue, SymptomLibrary.appetite, SymptomLibrary.hairLoss, SymptomLibrary.mouthSores, SymptomLibrary.mood, SymptomLibrary.sleep, SymptomLibrary.nausea],
+      watchSymptoms: [SymptomLibrary.fever],
     ),
   ];
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Protocol resolver — given a protocol + cycle day, returns the right phase
-// ─────────────────────────────────────────────────────────────────────────────
+// ── Protocol resolver ─────────────────────────────────────────────────────────
 class ProtocolResolver {
-
   static ChemoPhase resolve(BreastProtocol protocol, int cycleDay,
       {bool isTaxolPhase = false}) {
     List<ChemoPhase> phases;
     switch (protocol) {
       case BreastProtocol.act:
         phases = isTaxolPhase ? ACTProtocol.taxolPhases : ACTProtocol.acPhases;
-        break;
       case BreastProtocol.tc:
         phases = TCProtocol.phases;
-        break;
       case BreastProtocol.cmf:
         phases = CMFProtocol.phases;
-        break;
     }
-    // Find matching phase by day range
     for (final phase in phases) {
       if (cycleDay >= phase.cycleDay && cycleDay <= phase.cycleDayEnd) {
         return phase;
       }
     }
-    // Fallback to last phase
     return phases.last;
   }
 
   static bool isNadirDay(BreastProtocol protocol, int cycleDay,
       {bool isTaxolPhase = false}) {
-    return resolve(protocol, cycleDay,
-        isTaxolPhase: isTaxolPhase).isNadir;
+    return resolve(protocol, cycleDay, isTaxolPhase: isTaxolPhase).isNadir;
   }
 
   static String protocolSummary(BreastProtocol protocol, int currentCycle,
@@ -678,13 +447,10 @@ class MonitoringSymptomLibrary {
     cognitiveFog, sleep, mood, vaginalDiscomfort, weightChanges, bodyImage,
   ];
 
-  // Scanxiety period — scan within 14 days
   static const List<ProtocolSymptom> scanxietySymptoms = [
-    anxiety, sleep, mood, fatigue,
-    hotFlashes, nightSweats, cognitiveFog,
+    anxiety, sleep, mood, fatigue, hotFlashes, nightSweats, cognitiveFog,
   ];
 
-  // Standard monitoring check-in
   static const List<ProtocolSymptom> standardSymptoms = [
     fatigue, jointPain, hotFlashes, nightSweats,
     cognitiveFog, sleep, mood, vaginalDiscomfort,

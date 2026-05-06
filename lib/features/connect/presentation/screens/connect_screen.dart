@@ -543,83 +543,62 @@ class _ConnectScreenState extends State<ConnectScreen> {
   Widget _buildMentorCard(_Mentor m, {required bool showBadge}) {
     final badge = showBadge ? _PhaseMatch.matchBadge(m) : null;
     return Container(
-      margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
-      padding: const EdgeInsets.all(13),
+      margin: const EdgeInsets.fromLTRB(14, 0, 14, 7),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: AppRadius.mdBR,
         border: Border.all(color: AppColors.border, width: 0.5)),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      child: Row(children: [
         Container(
-          width: 42, height: 42,
+          width: 38, height: 38,
           decoration: BoxDecoration(
             color: m.avBg, shape: BoxShape.circle,
-            border: Border.all(color: Colors.white.withOpacity(0.7), width: 1.5)),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.7), width: 1.5)),
           child: Center(child: Text(m.initials,
-            style: TextStyle(fontFamily: 'Inter', fontSize: 14,
+            style: TextStyle(fontFamily: 'Inter', fontSize: 13,
               fontWeight: FontWeight.w500, color: m.avColor)))),
         const SizedBox(width: 10),
         Expanded(child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (badge != null) ...[
+          Row(children: [
+            Text(m.name, style: AppText.bodySemibold.copyWith(fontSize: 13)),
+            if (m.arabicSpeaker) ...[
+              const SizedBox(width: 5),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                margin: const EdgeInsets.only(bottom: 5),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 5, vertical: 1),
                 decoration: BoxDecoration(
-                  color: AppColors.teal.withOpacity(0.08),
-                  borderRadius: AppRadius.fullBR,
-                  border: Border.all(
-                    color: AppColors.teal.withOpacity(0.2), width: 0.5)),
-                child: Text('🟢 $badge',
+                  color: AppColors.tealLight,
+                  borderRadius: AppRadius.fullBR),
+                child: Text('🌐 عربي',
                   style: AppText.caption.copyWith(
-                    fontSize: 10, color: AppColors.teal,
-                    fontWeight: FontWeight.w600))),
+                    color: AppColors.teal,
+                    fontSize: 8, fontWeight: FontWeight.w500))),
             ],
-            Text(m.name, style: AppText.bodySemibold),
-            Text(m.status, style: AppText.bodySemibold.copyWith(
-              color: m.avColor, fontSize: 11)),
-            Text(m.protocol, style: AppText.caption.copyWith(fontSize: 11)),
-            const SizedBox(height: 6),
-            Text('"${m.quote}"',
-              style: AppText.bodySecondary.copyWith(
-                fontSize: 12, fontStyle: FontStyle.italic),
-              maxLines: 2, overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 8),
-            Row(children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: m.avColor.withOpacity(0.10),
-                  borderRadius: AppRadius.fullBR,
-                  border: Border.all(
-                    color: m.avColor.withOpacity(0.2), width: 0.5)),
-                child: Text('Message · Free',
-                  style: AppText.caption.copyWith(
-                    color: m.avColor, fontWeight: FontWeight.w500,
-                    fontSize: 11))),
-              if (m.arabicSpeaker) ...[
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppColors.tealLight,
-                    borderRadius: AppRadius.fullBR,
-                    border: Border.all(
-                      color: AppColors.teal.withOpacity(0.25), width: 0.5)),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Text('🌐', style: const TextStyle(fontSize: 10)),
-                    const SizedBox(width: 3),
-                    Text('Arabic · عربي',
-                      style: AppText.caption.copyWith(
-                        color: AppColors.teal,
-                        fontSize: 10, fontWeight: FontWeight.w500)),
-                  ])),
-              ],
-            ]),
-          ],
-        )),
+          ]),
+          const SizedBox(height: 1),
+          Text(m.status, style: AppText.caption.copyWith(
+            color: m.avColor, fontSize: 10,
+            fontWeight: FontWeight.w500)),
+          if (badge != null)
+            Text('● $badge',
+              style: AppText.caption.copyWith(
+                fontSize: 9, color: AppColors.teal,
+                fontWeight: FontWeight.w500)),
+        ])),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppColors.background2,
+            borderRadius: AppRadius.fullBR),
+          child: Text('Message',
+            style: AppText.caption.copyWith(
+              color: AppColors.text2,
+              fontSize: 11, fontWeight: FontWeight.w500))),
       ]),
     );
   }

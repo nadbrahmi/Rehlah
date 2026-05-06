@@ -22,6 +22,10 @@ abstract class AppColors {
   static const blueLight = Color(0xFFE8F2F8);
   static const gold = Color(0xFFC49030);
   static const goldLight = Color(0xFFFBF4E0);
+
+  // Standard card spacing — use everywhere for consistency
+  static const cardMargin = EdgeInsets.fromLTRB(14, 8, 14, 0);
+  static const cardPadding = EdgeInsets.all(13);
   static const rose = Color(0xFFC04060);
   static const roseLight = Color(0xFFFEF0F3);
 

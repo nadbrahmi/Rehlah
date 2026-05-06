@@ -199,10 +199,15 @@ class SectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 7),
+      padding: const EdgeInsets.fromLTRB(14, 16, 14, 6),
       child: Text(
         text.toUpperCase(),
-        style: AppText.label,
+        style: AppText.label.copyWith(
+          fontSize: 10,
+          letterSpacing: 0.8,
+          color: AppColors.text3,
+          fontWeight: FontWeight.w600,
+        ),
       ),
     );
   }
@@ -292,30 +297,45 @@ class ToolRow extends StatelessWidget {
   final Widget? trailing;
   final VoidCallback? onTap;
   final bool aiTinted;
+  final bool alertTinted;
+  final bool successTinted;
 
   const ToolRow({
     super.key,
     required this.icon, required this.iconBg,
     required this.title, required this.subtitle,
-    this.trailing, this.onTap, this.aiTinted = false,
+    this.trailing, this.onTap,
+    this.aiTinted = false,
+    this.alertTinted = false,
+    this.successTinted = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final bg = alertTinted
+        ? AppColors.peach.withOpacity(0.05)
+        : successTinted
+            ? AppColors.teal.withOpacity(0.04)
+            : aiTinted
+                ? AppColors.primary.withOpacity(0.05)
+                : AppColors.surface;
+    final borderColor = alertTinted
+        ? AppColors.peach.withOpacity(0.22)
+        : successTinted
+            ? AppColors.teal.withOpacity(0.18)
+            : aiTinted
+                ? AppColors.primary.withOpacity(0.18)
+                : AppColors.border;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
         decoration: BoxDecoration(
-          color: aiTinted ? AppColors.primary.withOpacity(0.05) : AppColors.surface,
+          color: bg,
           borderRadius: AppRadius.mdBR,
-          border: Border.all(
-            color: aiTinted
-                ? AppColors.primary.withOpacity(0.18)
-                : AppColors.border,
-            width: 0.5,
-          ),
+          border: Border.all(color: borderColor, width: 0.5),
         ),
         child: Row(
           children: [
@@ -331,7 +351,9 @@ class ToolRow extends StatelessWidget {
                 children: [
                   Text(title,
                     style: AppText.bodySemibold.copyWith(
-                      color: aiTinted ? AppColors.primary : AppColors.text1,
+                      color: alertTinted
+                          ? AppColors.peach
+                          : aiTinted ? AppColors.primary : AppColors.text1,
                     ),
                   ),
                   const SizedBox(height: 2),

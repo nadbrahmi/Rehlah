@@ -12,7 +12,9 @@ class PrepReportScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = UserSession();
-    final next = MockData.appointments.first;
+    session.initDefaultAppointments();
+    final upcoming = session.upcomingAppointments;
+    final next = upcoming.isNotEmpty ? upcoming.first : null;
     final history = session.history.toList();
     final now = DateTime.now();
 
@@ -94,7 +96,7 @@ class PrepReportScreen extends StatelessWidget {
                 TextSpan(text: 'report',
                   style: TextStyle(fontWeight: FontWeight.w700)),
               ])),
-              Text('For ${next.doctorName} · ${DateFormat('d MMM').format(next.dateTime)}',
+              Text('For ${next?.doctorName ?? 'your doctor'} · ${next != null ? DateFormat('d MMM').format(next.dateTime) : 'upcoming'}',
                 style: AppText.bodySecondary),
             ]),
           )),
@@ -492,7 +494,7 @@ class PrepReportScreen extends StatelessWidget {
 
   Widget _buildTrendLine(List<CheckInRecord> records) {
     if (records.isEmpty) return const SizedBox(height: 48);
-    final values = records.map((r) => _moodValue(r.moodEmoji)).toList();
+    final values = records.map((r) => _moodValue(r.moodEmoji)).toList().cast<double>();
     return SizedBox(
       height: 48,
       child: CustomPaint(

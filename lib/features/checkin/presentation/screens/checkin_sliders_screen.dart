@@ -1,627 +1,851 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/shared_widgets.dart';
+import '../../../../core/utils/models.dart';
 import '../../../../core/utils/user_session.dart';
 import '../../../../core/utils/protocols.dart';
 
-// ── Severity helpers ──────────────────────────────────────────────────────────
-class _Sev {
-  static Color color(double v, {bool invert = false}) {
-    final iv = invert ? (10 - v) : v;
-    if (v == 0) return const Color(0xFFE0D8F5);
-    if (iv <= 3) return AppColors.teal;
-    if (iv <= 6) return AppColors.peach;
-    return AppColors.rose;
-  }
-
-  static Color bgColor(double v, {bool invert = false}) {
-    final iv = invert ? (10 - v) : v;
-    if (v == 0) return const Color(0xFFF5F5F5);
-    if (iv <= 3) return AppColors.teal.withOpacity(0.10);
-    if (iv <= 6) return AppColors.peach.withOpacity(0.10);
-    return AppColors.rose.withOpacity(0.10);
-  }
-
-  static Color borderColor(double v, {bool invert = false}) {
-    final iv = invert ? (10 - v) : v;
-    if (v == 0) return const Color(0x12000000);
-    if (iv <= 3) return AppColors.teal.withOpacity(0.30);
-    if (iv <= 6) return AppColors.peach.withOpacity(0.30);
-    return AppColors.rose.withOpacity(0.28);
-  }
-
-  static Color textColor(double v, {bool invert = false}) {
-    final iv = invert ? (10 - v) : v;
-    if (v == 0) return AppColors.text3;
-    if (iv <= 3) return const Color(0xFF1A6B43);
-    if (iv <= 6) return const Color(0xFF924A10);
-    return AppColors.rose;
-  }
-
-  static String label(double v, {bool invert = false}) {
-    final iv = invert ? (10 - v) : v;
-    if (v == 0) return '—';
-    if (iv <= 3) return 'Mild';
-    if (iv <= 6) return 'Moderate';
-    return 'Severe';
-  }
-
-  // Phase pill color scheme
-  static Map<String, Color> phaseColors(bool isNadir, bool isRecovery) {
-    if (isNadir) return {
-      'bg': AppColors.peach.withOpacity(0.10),
-      'border': AppColors.peach.withOpacity(0.35),
-      'text': const Color(0xFF924A10),
-      'dot': AppColors.peach,
-      'ctx_bg': AppColors.peach.withOpacity(0.06),
-      'ctx_border': AppColors.peach.withOpacity(0.25),
-    };
-    if (isRecovery) return {
-      'bg': AppColors.teal.withOpacity(0.10),
-      'border': AppColors.teal.withOpacity(0.28),
-      'text': const Color(0xFF1A6B43),
-      'dot': AppColors.teal,
-      'ctx_bg': AppColors.teal.withOpacity(0.05),
-      'ctx_border': AppColors.teal.withOpacity(0.18),
-    };
-    return {
-      'bg': AppColors.primaryLight,
-      'border': AppColors.primaryMid,
-      'text': AppColors.primaryDark,
-      'dot': AppColors.primary,
-      'ctx_bg': AppColors.primary.withOpacity(0.05),
-      'ctx_border': AppColors.primary.withOpacity(0.15),
-    };
-  }
-}
-
-// ── Screen ────────────────────────────────────────────────────────────────────
-class CheckInSlidersScreen extends StatefulWidget {
-  const CheckInSlidersScreen({super.key});
+class CheckInScreen extends StatefulWidget {
+  const CheckInScreen({super.key});
   @override
-  State<CheckInSlidersScreen> createState() => _CheckInSlidersState();
+  State<CheckInScreen> createState() => _CheckInScreenState();
 }
 
-class _CheckInSlidersState extends State<CheckInSlidersScreen> {
-  final _noteController = TextEditingController();
+// Also expose under the old name so app_router.dart import doesn't break
+typedef CheckInSlidersScreen = CheckInScreen;
+
+class _CheckInScreenState extends State<CheckInScreen> {
   final _session = UserSession();
   late ChemoPhase _phase;
-  late Map<String, double> _scores;
-  final Map<String, String> _interference = {};
+  late List<ProtocolSymptom> _symptoms;
 
-  bool get _isRecovery =>
-      _phase.name.toLowerCase().contains('recovery');
+  int _step = 0;
+  MoodLevel _mood = MoodLevel.okay;
+  bool _moodSelected = false;
+  final Map<String, String> _symptomAnswers = {};
+  final Map<String, bool> _interferenceAnswers = {};
+  String _note = '';
+  final Set<String> _medsTakenInCheckin = {};
+  static const _scores = {'none': 1.0, 'mild': 4.0, 'significant': 7.0};
 
   @override
   void initState() {
     super.initState();
-    _phase = _session.currentPhase;
-    final all = _allSymptoms;
-    _scores = {for (final s in all) s.key: 0.0};
-    _session.symptomScores.forEach((k, v) {
-      if (_scores.containsKey(k)) _scores[k] = v;
-    });
+    if (_session.isMonitoring) {
+      _symptoms = _session.isScanxietyPeriod
+          ? MonitoringSymptomLibrary.scanxietySymptoms
+          : MonitoringSymptomLibrary.standardSymptoms;
+      _phase = ChemoPhase(
+        name: 'Monitoring & surveillance',
+        description: 'Post-treatment monitoring',
+        cycleDay: 0,
+        cycleDayEnd: 999,
+        phaseNote: 'Every check-in helps your care team track your wellbeing.',
+        primarySymptoms: _symptoms,
+        watchSymptoms: [],
+      );
+    } else {
+      _phase = _session.currentPhase;
+      _symptoms = _phase.primarySymptoms;
+    }
   }
 
-  @override
-  void dispose() { _noteController.dispose(); super.dispose(); }
+  // ── Step mapping ───────────────────────────────────────────────
+  bool get _isGreeting => _step == 0;
+  bool get _isSymptom  => _step >= 1 && _step <= _symptoms.length;
+  int  get _wo         => _phase.watchSymptoms.isNotEmpty ? 1 : 0;
+  bool get _isWatchScreen =>
+      _phase.watchSymptoms.isNotEmpty && _step == _symptoms.length + 1;
+  bool get _isMood => _step == _symptoms.length + 1 + _wo;
+  bool get _isMeds => _step == _symptoms.length + 2 + _wo;
+  bool get _isNote => false; // note combined with mood screen
+  int  get _totalDots => _symptoms.length + 2 + _wo;
 
-  // Urgent first, then primary, then watch-only
-  List<ProtocolSymptom> get _allSymptoms {
-    final seen = <String>{};
-    final urgent = <ProtocolSymptom>[];
-    final primary = <ProtocolSymptom>[];
-    final watchOnly = <ProtocolSymptom>[];
-    for (final s in [..._phase.primarySymptoms, ..._phase.watchSymptoms]) {
-      if (seen.contains(s.key)) continue;
-      if (s.isUrgent) { seen.add(s.key); urgent.add(s); }
-    }
-    for (final s in _phase.primarySymptoms) {
-      if (seen.add(s.key)) primary.add(s);
-    }
-    for (final s in _phase.watchSymptoms) {
-      if (seen.add(s.key)) watchOnly.add(s);
-    }
-    return [...urgent, ...primary, ...watchOnly];
+  ProtocolSymptom? get _currentSymptom =>
+      _isSymptom ? _symptoms[_step - 1] : null;
+
+  bool get _showingInterference {
+    final s = _currentSymptom;
+    if (s == null) return false;
+    return _symptomAnswers[s.key] == 'significant' &&
+        s.interferenceQuestion != null;
   }
 
-  // Symptoms with score > 0
-  List<MapEntry<String, double>> get _activeSeverity =>
-      _scores.entries.where((e) => e.value > 0).toList()
-        ..sort((a, b) => b.value.compareTo(a.value));
-
-  ProtocolSymptom? _symptomByKey(String key) {
-    try {
-      return _allSymptoms.firstWhere((s) => s.key == key);
-    } catch (_) { return null; }
+  void _next() {
+    if (_isMeds) { _save(); return; }
+    setState(() => _step++);
   }
 
+  void _back() {
+    if (_step > 0) setState(() => _step--);
+    else context.go('/');
+  }
+
+  // FIX: async save, null-safe lastCheckIn, await saveCheckIn()
+  Future<void> _save() async {
+    _session.moodEmoji = _mood.emoji;
+    _session.moodLabel = _mood.label;
+    _session.symptomScores = {
+      for (final e in _symptomAnswers.entries)
+        e.key: _scores[e.value] ?? 1.0,
+    };
+    _session.interferenceAnswers = _interferenceAnswers;
+    if (_note.isNotEmpty) _session.checkInNote = _note;
+    _session.lastCheckIn = DateTime.now();
+
+    debugPrint('[CheckIn] saved: ${_session.lastCheckIn?.toIso8601String()}');
+    await _session.saveCheckIn();
+    debugPrint('[CheckIn] hasCheckedInToday: ${_session.hasCheckedInToday}');
+
+    if (mounted) context.go('/checkin/success');
+  }
+
+  // ── Build ──────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final colors = _Sev.phaseColors(_session.isNadirWindow, _isRecovery);
-
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFFAF8F5),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Back
-              GestureDetector(
-                onTap: () => context.go('/checkin'),
-                child: Row(children: [
-                  Icon(Icons.arrow_back_ios_new_rounded, size: 15,
-                    color: AppColors.text2.withOpacity(0.4)),
-                  const SizedBox(width: 4),
-                  Text('Back', style: AppText.caption.copyWith(
-                    color: AppColors.text2)),
-                ]),
-              ),
-              const SizedBox(height: 14),
-
-              // Phase pill
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
-                decoration: BoxDecoration(
-                  color: colors['bg'],
-                  borderRadius: AppRadius.fullBR,
-                  border: Border.all(color: colors['border']!, width: 0.5)),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Container(width: 6, height: 6,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle, color: colors['dot'])),
-                  const SizedBox(width: 6),
-                  Text(
-                    _session.isNadirWindow
-                        ? '⚠ ${_session.protocol.name} · Nadir · Day ${_session.dayInCycle}'
-                        : '${_session.protocol.name} · ${_phase.name} · Day ${_session.dayInCycle}',
-                    style: AppText.caption.copyWith(
-                      fontSize: 11, fontWeight: FontWeight.w600,
-                      color: colors['text'])),
-                ]),
-              ),
-              const SizedBox(height: 12),
-
-              // Title — changes by phase
-              RichText(text: TextSpan(
-                style: AppText.displayTitle.copyWith(fontSize: 20),
-                children: [
-                  TextSpan(text: _isRecovery
-                      ? 'How are you\n'
-                      : 'Rate your\n'),
-                  TextSpan(
-                    text: _isRecovery ? 'recovering?' : 'symptoms',
-                    style: const TextStyle(fontWeight: FontWeight.w700)),
-                ],
-              )),
-              const SizedBox(height: 5),
-              Text('Drag · 0 = none · 10 = severe',
-                style: AppText.bodySecondary),
-              const SizedBox(height: 12),
-
-              // Phase context card — color coded
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: colors['ctx_bg'],
-                  borderRadius: AppRadius.mdBR,
-                  border: Border.all(color: colors['ctx_border']!, width: 0.5)),
-                child: Text(_phase.phaseNote,
-                  style: AppText.body.copyWith(
-                    fontSize: 12, height: 1.6,
-                    color: colors['text'])),
-              ),
-              const SizedBox(height: 14),
-
-              // Legend
-              Row(children: [
-                _legendDot(AppColors.teal, 'Mild 1–3'),
-                const SizedBox(width: 12),
-                _legendDot(AppColors.peach, 'Moderate 4–6'),
-                const SizedBox(width: 12),
-                _legendDot(AppColors.rose, 'Severe 7–10'),
-              ]),
-              const SizedBox(height: 16),
-
-              // Symptom cards
-              ..._allSymptoms.map((s) => _buildCard(s)),
-
-              // Summary card
-              if (_activeSeverity.isNotEmpty) ...[
-                const SizedBox(height: 6),
-                _buildSummaryCard(),
-              ],
-
-              const SizedBox(height: 14),
-              Text('ANYTHING TO ADD?', style: AppText.label),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _noteController,
-                maxLines: 3,
-                style: AppText.body,
-                decoration: InputDecoration(
-                  hintText: 'Any symptom, feeling, or question for your doctor…',
-                  hintStyle: AppText.body.copyWith(color: AppColors.text3),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Save button
-              GestureDetector(
-                onTap: _save,
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary,
-                    borderRadius: AppRadius.fullBR,
-                    boxShadow: [BoxShadow(
-                      color: AppColors.primary.withOpacity(0.3),
-                      blurRadius: 14, offset: const Offset(0, 4))],
-                  ),
-                  child: const Center(child: Text('Save check-in',
-                    style: TextStyle(fontFamily: 'Inter', fontSize: 15,
-                      fontWeight: FontWeight.w500, color: Colors.white))),
-                ),
-              ),
-              const SizedBox(height: 8),
-              GestureDetector(
-                onTap: _save,
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 13),
-                  decoration: BoxDecoration(
-                    color: Colors.transparent,
-                    borderRadius: AppRadius.fullBR,
-                    border: Border.all(color: AppColors.border, width: 0.5)),
-                  child: const Center(child: Text('Save quickly',
-                    style: TextStyle(fontFamily: 'Inter', fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      color: AppColors.text2))),
-                ),
-              ),
-            ],
-          ),
-        ),
+        child: Column(children: [
+          _buildTopBar(),
+          Expanded(child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 250),
+            transitionBuilder: (child, anim) => SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0.06, 0), end: Offset.zero)
+                .animate(CurvedAnimation(parent: anim, curve: Curves.easeOut)),
+              child: FadeTransition(opacity: anim, child: child)),
+            child: KeyedSubtree(
+              key: ValueKey(_step),
+              child: _buildCurrentStep()),
+          )),
+        ]),
       ),
     );
   }
 
-  Widget _legendDot(Color color, String label) {
-    return Row(children: [
-      Container(width: 7, height: 7,
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-      const SizedBox(width: 4),
-      Text(label, style: AppText.caption.copyWith(fontSize: 10)),
+  // ── Top bar ──────────────────────────────────────────────────────
+  Widget _buildTopBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 52, 24, 0),
+      child: Row(children: [
+        // Back button
+        GestureDetector(
+          onTap: _back,
+          child: Container(
+            width: 38, height: 38,
+            decoration: BoxDecoration(
+              color: Colors.white, shape: BoxShape.circle,
+              border: Border.all(color: const Color(0xFFEDE9E3)),
+              boxShadow: [BoxShadow(
+                color: Colors.black.withOpacity(0.08), blurRadius: 8)]),
+            child: _isGreeting
+                ? const SizedBox.shrink()
+                : const Center(child: Text('←',
+                    style: TextStyle(fontSize: 18, color: Color(0xFF2C2C2C)))))),
+        const SizedBox(width: 12),
+        // Progress dots
+        Expanded(child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(_totalDots, (i) {
+            final active = i == _step - 1;
+            final done = i < _step - 1;
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              width: active ? 20 : 7, height: 7,
+              margin: const EdgeInsets.symmetric(horizontal: 2.5),
+              decoration: BoxDecoration(
+                color: active
+                    ? const Color(0xFF6B9E78)
+                    : done
+                        ? const Color(0xFF6B9E78).withOpacity(0.35)
+                        : const Color(0xFFEDE9E3),
+                borderRadius: BorderRadius.circular(4)));
+          }))),
+        const SizedBox(width: 12),
+        // Phase label (top right)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFEDE9E3)),
+            boxShadow: [BoxShadow(
+              color: Colors.black.withOpacity(0.06), blurRadius: 6)]),
+          child: Text('AR',
+            style: const TextStyle(fontFamily: 'DM Sans', fontSize: 12,
+              fontWeight: FontWeight.w600, color: Color(0xFF7A7A7A)))),
+      ]),
+    );
+  }
+
+  Widget _buildCurrentStep() {
+    if (_isGreeting)    return _buildGreeting();
+    if (_isSymptom)     return _buildSymptomStep(_currentSymptom!);
+    if (_isWatchScreen) return _buildWatchScreen();
+    if (_isMood)        return _buildMoodStep();
+    if (_isMeds)        return _buildMedsStep();
+    return _buildGreeting();
+  }
+
+  // ── S1: Greeting ─────────────────────────────────────────────────
+  Widget _buildGreeting() {
+    final name = _session.displayName;
+    final streak = _session.streak;
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(28, 24, 28, 40),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+          const SizedBox(height: 12),
+          Text(_phaseIcon(), style: const TextStyle(fontSize: 72)),
+          const SizedBox(height: 20),
+          Text('Sabah el kheir, $name',
+            style: const TextStyle(fontFamily: 'Fraunces',
+              fontSize: 34, fontWeight: FontWeight.w400,
+              color: Color(0xFF2C2C2C), height: 1.2),
+            textAlign: TextAlign.center),
+          const SizedBox(height: 8),
+          Text(_greetingContext(),
+            style: const TextStyle(fontFamily: 'DM Sans',
+              fontSize: 15, color: Color(0xFF7A7A7A)),
+            textAlign: TextAlign.center),
+          const SizedBox(height: 12),
+          // Phase pill
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFDF6E3),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFFF0D080))),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Text(_session.isNadirWindow ? '⚠️' : '🌿',
+                style: const TextStyle(fontSize: 14)),
+              const SizedBox(width: 6),
+              Text(_phasePillLabel(),
+                style: const TextStyle(fontFamily: 'DM Sans', fontSize: 12,
+                  fontWeight: FontWeight.w600, color: Color(0xFF9A7000))),
+            ])),
+          const SizedBox(height: 16),
+          Text('This will take about 60 seconds —\nyour care team is listening.',
+            style: const TextStyle(fontFamily: 'DM Sans',
+              fontSize: 14, color: Color(0xFF7A7A7A), height: 1.65),
+            textAlign: TextAlign.center),
+          const SizedBox(height: 28),
+          _primaryBtn('Start my check-in →', _next),
+          if (streak > 1) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFFEDE9E3)),
+                boxShadow: [BoxShadow(
+                  color: Colors.black.withOpacity(0.07), blurRadius: 8)]),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                const Text('🔥', style: TextStyle(fontSize: 16)),
+                const SizedBox(width: 8),
+                Text('$streak-day streak — keep it up!',
+                  style: const TextStyle(fontFamily: 'DM Sans',
+                    fontSize: 13, fontWeight: FontWeight.w500,
+                    color: Color(0xFF2C2C2C))),
+              ])),
+          ],
+        ]),
+      ),
+    );
+  }
+
+  String _phaseIcon() {
+    if (_session.isMonitoring) return '🎗️';
+    if (_session.isNadirWindow) return '🌡️';
+    if (_session.isNadirApproaching) return '⚡';
+    return '🌿';
+  }
+
+  String _greetingContext() {
+    if (_session.isMonitoring)
+      return '${_session.daysCancerFree} days cancer-free · Monitoring';
+    return 'Day ${_session.dayInCycle} of your ${_session.protocol.name} cycle';
+  }
+
+  String _phasePillLabel() {
+    if (_session.isMonitoring)
+      return _session.isScanxietyPeriod ? 'Scan approaching' : 'Monitoring & surveillance';
+    if (_session.isNadirWindow)
+      return 'Nadir window · Days 6–14';
+    return '${_session.protocol.name} · Day ${_session.dayInCycle}';
+  }
+
+  Color _phaseColor() {
+    if (_session.isMonitoring) return AppColors.teal;
+    if (_session.isNadirWindow) return AppColors.peach;
+    return AppColors.primary;
+  }
+
+  // ── S2–5: Symptom step ────────────────────────────────────────────
+  Widget _buildSymptomStep(ProtocolSymptom s) {
+    final answer = _symptomAnswers[s.key];
+    final showInterference = answer == 'significant' && s.interferenceQuestion != null;
+    final hasInterferenceAnswer = !showInterference || _interferenceAnswers.containsKey(s.key);
+    final canContinue = answer != null && hasInterferenceAnswer;
+    final isUrgent = answer == 'significant' && s.isUrgent;
+    final defs = _answersFor(s);
+
+    return Column(children: [
+      Expanded(child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // Tag
+          Text(s.label.toUpperCase(),
+            style: const TextStyle(fontFamily: 'DM Sans', fontSize: 11,
+              fontWeight: FontWeight.w700, color: Color(0xFF6B9E78),
+              letterSpacing: 0.08)),
+          const SizedBox(height: 10),
+          // Question — Fraunces serif
+          Text(_symptomQuestion(s),
+            style: const TextStyle(fontFamily: 'Fraunces', fontSize: 26,
+              fontWeight: FontWeight.w400, color: Color(0xFF2C2C2C), height: 1.3)),
+          const SizedBox(height: 24),
+          // Option cards — flex:1 equivalent
+          ...List.generate(defs.length, (i) => Padding(
+            padding: EdgeInsets.only(bottom: i < defs.length - 1 ? 12 : 0),
+            child: _ocard(defs[i][0], s, answer, defs[i][1], defs[i][2], defs[i][3]))),
+          // Interference question
+          if (showInterference) ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white, borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFEDE9E3))),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(s.interferenceQuestion!,
+                  style: const TextStyle(fontFamily: 'DM Sans', fontSize: 14,
+                    fontWeight: FontWeight.w500, color: Color(0xFF2C2C2C))),
+                const SizedBox(height: 10),
+                Row(children: [
+                  _interferenceBtn(s.key, true, 'Yes'),
+                  const SizedBox(width: 8),
+                  _interferenceBtn(s.key, false, 'No'),
+                ]),
+              ])),
+          ],
+          // Urgent warning
+          if (isUrgent && s.urgentMessage != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(13),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEECEC),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFD4876A).withOpacity(0.4))),
+              child: Row(children: [
+                const Text('🚨', style: TextStyle(fontSize: 14)),
+                const SizedBox(width: 8),
+                Expanded(child: Text(s.urgentMessage!,
+                  style: const TextStyle(fontFamily: 'DM Sans', fontSize: 12,
+                    fontWeight: FontWeight.w500, color: Color(0xFFD4876A), height: 1.5))),
+              ])),
+          ],
+          const SizedBox(height: 32),
+        ]),
+      )),
+      // Bottom actions
+      Padding(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+        child: Column(children: [
+          _primaryBtn('Continue →', canContinue ? _next : null),
+          const SizedBox(height: 10),
+          _skipRow(),
+        ])),
     ]);
   }
 
-  Widget _buildCard(ProtocolSymptom s) {
-    final v = _scores[s.key] ?? 0.0;
-    // Inverted symptoms: high score = better (mood etc.)
-    final invert = s.isInverted;
-    // Calculate severity ONCE using effective value — used everywhere in this card
-    final effectiveV = invert ? (v == 0 ? 0.0 : 10 - v) : v;
-    final color = effectiveV == 0
-        ? const Color(0xFFE0D8F5)
-        : effectiveV <= 3
-            ? AppColors.teal
-            : effectiveV <= 6
-                ? AppColors.peach
-                : AppColors.rose;
-    final bgCol = effectiveV == 0
-        ? const Color(0xFFF5F5F5)
-        : effectiveV <= 3
-            ? AppColors.teal.withOpacity(0.10)
-            : effectiveV <= 6
-                ? AppColors.peach.withOpacity(0.10)
-                : AppColors.rose.withOpacity(0.10);
-    final borderCol = effectiveV == 0
-        ? const Color(0x12000000)
-        : effectiveV <= 3
-            ? AppColors.teal.withOpacity(0.30)
-            : effectiveV <= 6
-                ? AppColors.peach.withOpacity(0.30)
-                : AppColors.rose.withOpacity(0.28);
-    final textCol = effectiveV == 0
-        ? AppColors.text3
-        : effectiveV <= 3
-            ? const Color(0xFF1A6B43)
-            : effectiveV <= 6
-                ? const Color(0xFF924A10)
-                : AppColors.rose;
-    final sevLabel = effectiveV == 0
-        ? '—'
-        : effectiveV <= 3 ? 'Mild'
-        : effectiveV <= 6 ? 'Moderate'
-        : 'Severe';
+  // ── Option card (ocard in HTML) ────────────────────────────────────
+  Widget _ocard(String val, ProtocolSymptom s, String? current,
+      String emoji, String label, String sub) {
+    final sel = current == val;
+    final Color border, bg, textColor;
+    switch (val) {
+      case 'none':
+        border = sel ? const Color(0xFF6B9E78) : const Color(0xFFEDE9E3);
+        bg = sel ? const Color(0xFFEAF3EC) : Colors.white;
+        textColor = sel ? const Color(0xFF6B9E78) : const Color(0xFF2C2C2C);
+        break;
+      case 'mild':
+        border = sel ? const Color(0xFFE8B84B) : const Color(0xFFEDE9E3);
+        bg = sel ? const Color(0xFFFDF6E3) : Colors.white;
+        textColor = sel ? const Color(0xFFE8B84B) : const Color(0xFF2C2C2C);
+        break;
+      default: // significant
+        border = sel ? const Color(0xFFD4876A) : const Color(0xFFEDE9E3);
+        bg = sel ? const Color(0xFFFAF0EB) : Colors.white;
+        textColor = sel ? const Color(0xFFD4876A) : const Color(0xFF2C2C2C);
+    }
 
-    final showWarning = s.isUrgent && v >= s.urgentThreshold;
-    final showInterference = v >= 3 && !showWarning;
-    final isActive = v > 0;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadius.lgBR,
-        border: Border.all(
-          color: showWarning
-              ? AppColors.peach.withOpacity(0.4)
-              : isActive
-                  ? color.withOpacity(0.22)
-                  : AppColors.border,
-          width: showWarning ? 1.5 : 0.5),
-        boxShadow: isActive ? [BoxShadow(
-          color: color.withOpacity(0.06),
-          blurRadius: 10, offset: const Offset(0, 2))] : null,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Nadir tag
-          if (s.isUrgent && _session.isNadirWindow) ...[
-            Text('MONITOR CLOSELY',
-              style: AppText.label.copyWith(
-                color: AppColors.peach, fontSize: 10,
-                fontWeight: FontWeight.w700)),
-            const SizedBox(height: 8),
-          ],
-
-          // Top row: icon + label + score badge
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(children: [
-                Container(
-                  width: 32, height: 32,
-                  decoration: BoxDecoration(
-                    color: isActive ? color.withOpacity(0.12) : AppColors.primaryLight,
-                    borderRadius: AppRadius.smBR),
-                  child: Center(child: Text(s.emoji,
-                    style: const TextStyle(fontSize: 15)))),
-                const SizedBox(width: 10),
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(children: [
-                    Text(s.label, style: AppText.bodySemibold.copyWith(
-                      fontSize: 14, color: AppColors.text1)),
-                    if (s.isUrgent) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: AppColors.peachLight,
-                          borderRadius: AppRadius.fullBR),
-                        child: Text('monitor',
-                          style: AppText.caption.copyWith(
-                            fontSize: 9, color: AppColors.peach,
-                            fontWeight: FontWeight.w700))),
-                    ],
-                  ]),
-                  Text(s.arabicLabel,
-                    style: AppText.caption.copyWith(
-                      fontSize: 11, color: AppColors.text3)),
-                ]),
-              ]),
-              // Score badge
-              Container(
-                width: 38, height: 38,
-                decoration: BoxDecoration(
-                  color: bgCol,
-                  borderRadius: AppRadius.smBR,
-                  border: Border.all(color: borderCol, width: 1.5)),
-                child: Center(child: Text(
-                  v == 0 ? '—' : '${v.toInt()}',
-                  style: TextStyle(
-                    fontFamily: 'Inter', fontSize: v == 0 ? 16 : 18,
-                    fontWeight: FontWeight.w400, color: textCol)))),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Severity label above slider
-          if (isActive)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: bgCol,
-                      borderRadius: AppRadius.fullBR,
-                      border: Border.all(color: borderCol, width: 0.5)),
-                    child: Text(sevLabel,
-                      style: AppText.caption.copyWith(
-                        fontSize: 11, color: textCol,
-                        fontWeight: FontWeight.w600))),
-                ],
-              ),
-            ),
-
-          // Slider with dynamic color
-          SliderTheme(
-            data: SliderTheme.of(context).copyWith(
-              trackHeight: 5,
-              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10),
-              overlayShape: const RoundSliderOverlayShape(overlayRadius: 20),
-              activeTrackColor: isActive ? color : AppColors.primary.withOpacity(0.15),
-              inactiveTrackColor: AppColors.primary.withOpacity(0.08),
-              thumbColor: isActive ? color : AppColors.primary,
-              overlayColor: (isActive ? color : AppColors.primary).withOpacity(0.12),
-            ),
-            child: Slider(
-              value: v, min: 0, max: 10, divisions: 10,
-              onChanged: (val) => setState(() => _scores[s.key] = val),
-            ),
-          ),
-
-          // Tick marks
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(11, (i) => Text(
-              '$i',
-              style: AppText.caption.copyWith(
-                fontSize: i == v.toInt() && isActive ? 11 : 9,
-                color: i == v.toInt() && isActive ? color : AppColors.text3,
-                fontWeight: i == v.toInt() && isActive
-                    ? FontWeight.w700 : FontWeight.w400))),
-          ),
-
-          // Protocol tip
-          if (s.tip != null && isActive && !showWarning) ...[
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.teal.withOpacity(0.05),
-                borderRadius: AppRadius.smBR,
-                border: Border.all(
-                  color: AppColors.teal.withOpacity(0.18), width: 0.5)),
-              child: Row(children: [
-                const Text('💡', style: TextStyle(fontSize: 12)),
-                const SizedBox(width: 7),
-                Expanded(child: Text(s.tip!,
-                  style: AppText.body.copyWith(
-                    fontSize: 12, color: AppColors.teal))),
-              ]),
-            ),
-          ],
-
-          // Urgent warning
-          if (showWarning) ...[
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(11),
-              decoration: BoxDecoration(
-                color: AppColors.peachLight,
-                borderRadius: AppRadius.smBR,
-                border: Border.all(
-                  color: AppColors.peach.withOpacity(0.3), width: 0.5)),
-              child: Row(children: [
-                const Text('⚠', style: TextStyle(fontSize: 14)),
-                const SizedBox(width: 8),
-                Expanded(child: Text(
-                  s.urgentMessage ?? 'Contact your care team.',
-                  style: AppText.body.copyWith(
-                    color: AppColors.peach, fontSize: 12,
-                    fontWeight: FontWeight.w400))),
-              ]),
-            ),
-          ],
-
-          // Interference question — show when score ≥ 3 and warning is NOT showing
-          if (showInterference && !showWarning && s.interferenceQuestion != null) ...[
-            const SizedBox(height: 12),
-            Divider(color: AppColors.border, height: 1, thickness: 0.5),
-            const SizedBox(height: 10),
-            Text(
-              s.interferenceQuestion ?? 'Does this stop you doing normal things?',
-              style: AppText.body.copyWith(
-                fontSize: 12, color: AppColors.text2,
-                fontWeight: FontWeight.w300, height: 1.5)),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 5, runSpacing: 5,
-              children: ['Not at all', 'A little', 'Quite a bit', 'Very much']
-                  .map((o) {
-                final sel = _interference[s.key] == o;
-                return GestureDetector(
-                  onTap: () => setState(() => _interference[s.key] = o),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 120),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 11, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: sel ? AppColors.primaryLight : AppColors.surface,
-                      borderRadius: AppRadius.fullBR,
-                      border: Border.all(
-                        color: sel ? AppColors.primaryMid : AppColors.border,
-                        width: 0.5)),
-                    child: Text(o,
-                      style: AppText.caption.copyWith(
-                        fontSize: 11,
-                        color: sel ? AppColors.primary : AppColors.text2,
-                        fontWeight: sel ? FontWeight.w500 : FontWeight.w400))),
-                );
-              }).toList(),
-            ),
-          ],
-        ],
+    return GestureDetector(
+      onTap: () => setState(() {
+        _symptomAnswers[s.key] = val;
+        if (val != 'significant') _interferenceAnswers.remove(s.key);
+      }),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: border, width: 2),
+          boxShadow: [BoxShadow(
+            color: Colors.black.withOpacity(0.06), blurRadius: 10)]),
+        child: Row(children: [
+          Text(emoji, style: const TextStyle(fontSize: 34)),
+          const SizedBox(width: 16),
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(label, style: TextStyle(fontFamily: 'DM Sans',
+              fontSize: 15, fontWeight: FontWeight.w600, color: textColor)),
+            const SizedBox(height: 3),
+            Text(sub, style: const TextStyle(fontFamily: 'DM Sans',
+              fontSize: 12.5, color: Color(0xFF7A7A7A))),
+          ])),
+          // Check circle
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: 26, height: 26,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: sel ? border : Colors.white,
+              border: Border.all(color: sel ? border : const Color(0xFFEDE9E3), width: 2)),
+            child: sel
+                ? const Icon(Icons.check_rounded, size: 13, color: Colors.white)
+                : null),
+        ]),
       ),
     );
   }
 
-  // Live summary card
-  Widget _buildSummaryCard() {
-    final active = _activeSeverity;
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.05),
-        borderRadius: AppRadius.mdBR,
-        border: Border.all(
-          color: AppColors.primary.withOpacity(0.15), width: 0.5)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('SUMMARY FOR YOUR DOCTOR',
-            style: AppText.label.copyWith(fontSize: 10)),
+  Widget _interferenceBtn(String key, bool value, String label) {
+    final sel = _interferenceAnswers[key] == value;
+    return Expanded(child: GestureDetector(
+      onTap: () => setState(() => _interferenceAnswers[key] = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 130),
+        padding: const EdgeInsets.symmetric(vertical: 9),
+        decoration: BoxDecoration(
+          color: sel ? const Color(0xFFEAF3EC) : const Color(0xFFF5F3F0),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: sel ? const Color(0xFF6B9E78) : const Color(0xFFEDE9E3))),
+        child: Center(child: Text(label,
+          style: TextStyle(fontFamily: 'DM Sans', fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: sel ? const Color(0xFF6B9E78) : const Color(0xFF7A7A7A)))))));
+  }
+
+  // ── Watch screen ──────────────────────────────────────────────────
+  Widget _buildWatchScreen() {
+    final watches = _phase.watchSymptoms;
+    return Column(children: [
+      Expanded(child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('WATCH FOR TODAY',
+            style: TextStyle(fontFamily: 'DM Sans', fontSize: 11,
+              fontWeight: FontWeight.w700, color: Color(0xFFD4876A),
+              letterSpacing: 0.08)),
           const SizedBox(height: 10),
-          ...active.map((e) {
-            final s = _symptomByKey(e.key);
-            final isInvert = s?.isInverted ?? false;
-            final effV = isInvert ? (e.value == 0 ? 0.0 : 10 - e.value) : e.value;
-            final color = effV == 0
-                ? AppColors.text3
-                : effV <= 3 ? AppColors.teal
-                : effV <= 6 ? AppColors.peach
-                : AppColors.rose;
-            final label = effV == 0 ? 'None'
-                : effV <= 3 ? 'Mild'
-                : effV <= 6 ? 'Moderate'
-                : 'Severe';
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 6),
+          const Text('Signs that need\nimmediate attention',
+            style: TextStyle(fontFamily: 'Fraunces', fontSize: 26,
+              fontWeight: FontWeight.w400, color: Color(0xFF2C2C2C), height: 1.3)),
+          const SizedBox(height: 24),
+          ...watches.map((w) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: w.isUrgent
+                    ? const Color(0xFFFEECEC) : const Color(0xFFFDF6E3),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: w.isUrgent
+                      ? const Color(0xFFD4876A).withOpacity(0.3)
+                      : const Color(0xFFE8B84B).withOpacity(0.3))),
               child: Row(children: [
-                Container(width: 8, height: 8,
-                  decoration: BoxDecoration(
-                    color: color, shape: BoxShape.circle)),
-                const SizedBox(width: 8),
-                Expanded(child: Text(
-                  '${s?.label ?? e.key} — $label (${e.value.toInt()}/10)',
-                  style: AppText.body.copyWith(fontSize: 13))),
+                Text(w.emoji, style: const TextStyle(fontSize: 24)),
+                const SizedBox(width: 12),
+                Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(w.label, style: TextStyle(fontFamily: 'DM Sans',
+                    fontSize: 14, fontWeight: FontWeight.w600,
+                    color: w.isUrgent
+                        ? const Color(0xFFD4876A) : const Color(0xFFE8B84B))),
+                  if (w.urgentMessage != null) ...[
+                    const SizedBox(height: 3),
+                    Text(w.urgentMessage!, style: const TextStyle(
+                      fontFamily: 'DM Sans', fontSize: 12,
+                      color: Color(0xFF7A7A7A), height: 1.5)),
+                  ],
+                ])),
               ]),
-            );
-          }),
-          Divider(
-            color: AppColors.border, height: 16, thickness: 0.5),
-          Row(children: [
-            const Icon(Icons.check_circle_outline_rounded,
-              size: 14, color: AppColors.teal),
-            const SizedBox(width: 6),
-            Expanded(child: Text(
-              'This will be included in your pre-visit report for Dr. Sarah Chen.',
-              style: AppText.caption.copyWith(
-                color: AppColors.teal, fontSize: 11, height: 1.5))),
-          ]),
-        ],
-      ),
+            ))),
+          const SizedBox(height: 16),
+        ]),
+      )),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+        child: Column(children: [
+          _primaryBtn('I understand — continue →', _next),
+          const SizedBox(height: 10),
+          _skipRow(),
+        ])),
+    ]);
+  }
+
+  // ── S5: Mood + Note (combined like HTML) ─────────────────────────
+  Widget _buildMoodStep() {
+    final noteCtrl = TextEditingController(text: _note);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('MOOD',
+          style: TextStyle(fontFamily: 'DM Sans', fontSize: 11,
+            fontWeight: FontWeight.w700, color: Color(0xFF6B9E78),
+            letterSpacing: 0.08)),
+        const SizedBox(height: 10),
+        const Text('How are you feeling\nemotionally?',
+          style: TextStyle(fontFamily: 'Fraunces', fontSize: 26,
+            fontWeight: FontWeight.w400, color: Color(0xFF2C2C2C), height: 1.3)),
+        const SizedBox(height: 20),
+        // Mood row — 5 cards like HTML .mood-row
+        Row(children: MoodLevel.values.map((m) {
+          final sel = m == _mood && _moodSelected;
+          return Expanded(child: GestureDetector(
+            onTap: () => setState(() { _mood = m; _moodSelected = true; }),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              margin: EdgeInsets.only(right: m != MoodLevel.great ? 8 : 0),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                color: sel ? const Color(0xFFF0EEF9) : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: sel
+                      ? const Color(0xFF9B8EC4) : const Color(0xFFEDE9E3),
+                  width: 2),
+                boxShadow: [BoxShadow(
+                  color: sel
+                      ? const Color(0xFF9B8EC4).withOpacity(0.22)
+                      : Colors.black.withOpacity(0.06),
+                  blurRadius: sel ? 20 : 10)]),
+              child: Column(children: [
+                Text(m.emoji,
+                  style: TextStyle(fontSize: sel ? 28 : 22)),
+                const SizedBox(height: 6),
+                Text(m.label, style: TextStyle(fontFamily: 'DM Sans',
+                  fontSize: 10,
+                  fontWeight: sel ? FontWeight.w700 : FontWeight.w500,
+                  color: sel
+                      ? const Color(0xFF9B8EC4) : const Color(0xFF7A7A7A))),
+              ]),
+            )));
+        }).toList()),
+        const SizedBox(height: 20),
+        // Note on same screen
+        const Text("What\'s on your mind? (optional)",
+          style: TextStyle(fontFamily: 'DM Sans',
+            fontSize: 12, color: Color(0xFF7A7A7A))),
+        const SizedBox(height: 8),
+        Expanded(child: TextField(
+          controller: noteCtrl,
+          maxLines: null, expands: true,
+          textAlignVertical: TextAlignVertical.top,
+          onChanged: (v) => _note = v,
+          style: const TextStyle(fontFamily: 'DM Sans',
+            fontSize: 14, color: Color(0xFF2C2C2C), height: 1.6),
+          decoration: InputDecoration(
+            hintText: 'You can share anything here...',
+            hintStyle: const TextStyle(fontFamily: 'DM Sans',
+              fontSize: 14, color: Color(0xFFB0A890)),
+            filled: true, fillColor: Colors.white,
+            contentPadding: const EdgeInsets.all(14),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(
+                color: Color(0xFFEDE9E3), width: 1.5)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(
+                color: Color(0xFFEDE9E3), width: 1.5)),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: const BorderSide(
+                color: Color(0xFF9B8EC4), width: 2))),
+        )),
+        const SizedBox(height: 16),
+        _primaryBtn('Continue →', _moodSelected ? _next : null),
+        const SizedBox(height: 10),
+        _skipRow(),
+      ]),
     );
   }
 
-  void _save() {
-    _session.symptomScores = Map<String, double>.from(_scores);
-    _session.interferenceAnswers = Map<String, String>.from(_interference);
-    _session.checkInNote = _noteController.text.trim();
+  // ── S6: Medications ───────────────────────────────────────────────
+  Widget _buildMedsStep() {
+    final meds = _session.medications;
+    final allDone = meds.isNotEmpty &&
+        meds.every((m) => _medsTakenInCheckin.contains(m.id));
+
+    return Column(children: [
+      Expanded(child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('MEDICATIONS',
+            style: TextStyle(fontFamily: 'DM Sans', fontSize: 11,
+              fontWeight: FontWeight.w700, color: Color(0xFF6B9E78),
+              letterSpacing: 0.08)),
+          const SizedBox(height: 10),
+          const Text('Did you take your\nmedications today? 💊',
+            style: TextStyle(fontFamily: 'Fraunces', fontSize: 26,
+              fontWeight: FontWeight.w400, color: Color(0xFF2C2C2C), height: 1.3)),
+          const SizedBox(height: 24),
+          if (meds.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white, borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xFFEDE9E3))),
+              child: const Text('No medications on record.',
+                style: TextStyle(fontFamily: 'DM Sans',
+                  fontSize: 13, color: Color(0xFF7A7A7A))))
+          else
+            // med-list
+            Column(children: meds.map((med) {
+              final taken = _medsTakenInCheckin.contains(med.id);
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: GestureDetector(
+                  onTap: () => setState(() {
+                    if (taken) _medsTakenInCheckin.remove(med.id);
+                    else {
+                      _medsTakenInCheckin.add(med.id);
+                      _session.markMedTaken(med.id);
+                    }
+                  }),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: taken ? const Color(0xFFEAF3EC) : Colors.white,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: taken
+                            ? const Color(0xFF6B9E78) : const Color(0xFFEDE9E3),
+                        width: taken ? 2 : 2),
+                      boxShadow: [BoxShadow(
+                        color: Colors.black.withOpacity(0.06), blurRadius: 10)]),
+                    child: Row(children: [
+                      // Circle check
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        width: 28, height: 28,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: taken
+                              ? const Color(0xFF6B9E78) : Colors.white,
+                          border: Border.all(
+                            color: taken
+                                ? const Color(0xFF6B9E78)
+                                : const Color(0xFFEDE9E3),
+                            width: 2)),
+                        child: taken
+                            ? const Icon(Icons.check_rounded,
+                                size: 14, color: Colors.white)
+                            : null),
+                      const SizedBox(width: 14),
+                      Expanded(child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                        Text(med.name, style: TextStyle(
+                          fontFamily: 'DM Sans', fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: taken
+                              ? const Color(0xFF6B9E78)
+                              : const Color(0xFF2C2C2C))),
+                        const SizedBox(height: 2),
+                        Text('${med.dose} · ${med.frequency}',
+                          style: const TextStyle(fontFamily: 'DM Sans',
+                            fontSize: 12, color: Color(0xFF7A7A7A))),
+                      ])),
+                      Text(med.emoji,
+                        style: const TextStyle(fontSize: 22)),
+                    ]),
+                  ),
+                ),
+              );
+            }).toList()),
+          const SizedBox(height: 4),
+          // All taken dashed button
+          GestureDetector(
+            onTap: () => setState(() {
+              for (final m in meds) {
+                if (!_medsTakenInCheckin.contains(m.id)) {
+                  _medsTakenInCheckin.add(m.id);
+                  _session.markMedTaken(m.id);
+                }
+              }
+            }),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: double.infinity, height: 46,
+              decoration: BoxDecoration(
+                color: allDone ? const Color(0xFFEAF3EC) : Colors.transparent,
+                borderRadius: BorderRadius.circular(23),
+                border: Border.all(
+                  color: const Color(0xFF6B9E78), width: 1.5,
+                  style: allDone ? BorderStyle.solid : BorderStyle.solid)),
+              child: Center(child: Text(
+                allDone ? '✓ All medications confirmed!' : '✓ All taken today',
+                style: const TextStyle(fontFamily: 'DM Sans',
+                  fontSize: 13, fontWeight: FontWeight.w600,
+                  color: Color(0xFF6B9E78)))))),
+          const SizedBox(height: 10),
+          GestureDetector(
+            onTap: _next,
+            child: Center(child: Text("Couldn\'t take one? Skip",
+              style: const TextStyle(fontFamily: 'DM Sans', fontSize: 12,
+                color: Color(0xFF7A7A7A),
+                decoration: TextDecoration.underline)))),
+          const SizedBox(height: 32),
+        ]),
+      )),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+        child: Column(children: [
+          _primaryBtn('Done →', _save),
+          const SizedBox(height: 10),
+          _skipRow(saveLabel: 'Save & exit'),
+        ])),
+    ]);
+  }
+
+  // ── Symptom question text ─────────────────────────────────────────
+  String _symptomQuestion(ProtocolSymptom s) {
+    const map = {
+      'fever': 'Any fever or chills today?',
+      'fatigue': "How\'s your energy today?",
+      'energy': "How\'s your energy today?",
+      'nausea': 'Any nausea or stomach discomfort?',
+      'vomiting': 'Any vomiting today?',
+      'pain': 'Any pain today?',
+      'joint_pain': 'Any joint or muscle pain?',
+      'neuropathy': 'Any tingling or numbness?',
+      'mouth_sores': 'Any mouth sores today?',
+      'appetite': "How\'s your appetite?",
+      'breathlessness': 'Any breathlessness today?',
+      'infection': 'Any signs of infection?',
+      'fluid_retention': 'Any swelling or fluid retention?',
+      'anxiety': 'How is your anxiety today?',
+      'sleep': "How did you sleep last night?",
+      'hot_flashes': 'Any hot flashes today?',
+      'night_sweats': 'Any night sweats?',
+      'cognitive_fog': 'Any brain fog today?',
+      'palpitations': 'Any heart palpitations?',
+      'constipation': 'Any constipation today?',
+      'diarrhea': 'Any diarrhoea today?',
+      'hair_loss': 'How is your hair loss today?',
+    };
+    return map[s.key] ?? 'How is your ${s.label.toLowerCase()} today?';
+  }
+
+  // ── _answersFor — symptom-specific scales ─────────────────────────
+  List<List<String>> _answersFor(ProtocolSymptom s) {
+    switch (s.key) {
+      case 'fever': return [['none','🌡️','Normal','No fever today'],['mild','🤒','Low-grade','Below 38°C'],['significant','🔴','High 38°C+','Call your team now']];
+      case 'fatigue': case 'energy': return [['none','🌟','Good energy','Feeling strong today'],['mild','🌿','A bit tired','Managing okay'],['significant','🌑','Exhausted','Really struggling today']];
+      case 'nausea': return [['none','😊','None','Stomach feels fine'],['mild','🌊','Mild','Some discomfort'],['significant','🤢','Strong','Hard to eat or drink']];
+      case 'vomiting': return [['none','✅','None','No vomiting today'],['mild','😟','1–2 times','A couple of episodes'],['significant','🤢','3+ times','Multiple — contact team']];
+      case 'pain': return [['none','✨','No pain','Feeling comfortable'],['mild','💛','Mild pain','Manageable'],['significant','🔴','Strong pain','Needs attention']];
+      case 'mood': return [['none','😊','Good','Feeling okay emotionally'],['mild','😐','So-so','Up and down today'],['significant','😔','Low or anxious','Struggling emotionally']];
+      case 'anxiety': return [['none','😌','Calm','Not feeling anxious'],['mild','😟','Some worry','A bit on edge'],['significant','😰','Very anxious','Hard to manage']];
+      case 'sleep': return [['none','😴','Slept well','Good night rest'],['mild','🌙','Disturbed','Woke up during the night'],['significant','👁️','Barely slept','Very poor sleep']];
+      case 'joint_pain': return [['none','✅','No pain','Joints feel fine'],['mild','🦴','Mild ache','Sore but moving okay'],['significant','😔','Strong pain','Affecting movement']];
+      case 'breathlessness': return [['none','🫁','Breathing fine','No breathlessness'],['mild','😤','With effort','Short of breath with activity'],['significant','🔴','At rest','Even resting — call team']];
+      case 'infection': return [['none','✅','No signs','No redness or swelling'],['mild','👀','Some redness','Mild — watching it'],['significant','🔴','Concerned','Warm or spreading — call team']];
+      case 'mouth_sores': return [['none','✅','None','Mouth feels fine'],['mild','👄','Mild sores','Some discomfort, can eat'],['significant','😔','Painful','Hard to eat or speak']];
+      case 'appetite': return [['none','🍽️','Good appetite','Eating normally'],['mild','😟','Reduced','Eating less than usual'],['significant','🚫','Cannot eat','Very little or nothing today']];
+      case 'hot_flashes': return [['none','✅','None','No hot flashes today'],['mild','🌡️','Mild','A few, not disruptive'],['significant','🔥','Frequent','Frequent and intense']];
+      case 'neuropathy': return [['none','✅','None','No tingling or numbness'],['mild','🤲','Mild tingling','Manageable'],['significant','😔','Affecting me','Affecting hands or feet']];
+      case 'cognitive_fog': return [['none','🧠','Clear','Thinking clearly'],['mild','☁️','Some fog','Occasional forgetfulness'],['significant','😵','Hard to focus','Struggling to concentrate']];
+      case 'fluid_retention': case 'swelling': return [['none','✅','No swelling','Feels normal'],['mild','💧','Mild','Some puffiness'],['significant','😔','Noticeable','Tight shoes or visible swelling']];
+      case 'palpitations': return [['none','❤️','Normal','Heart feels fine'],['mild','💓','Occasional','Rare flutter'],['significant','🔴','Concerning','Persistent — call team']];
+      case 'night_sweats': return [['none','✅','None','Slept without sweating'],['mild','💧','Mild','Some sweating'],['significant','😔','Severe','Woke up drenched']];
+      case 'hair_loss': return [['none','✅','None','No hair loss'],['mild','💇','Some loss','Thinning noticed'],['significant','😔','Significant','Noticeable patches']];
+      case 'constipation': return [['none','✅','None','Normal today'],['mild','😟','Mild','Some discomfort'],['significant','😔','Significant','No movement 2+ days']];
+      case 'diarrhea': return [['none','✅','None','Normal today'],['mild','😟','Mild','A couple of times'],['significant','😔','Frequent','4+ times — contact team']];
+      default: return [['none','✅','None','Not a concern today'],['mild','😐','Mild','Noticeable but manageable'],['significant','😔','Significant','Affecting my day']];
+    }
+  }
+
+  // ── Bottom row: Skip · Save & exit ───────────────────────────────
+  Widget _skipRow({String saveLabel = 'Save & exit'}) {
+    return Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+      GestureDetector(
+        onTap: _next,
+        child: const Text('Skip this step',
+          style: TextStyle(fontFamily: 'DM Sans', fontSize: 12,
+            color: Color(0xFF7A7A7A),
+            decoration: TextDecoration.underline))),
+      const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 12),
+        child: Text('·', style: TextStyle(color: Color(0xFFCCC9C2)))),
+      GestureDetector(
+        onTap: _savePartial,
+        child: Text(saveLabel,
+          style: const TextStyle(fontFamily: 'DM Sans', fontSize: 12,
+            color: Color(0xFF7A7A7A),
+            decoration: TextDecoration.underline))),
+    ]);
+  }
+
+  // ── Partial save ──────────────────────────────────────────────────
+  Future<void> _savePartial() async {
+    _session.symptomScores = {
+      for (final e in _symptomAnswers.entries)
+        e.key: _scores[e.value] ?? 1.0,
+    };
+    _session.interferenceAnswers = _interferenceAnswers;
+    if (_moodSelected) {
+      _session.moodEmoji = _mood.emoji;
+      _session.moodLabel = _mood.label;
+    }
+    if (_note.isNotEmpty) _session.checkInNote = _note;
     _session.lastCheckIn = DateTime.now();
-    _session.saveCheckIn(); // ← save to history
-    context.go('/checkin/success');
+    await _session.saveCheckIn();
+    if (mounted) context.go('/checkin/success');
+  }
+
+  // ── Primary button ────────────────────────────────────────────────
+  Widget _primaryBtn(String label, VoidCallback? onTap) {
+    final enabled = onTap != null;
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        width: double.infinity, height: 54,
+        decoration: BoxDecoration(
+          color: enabled
+              ? const Color(0xFF6B9E78) : const Color(0xFFC5D3C7),
+          borderRadius: BorderRadius.circular(27),
+          boxShadow: enabled ? [BoxShadow(
+            color: const Color(0xFF6B9E78).withOpacity(0.32),
+            blurRadius: 22, offset: const Offset(0, 8))] : []),
+        child: Center(child: Text(label,
+          style: const TextStyle(fontFamily: 'DM Sans', fontSize: 16,
+            fontWeight: FontWeight.w600, color: Colors.white))),
+      ),
+    );
   }
 }
