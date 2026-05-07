@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rehlah — Patient Onboarding</title>
+<!-- Fonts: Inter (body), Fraunces (display), Almarai (Arabic) — same stack as care-team page -->
+<link href="https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Inter:wght@300;400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,300;1,9..144,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="shell">
+
+<!-- ═══════════ SIDEBAR ═══════════ -->
+<aside class="sidebar">
+  <a href="../" class="sb-logo" aria-label="Rehlah care-team home">
+    <div class="sb-logo-mark">
+      <svg viewBox="0 0 24 24" fill="none" width="18" height="18"><path d="M4 13c2-5 6-8 10-8s6 2 6 5c0 4-4 6-8 6-2 0-3 1-3 3" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/><circle cx="9" cy="18" r="1.5" fill="#fff"/></svg>
+    </div>
+    <div class="sb-logo-text">
+      <span class="sb-logo-en">Rehlah</span>
+      <span class="sb-logo-ar">رحلة · journey</span>
+    </div>
+  </a>
+
+  <!-- ═══ Default workspace nav (hidden during onboarding) ═══ -->
+  <div class="sb-section" id="sb-default">
+    <div class="sb-section-label">Workspace</div>
+    <div class="sb-nav active" id="sbn-dash" onclick="showScreen('dashboard')">
+      <svg viewBox="0 0 16 16" fill="none"><path d="M2 7l6-5 6 5v7H2V7z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M6 14V9h4v5" stroke="currentColor" stroke-width="1.4"/></svg>
+      Dashboard
+    </div>
+    <div class="sb-nav" id="sbn-pat" onclick="showScreen('patients')">
+      <svg viewBox="0 0 16 16" fill="none"><circle cx="6" cy="6" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M2 14c0-2.5 1.8-4 4-4s4 1.5 4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="11" cy="5" r="1.8" stroke="currentColor" stroke-width="1.3"/><path d="M10 14c0-2 1-3.2 2-3.7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      Patients
+    </div>
+    <div class="sb-nav" onclick="startOnboarding()">
+      <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.4"/><path d="M8 5v6M5 8h6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      Enroll new patient
+    </div>
+    <div class="sb-nav" onclick="showToast('Coming in Rehlah v1.1')">
+      <svg viewBox="0 0 16 16" fill="none"><rect x="2.5" y="3" width="11" height="10" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 6h6M5 9h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      Reports
+    </div>
+    <div class="sb-nav" onclick="showToast('Coming in Rehlah v1.1')">
+      <svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.4"/><path d="M8 4v4l2.5 1.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      Activity
+    </div>
+  </div>
+
+  <!-- ═══ Onboarding step nav (shown during steps 1–4) ═══ -->
+  <div class="sb-section" id="sb-onboarding" style="display:none;">
+    <div class="sb-section-label">Patient enrollment</div>
+    <div class="sb-steps">
+      <div class="sb-step" data-step="1" onclick="goToStep(1)">
+        <div class="sb-step-num">1</div>
+        <div class="sb-step-body">
+          <span class="sb-step-eyebrow">Step 1</span>
+          <span class="sb-step-label">Patient identity</span>
+        </div>
+      </div>
+      <div class="sb-step" data-step="2" onclick="goToStep(2)">
+        <div class="sb-step-num">2</div>
+        <div class="sb-step-body">
+          <span class="sb-step-eyebrow">Step 2</span>
+          <span class="sb-step-label">Treatment protocol</span>
+        </div>
+      </div>
+      <div class="sb-step" data-step="3" onclick="goToStep(3)">
+        <div class="sb-step-num">3</div>
+        <div class="sb-step-body">
+          <span class="sb-step-eyebrow">Step 3</span>
+          <span class="sb-step-label">Review &amp; confirm</span>
+        </div>
+      </div>
+      <div class="sb-step" data-step="4">
+        <div class="sb-step-num">4</div>
+        <div class="sb-step-body">
+          <span class="sb-step-eyebrow">Step 4</span>
+          <span class="sb-step-label">Invite code</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sb-card">
+    <div class="sb-card-title"><span class="sb-card-title-dot"></span>Onboarding guide</div>
+    <div class="sb-card-row">
+      <svg viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M6.5 3.5v3l2 1.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Target: under 10 min per patient
+    </div>
+    <div class="sb-card-row">
+      <svg viewBox="0 0 13 13" fill="none"><path d="M2 6.5l3 3 6-6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Protocol seeds all check-in questions
+    </div>
+    <div class="sb-card-row">
+      <svg viewBox="0 0 13 13" fill="none"><rect x="3" y="2" width="7" height="9" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 9.5h2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Invite code sent by SMS
+    </div>
+    <div class="sb-card-row">
+      <svg viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5.5" stroke="currentColor" stroke-width="1.2"/><path d="M6.5 4v3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="6.5" cy="9" r="0.7" fill="currentColor"/></svg>
+      Code expires in 14 days
+    </div>
+  </div>
+
+  <div class="sb-foot">
+    <div class="sb-foot-avatar">SA</div>
+    <div class="sb-foot-meta">
+      <span class="sb-foot-name">Sara Al-Mansoori</span>
+      <span class="sb-foot-role">Care coordinator</span>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══════════ MAIN ═══════════ -->
+<main class="main">
+
+  <!-- ═══ DASHBOARD ═══ -->
+  <div id="screen-dashboard" class="screen">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-eyebrow">Good morning, Sara</div>
+        <div class="topbar-title">Coordinator <em>dashboard</em></div>
+      </div>
+      <div class="topbar-right">
+        <div class="topbar-chip"><span class="topbar-chip-dot"></span>Cleveland Clinic Abu Dhabi</div>
+      </div>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-top">
+          <div class="stat-icon"><svg viewBox="0 0 14 14" fill="none"><circle cx="5" cy="5" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M1.5 12c0-2 1.5-3.5 3.5-3.5s3.5 1.5 3.5 3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="10.5" cy="4.5" r="1.5" stroke="currentColor" stroke-width="1.2"/></svg></div>
+          <span class="stat-trend">↑ 3 wk</span>
+        </div>
+        <div class="stat-val" id="stat-active-count">12</div>
+        <div class="stat-lbl">Active patients</div>
+      </div>
+      <div class="stat">
+        <div class="stat-top">
+          <div class="stat-icon ok"><svg viewBox="0 0 14 14" fill="none"><path d="M2 7l3 3 7-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span class="stat-trend">Above target</span>
+        </div>
+        <div class="stat-val">86%</div>
+        <div class="stat-lbl">Avg check-in rate</div>
+      </div>
+      <div class="stat">
+        <div class="stat-top">
+          <div class="stat-icon warn"><svg viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.3"/><path d="M7 4v3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="7" cy="9.5" r="0.7" fill="currentColor"/></svg></div>
+          <span class="stat-trend warn">Awaiting</span>
+        </div>
+        <div class="stat-val">2</div>
+        <div class="stat-lbl">Pending invites</div>
+      </div>
+      <div class="stat">
+        <div class="stat-top">
+          <div class="stat-icon info"><svg viewBox="0 0 14 14" fill="none"><rect x="2" y="3" width="10" height="9" rx="1" stroke="currentColor" stroke-width="1.3"/><path d="M5 6h4M5 8.5h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></div>
+          <span class="stat-trend purple">Tue 9:00</span>
+        </div>
+        <div class="stat-val">4</div>
+        <div class="stat-lbl">Reports this week</div>
+      </div>
+    </div>
+
+    <div class="section-head">
+      <div class="section-title">Recent <em style="font-style:italic;color:var(--pd);">patients</em></div>
+      <a class="section-link" onclick="showScreen('patients')">View all →</a>
+    </div>
+
+    <div class="table">
+      <div class="table-head">
+        <div class="th">Patient</div>
+        <div class="th">Protocol</div>
+        <div class="th">Invite code</div>
+        <div class="th">Status</div>
+        <div class="th"></div>
+      </div>
+      <div id="dash-table-body">
+        <!-- Populated by renderDynamicPatients() from localStorage + demo data -->
+      </div>
+    </div>
+
+    <div style="margin-top:32px;">
+      <button class="btn btn-primary" onclick="startOnboarding()">
+        <svg viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Enroll new patient
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ STEP 1 — Patient identity ═══ -->
+  <div id="screen-step1" class="screen">
+    <div class="prog-wrap">
+      <div class="prog-bar"><div class="prog-fill" style="width:25%"></div></div>
+      <div class="prog-meta">
+        <span class="prog-meta-l">Step 1 of 4 · 25% complete</span>
+        <span class="prog-meta-r">~2 min remaining</span>
+      </div>
+    </div>
+
+    <div class="step-head">
+      <div class="step-eyebrow">Patient identity</div>
+      <h1 class="step-title">Who are we <em>enrolling?</em></h1>
+      <p class="step-sub">Basic patient identity, seeded from the care record. The patient never enters this information themselves.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-icon"><svg viewBox="0 0 17 17" fill="none"><circle cx="8.5" cy="6" r="2.8" stroke="currentColor" stroke-width="1.4"/><path d="M2.5 14.5c0-3 2.7-5 6-5s6 2 6 5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+        <div>
+          <div class="card-title">Patient details</div>
+          <div class="card-sub">Identity &amp; contact</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field" data-field="patient-name">
+          <label>Full name <span class="req">*</span></label>
+          <!-- dir="auto": Arabic names render RTL, English LTR — no toggle needed -->
+          <input type="text" id="patient-name" dir="auto" placeholder="e.g. Nadia Al-Rashidi" oninput="updateReview();clearError(this)">
+          <div class="field-error"><svg viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1.1"/><path d="M5.5 3.5v2.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="5.5" cy="7.7" r="0.55" fill="currentColor"/></svg>This field is required</div>
+        </div>
+        <div class="field" data-field="patient-dob">
+          <label>Date of birth <span class="req">*</span></label>
+          <input type="date" id="patient-dob" oninput="updateReview();clearError(this)">
+          <div class="field-error"><svg viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1.1"/><path d="M5.5 3.5v2.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="5.5" cy="7.7" r="0.55" fill="currentColor"/></svg>This field is required</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field" data-field="patient-phone">
+          <label>Mobile number <span class="req">*</span></label>
+          <div class="phone-group">
+            <div class="phone-flag"><div class="phone-flag-mark"></div>+971</div>
+            <input type="tel" id="patient-phone" placeholder="50 000 0000" maxlength="15"
+              oninput="normalizePhone(this);updateReview();clearError(this)"
+              onblur="validatePhoneFormat(this)">
+          </div>
+          <div class="field-hint" id="phone-hint">
+            <svg viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1"/><path d="M5.5 3.5v2.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/><circle cx="5.5" cy="7.5" r="0.5" fill="currentColor"/></svg>
+            Invite code sent by SMS to this number
+          </div>
+          <div class="field-error"><svg viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1.1"/><path d="M5.5 3.5v2.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="5.5" cy="7.7" r="0.55" fill="currentColor"/></svg>Enter a UAE mobile starting with 5 (e.g. 50 123 4567)</div>
+        </div>
+        <div class="field">
+          <label>Email address <span class="opt">optional</span></label>
+          <input type="email" id="patient-email" placeholder="patient@email.com" oninput="updateReview()">
+          <div class="field-hint">
+            <svg viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1"/><path d="M5.5 3.5v2.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/><circle cx="5.5" cy="7.5" r="0.5" fill="currentColor"/></svg>
+            Pre-visit report cc'd here
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-icon warn"><svg viewBox="0 0 17 17" fill="none"><path d="M3 8.5C3 5.5 5.5 3 8.5 3S14 5.5 14 8.5 11.5 14 8.5 14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8.5" cy="8.5" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M8.5 14L6 12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+        <div>
+          <div class="card-title">Diagnosis</div>
+          <div class="card-sub">Cancer type, stage &amp; subtype</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field" data-field="cancer-type">
+          <label>Cancer type <span class="req">*</span></label>
+          <select id="cancer-type" onchange="updateReview();clearError(this)">
+            <option value="">Select diagnosis</option>
+            <option value="Breast cancer">Breast cancer</option>
+            <option value="Colorectal cancer">Colorectal cancer</option>
+            <option value="Lung cancer">Lung cancer</option>
+            <option value="Ovarian cancer">Ovarian cancer</option>
+            <option value="Lymphoma">Lymphoma</option>
+            <option value="Other">Other</option>
+          </select>
+          <div class="field-error"><svg viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1.1"/><path d="M5.5 3.5v2.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="5.5" cy="7.7" r="0.55" fill="currentColor"/></svg>This field is required</div>
+        </div>
+        <div class="field">
+          <label>Stage <span class="opt">optional</span></label>
+          <select id="cancer-stage" onchange="updateReview()">
+            <option value="">Select stage</option>
+            <option>Stage I</option>
+            <option>Stage II</option>
+            <option>Stage III</option>
+            <option>Stage IV</option>
+          </select>
+        </div>
+      </div>
+      <div class="row single">
+        <div class="field">
+          <label>Molecular subtype / clinical notes <span class="opt">optional</span></label>
+          <input type="text" id="cancer-subtype" placeholder="e.g. HER2+, Triple negative, BRCA1…" oninput="updateReview()">
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary" onclick="attemptStep(2)">
+        Continue to protocol
+        <svg viewBox="0 0 14 14" fill="none"><path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="btn btn-ghost" onclick="cancelOnboarding()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- ═══ STEP 2 — Treatment protocol ═══ -->
+  <div id="screen-step2" class="screen">
+    <div class="prog-wrap">
+      <div class="prog-bar"><div class="prog-fill" style="width:50%"></div></div>
+      <div class="prog-meta">
+        <span class="prog-meta-l">Step 2 of 4 · 50% complete</span>
+        <span class="prog-meta-r">~3 min remaining</span>
+      </div>
+    </div>
+
+    <div class="step-head">
+      <div class="step-eyebrow">Treatment protocol</div>
+      <h1 class="step-title">What is her <em>treatment protocol?</em></h1>
+      <p class="step-sub">This seeds every check-in question, nadir window and medication tracker automatically.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-icon"><svg viewBox="0 0 17 17" fill="none"><rect x="3" y="3" width="11" height="11" rx="5.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 8.5h7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+        <div>
+          <div class="card-title">Select chemotherapy protocol</div>
+          <div class="card-sub">Choose the regimen prescribed by the oncologist</div>
+        </div>
+      </div>
+      <div data-field="protocol-grid">
+        <div class="proto-grid" id="protocol-grid">
+          <div class="proto" onclick="selectProtocol(this,'AC-21')">
+            <div class="proto-tick"><svg viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5L9 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="proto-name">AC-21</div>
+            <div class="proto-desc">Doxorubicin + Cyclophosphamide</div>
+            <div class="proto-meta">
+              <span class="proto-tag">21d cycle</span>
+              <span class="proto-tag">8 cycles</span>
+            </div>
+          </div>
+          <div class="proto" onclick="selectProtocol(this,'Taxol-W')">
+            <div class="proto-tick"><svg viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5L9 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="proto-name">Taxol Weekly</div>
+            <div class="proto-desc">Paclitaxel (weekly)</div>
+            <div class="proto-meta">
+              <span class="proto-tag">7d cycle</span>
+              <span class="proto-tag">12 weeks</span>
+            </div>
+          </div>
+          <div class="proto" onclick="selectProtocol(this,'Carbo-T')">
+            <div class="proto-tick"><svg viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5L9 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="proto-name">Carbo-Taxol</div>
+            <div class="proto-desc">Carboplatin + Paclitaxel</div>
+            <div class="proto-meta">
+              <span class="proto-tag">21d cycle</span>
+              <span class="proto-tag">6 cycles</span>
+            </div>
+          </div>
+          <div class="proto" onclick="selectProtocol(this,'CMF')">
+            <div class="proto-tick"><svg viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2.5 2.5L9 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <div class="proto-name">CMF</div>
+            <div class="proto-desc">Cyclophosphamide + Methotrexate + 5-FU</div>
+            <div class="proto-meta">
+              <span class="proto-tag">28d cycle</span>
+              <span class="proto-tag">6 cycles</span>
+            </div>
+          </div>
+        </div>
+        <div class="proto-grid-error" id="proto-grid-error">
+          <svg viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1.1"/><path d="M5.5 3.5v2.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="5.5" cy="7.7" r="0.55" fill="currentColor"/></svg>
+          Please select a treatment protocol
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="cycle-card" style="display:none;">
+      <div class="card-head">
+        <div class="card-icon ok"><svg viewBox="0 0 17 17" fill="none"><rect x="3" y="4" width="11" height="10" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M3 7h11M6 2.5v3M11 2.5v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+        <div>
+          <div class="card-title">Cycle details</div>
+          <div class="card-sub">When did this cycle begin?</div>
+        </div>
+      </div>
+      <div class="row triple">
+        <div class="field">
+          <label>Cycle number <span class="req">*</span></label>
+          <select id="cycle-num" onchange="updateCycleDisplay()">
+            <option value="1">Cycle 1</option><option value="2">Cycle 2</option>
+            <option value="3">Cycle 3</option><option value="4">Cycle 4</option>
+            <option value="5">Cycle 5</option><option value="6">Cycle 6</option>
+            <option value="7">Cycle 7</option><option value="8">Cycle 8</option>
+          </select>
+        </div>
+        <div class="field" data-field="cycle-start">
+          <label>Cycle start <span class="req">*</span></label>
+          <input type="date" id="cycle-start" onchange="updateCycleDisplay();clearError(this)">
+          <div class="field-error"><svg viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1.1"/><path d="M5.5 3.5v2.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="5.5" cy="7.7" r="0.55" fill="currentColor"/></svg>This field is required</div>
+        </div>
+        <div class="field" data-field="appt-date">
+          <label>Next appointment <span class="req">*</span></label>
+          <input type="date" id="appt-date" onchange="updateReview();clearError(this)">
+          <div class="field-error"><svg viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1.1"/><path d="M5.5 3.5v2.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="5.5" cy="7.7" r="0.55" fill="currentColor"/></svg>This field is required</div>
+        </div>
+      </div>
+      <div class="cycle-display" id="cycle-display" style="display:none;">
+        <div class="cycle-item">
+          <span class="cycle-label">Today's cycle day</span>
+          <span class="cycle-val" id="cycle-day-display">—</span>
+        </div>
+        <div class="cycle-item">
+          <span class="cycle-label">Current phase</span>
+          <span class="cycle-val" id="cycle-phase-display">—</span>
+        </div>
+        <div class="cycle-item">
+          <span class="cycle-label">Nadir window</span>
+          <span class="cycle-val" id="nadir-display">—</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="meds-card" style="display:none;">
+      <div class="card-head">
+        <div class="card-icon warn"><svg viewBox="0 0 17 17" fill="none"><rect x="2.5" y="6" width="12" height="6" rx="3" stroke="currentColor" stroke-width="1.4"/><path d="M8.5 6v6" stroke="currentColor" stroke-width="1.4"/></svg></div>
+        <div>
+          <div class="card-title">Prescribed medications</div>
+          <div class="card-sub">Pre-loaded from protocol — confirm or amend</div>
+        </div>
+        <div class="med-count-wrap">
+          <div class="med-count-badge" id="med-count-badge">0 of 0 confirmed</div>
+          <div class="card-head-meta">Auto-tracked<br>in patient app</div>
+        </div>
+      </div>
+      <div class="med-list" id="meds-list"></div>
+      <button class="med-add" onclick="addCustomMed()">
+        <svg viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Add additional medication
+      </button>
+      <div class="med-callout">
+        <div class="med-callout-icon">
+          <svg viewBox="0 0 14 14" fill="none"><rect x="3.5" y="1.5" width="7" height="11" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 3.5h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="7" cy="10" r="0.6" fill="currentColor"/></svg>
+        </div>
+        <div class="med-callout-body">
+          <strong>Auto-loads in patient app.</strong> These medications will pre-load in the patient's daily tracker when they activate their invite code.
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head">
+        <div class="card-icon info"><svg viewBox="0 0 17 17" fill="none"><circle cx="6" cy="6" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M2 14c0-2.5 2-4 4-4s4 1.5 4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="12" cy="5.5" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M10 14c.3-1.8 1.3-3 2.5-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></div>
+        <div>
+          <div class="card-title">Care team routing</div>
+          <div class="card-sub">Where reports &amp; alerts are delivered</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field" data-field="onco-email">
+          <label>Oncologist email <span class="req">*</span></label>
+          <input type="email" id="onco-email" placeholder="oncologist@hospital.ae" oninput="updateReview();clearError(this)">
+          <div class="field-hint">
+            <svg viewBox="0 0 11 11" fill="none"><rect x="1.5" y="2.5" width="8" height="6" rx="1" stroke="currentColor" stroke-width="1"/><path d="M1.5 3.5l4 2.5 4-2.5" stroke="currentColor" stroke-width="1"/></svg>
+            Pre-visit report delivered 48h before appointment
+          </div>
+          <div class="field-error"><svg viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1.1"/><path d="M5.5 3.5v2.5" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><circle cx="5.5" cy="7.7" r="0.55" fill="currentColor"/></svg>This field is required</div>
+        </div>
+        <div class="field">
+          <label>Care coordinator email <span class="opt">optional</span></label>
+          <input type="email" id="coord-email" placeholder="coordinator@hospital.ae" oninput="updateReview()">
+          <div class="field-hint">
+            <svg viewBox="0 0 11 11" fill="none"><circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1"/><path d="M5.5 3.5v2.5l1.5 1" stroke="currentColor" stroke-width="1" stroke-linecap="round"/></svg>
+            Early warning alerts routed here
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions between">
+      <button class="btn btn-secondary" onclick="goToStep(1)">
+        <svg viewBox="0 0 14 14" fill="none"><path d="M11 7H3M7 3L3 7l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Back
+      </button>
+      <button class="btn btn-primary" onclick="attemptStep(3)">
+        Continue to review
+        <svg viewBox="0 0 14 14" fill="none"><path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ STEP 3 — Review & confirm ═══ -->
+  <div id="screen-step3" class="screen">
+    <div class="prog-wrap">
+      <div class="prog-bar"><div class="prog-fill" style="width:75%"></div></div>
+      <div class="prog-meta">
+        <span class="prog-meta-l">Step 3 of 4 · 75% complete</span>
+        <span class="prog-meta-r">Almost done</span>
+      </div>
+    </div>
+
+    <div class="step-head">
+      <div class="step-eyebrow">Review</div>
+      <h1 class="step-title">Confirm <em>patient record</em></h1>
+      <p class="step-sub">Review before generating the invite code. The patient never sees this screen — these details power their daily check-ins.</p>
+    </div>
+
+    <div class="review-card">
+      <div class="review-head">
+        <div class="review-section-title">
+          <span class="review-section-icon"><svg viewBox="0 0 12 12" fill="none"><circle cx="6" cy="4.5" r="2" stroke="currentColor" stroke-width="1.3"/><path d="M2 11c0-2 2-3.5 4-3.5S10 9 10 11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+          Patient identity
+        </div>
+        <!-- Edit links in review intentionally bypass validation (jump-back) -->
+        <button class="review-edit" onclick="goToStep(1)">Edit
+          <svg viewBox="0 0 11 11" fill="none"><path d="M2 9l1-3 5-5 2 2-5 5-3 1z" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <div class="review-row"><span class="review-key">Full name</span><span class="review-val purple" id="rv-name">—</span></div>
+      <div class="review-row"><span class="review-key">Date of birth</span><span class="review-val" id="rv-dob">—</span></div>
+      <div class="review-row"><span class="review-key">Mobile</span><span class="review-val" id="rv-phone">—</span></div>
+      <div class="review-row"><span class="review-key">Email</span><span class="review-val" id="rv-email">—</span></div>
+    </div>
+
+    <div class="review-card">
+      <div class="review-head">
+        <div class="review-section-title">
+          <span class="review-section-icon" style="background:var(--warnl);color:var(--warnd);"><svg viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.3"/><circle cx="6" cy="6" r="1.8" fill="currentColor"/></svg></span>
+          Diagnosis
+        </div>
+        <button class="review-edit" onclick="goToStep(1)">Edit</button>
+      </div>
+      <div class="review-row"><span class="review-key">Cancer type</span><span class="review-val" id="rv-cancer">—</span></div>
+      <div class="review-row"><span class="review-key">Stage</span><span class="review-val" id="rv-stage">—</span></div>
+      <div class="review-row"><span class="review-key">Subtype / notes</span><span class="review-val" id="rv-subtype">—</span></div>
+    </div>
+
+    <div class="review-card">
+      <div class="review-head">
+        <div class="review-section-title">
+          <span class="review-section-icon"><svg viewBox="0 0 12 12" fill="none"><rect x="2" y="3" width="8" height="7" rx="1" stroke="currentColor" stroke-width="1.3"/><path d="M2 5.5h8M4.5 1.5v2M7.5 1.5v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></span>
+          Protocol &amp; cycle
+        </div>
+        <button class="review-edit" onclick="goToStep(2)">Edit</button>
+      </div>
+      <div class="review-row"><span class="review-key">Protocol</span><span class="review-val purple" id="rv-protocol">—</span></div>
+      <div class="review-row"><span class="review-key">Cycle</span><span class="review-val" id="rv-cycle">—</span></div>
+      <div class="review-row"><span class="review-key">Cycle start date</span><span class="review-val" id="rv-cyclestart">—</span></div>
+      <div class="review-row"><span class="review-key">Today's phase</span><span class="review-val green" id="rv-cyclephase">—</span></div>
+      <div class="review-row"><span class="review-key">Next appointment</span><span class="review-val" id="rv-appt">—</span></div>
+    </div>
+
+    <div class="review-card">
+      <div class="review-head">
+        <div class="review-section-title">
+          <span class="review-section-icon" style="background:var(--infol);color:var(--info);"><svg viewBox="0 0 12 12" fill="none"><rect x="1.5" y="3" width="9" height="6.5" rx="1" stroke="currentColor" stroke-width="1.3"/><path d="M1.5 4l4.5 3 4.5-3" stroke="currentColor" stroke-width="1.3"/></svg></span>
+          Care team routing
+        </div>
+        <button class="review-edit" onclick="goToStep(2)">Edit</button>
+      </div>
+      <div class="review-row"><span class="review-key">Oncologist (report)</span><span class="review-val" id="rv-onco">—</span></div>
+      <div class="review-row"><span class="review-key">Coordinator (alerts)</span><span class="review-val" id="rv-coord">—</span></div>
+    </div>
+
+    <div class="review-callout">
+      <div class="review-callout-icon"><svg viewBox="0 0 14 14" fill="none"><path d="M2 7l3 3 7-7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="review-callout-body">
+        Medications will be pre-loaded from the <strong id="rv-proto-meds">selected protocol</strong>. The patient's daily check-in questions will adapt automatically to their cycle phase, with extra support during the nadir window.
+      </div>
+    </div>
+
+    <div class="actions between">
+      <button class="btn btn-secondary" onclick="goToStep(2)">
+        <svg viewBox="0 0 14 14" fill="none"><path d="M11 7H3M7 3L3 7l4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Back
+      </button>
+      <button class="btn btn-primary" onclick="generateInvite()">
+        Generate invite code
+        <svg viewBox="0 0 14 14" fill="none"><path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ STEP 4 — Invite code ═══ -->
+  <div id="screen-step4" class="screen">
+    <div class="prog-wrap">
+      <div class="prog-bar"><div class="prog-fill" style="width:100%"></div></div>
+      <div class="prog-meta">
+        <span class="prog-meta-l" style="color:var(--ok);">Step 4 of 4 · Complete</span>
+        <span class="prog-meta-r">Patient enrolled</span>
+      </div>
+    </div>
+
+    <div class="invite-wrap">
+      <div class="invite-success-card">
+        <div class="invite-tick">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h2 class="invite-success-h">Patient <em>enrolled</em> successfully</h2>
+        <p class="invite-success-p">The record is created and the protocol seeded. Share the code below — the patient enters it in the Rehlah app to activate their account.</p>
+      </div>
+
+      <div class="code-card">
+        <div class="code-card-label">Invite code</div>
+        <div class="code-display" id="generated-code" onclick="copyCode()" title="Click to copy">—</div>
+        <div class="code-actions">
+          <span class="code-meta">
+            <svg viewBox="0 0 11 11" fill="none"><path d="M2 5.5l2 2 5-5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Valid for 14 days
+          </span>
+          <span class="code-meta purple">Single use</span>
+          <span class="code-meta purple">Revocable</span>
+        </div>
+      </div>
+
+      <div class="invite-details">
+        <div class="id-row">
+          <div class="id-icon" style="background:var(--pl);color:var(--pd);"><svg viewBox="0 0 16 16" fill="none"><circle cx="8" cy="6" r="2.5" stroke="currentColor" stroke-width="1.4"/><path d="M2.5 14c0-2.7 2.5-4.5 5.5-4.5s5.5 1.8 5.5 4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+          <div class="id-body">
+            <div class="id-label">Patient</div>
+            <div class="id-value" id="inv-name">—</div>
+            <div class="id-sub" id="inv-proto">—</div>
+          </div>
+        </div>
+        <div class="id-row">
+          <div class="id-icon" style="background:var(--okl);color:var(--okd);"><svg viewBox="0 0 16 16" fill="none"><rect x="4.5" y="2" width="7" height="12" rx="1.5" stroke="currentColor" stroke-width="1.4"/><circle cx="8" cy="11.5" r="0.7" fill="currentColor"/></svg></div>
+          <div class="id-body">
+            <div class="id-label">SMS sent to</div>
+            <div class="id-value" id="inv-phone">—</div>
+            <div class="id-sub">Invite code delivered automatically</div>
+          </div>
+        </div>
+        <div class="id-row">
+          <div class="id-icon" style="background:var(--infol);color:var(--info);"><svg viewBox="0 0 16 16" fill="none"><rect x="2.5" y="3" width="11" height="10" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M5 6.5h6M5 9h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg></div>
+          <div class="id-body">
+            <div class="id-label">Pre-visit report</div>
+            <div class="id-value" id="inv-onco">—</div>
+            <div class="id-sub" id="inv-appt">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sms-section">
+        <div class="sms-section-head">
+          <div class="card-icon ok" style="width:30px;height:30px;border-radius:9px;"><svg viewBox="0 0 14 14" fill="none" width="14" height="14"><path d="M2 4l5 4 5-4M2 4v6h10V4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <span class="sms-section-title">SMS preview</span>
+          <span class="sms-section-sub">As the patient will see it</span>
+        </div>
+        <div class="phone-stage">
+          <div class="sms-meta">
+            <span class="sms-from">Rehlah · Cleveland Clinic AD</span>
+            <span class="sms-time">just now</span>
+          </div>
+          <div class="sms-bubble" id="sms-preview">
+            Hello, your care team has enrolled you in Rehlah. Download the app and enter your invite code to begin. Your journey is supported. 🌿
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="actions center">
+      <button class="btn btn-copy" onclick="copyCode()">
+        <svg viewBox="0 0 14 14" fill="none"><rect x="3.5" y="3.5" width="7" height="8" rx="1" stroke="currentColor" stroke-width="1.4"/><path d="M5.5 3.5v-1a1 1 0 011-1h4a1 1 0 011 1v6a1 1 0 01-1 1h-1" stroke="currentColor" stroke-width="1.4"/></svg>
+        Copy code
+      </button>
+      <button class="btn btn-soft" onclick="startOnboarding()">
+        <svg viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Enroll another patient
+      </button>
+      <button class="btn btn-secondary" onclick="cancelOnboarding();showScreen('patients');">View all patients</button>
+    </div>
+  </div>
+
+  <!-- ═══ PATIENTS LIST ═══ -->
+  <div id="screen-patients" class="screen">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="topbar-eyebrow">All patients</div>
+        <div class="topbar-title">Patient <em>roster</em></div>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-primary" onclick="startOnboarding()" style="height:40px;padding:0 20px;font-size:13.5px;">
+          <svg viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          Enroll new
+        </button>
+      </div>
+    </div>
+    <div class="table">
+      <div class="table-head">
+        <div class="th">Patient</div>
+        <div class="th">Protocol</div>
+        <div class="th">Invite code</div>
+        <div class="th">Status</div>
+        <div class="th"></div>
+      </div>
+      <div id="patients-table-body">
+        <!-- Populated by renderDynamicPatients() from localStorage + demo data -->
+      </div>
+    </div>
+  </div>
+
+</main>
+</div>
+
+<!-- ═══ Add medication modal ═══ -->
+<div class="modal-backdrop" id="med-modal" onclick="if(event.target===this)closeMedModal()">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="med-modal-title">
+    <div class="modal-head">
+      <div class="card-icon warn"><svg viewBox="0 0 17 17" fill="none"><rect x="2.5" y="6" width="12" height="6" rx="3" stroke="currentColor" stroke-width="1.4"/><path d="M8.5 6v6" stroke="currentColor" stroke-width="1.4"/></svg></div>
+      <div>
+        <div class="modal-title" id="med-modal-title">Add medication</div>
+        <div class="modal-sub">Off-protocol prescriptions or supportive meds</div>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Medication name</label>
+        <input type="text" id="med-modal-name" placeholder="e.g. Filgrastim (Neupogen)"
+          onkeydown="if(event.key==='Enter')saveMedFromModal()">
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Dose</label>
+          <input type="text" id="med-modal-dose" placeholder="e.g. 5 mcg/kg">
+        </div>
+        <div class="field">
+          <label>Route</label>
+          <select id="med-modal-route">
+            <option>Oral</option>
+            <option>IV push</option>
+            <option>IV infusion</option>
+            <option>Subcutaneous</option>
+            <option>Intramuscular</option>
+            <option>Topical</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Frequency</label>
+        <select id="med-modal-freq">
+          <option>Once daily</option>
+          <option>Twice daily</option>
+          <option>Three times daily</option>
+          <option>Weekly</option>
+          <option>Every cycle day 1</option>
+          <option>Days 1–3 of cycle</option>
+          <option>As needed</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="med-edit-btn" onclick="closeMedModal()">Cancel</button>
+      <button class="med-edit-btn primary" onclick="saveMedFromModal()">Add medication</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Toast ═══ -->
+<div class="toast" id="toast" onclick="this.classList.remove('show');clearTimeout(window.__toastT);">
+  <svg viewBox="0 0 14 14" fill="none"><path d="M2 7l3 3 7-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <span id="toast-text">Done</span>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
