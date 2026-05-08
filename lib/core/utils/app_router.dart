@@ -21,9 +21,17 @@ import '../../features/monitoring/presentation/screens/cycle_tracker_screen.dart
 import '../../features/profile/presentation/screens/privacy_screen.dart';
 import '../../features/caregiver/presentation/screens/caregiver_home_screen.dart';
 import 'shell_screen.dart';
+import 'user_session.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/welcome',
+  redirect: (context, state) {
+    if (state.matchedLocation == '/welcome' &&
+        UserSession().supabasePatientId != null) {
+      return '/';
+    }
+    return null;
+  },
   routes: [
     GoRoute(path: '/welcome',    builder: (c, s) => const WelcomeScreen()),
     GoRoute(path: '/onboarding', builder: (c, s) => const OnboardingScreen()),

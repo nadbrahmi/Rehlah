@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/utils/invite_codes.dart';
+import '../../../../core/services/supabase_service.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -13,33 +15,77 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   final _codeController = TextEditingController();
   bool _showCodeInput = false;
   String? _errorMessage;
-  InviteProfile? _validatedProfile;
+  InviteProfile? _validatedProfile;   // demo / hardcoded codes
+  Map<String, dynamic>? _supabaseData; // real patient from Supabase
   bool _isValidating = false;
+  bool _isApplying = false;
 
   @override
   void dispose() { _codeController.dispose(); super.dispose(); }
 
-  void _validateCode(String code) {
-    if (code.trim().isEmpty) return;
-    setState(() { _isValidating = true; _errorMessage = null; });
+  bool get _hasValidCode => _validatedProfile != null || _supabaseData != null;
 
-    // Simulate a brief validation delay (will be real API call later)
-    Future.delayed(const Duration(milliseconds: 600), () {
-      final profile = InviteCodes.validate(code);
-      if (mounted) setState(() {
-        _isValidating = false;
-        _validatedProfile = profile;
-        _errorMessage = profile == null
-            ? 'Code not recognised. Check with your care team or set up manually.'
-            : null;
-      });
+  // ── Validation: Supabase first, demo codes as fallback ───────────────────
+  Future<void> _validateCode(String code) async {
+    final trimmed = code.trim().toUpperCase();
+    if (trimmed.isEmpty) return;
+    setState(() {
+      _isValidating = true;
+      _errorMessage = null;
+      _supabaseData = null;
+      _validatedProfile = null;
+    });
+
+    // 1. Try Supabase (real patient)
+    if (SupabaseService.isAvailable) {
+      final data = await SupabaseService.validateInviteCode(trimmed);
+      if (!mounted) return;
+      // Guard against stale result if user kept typing
+      if (_codeController.text.trim().toUpperCase() == trimmed && data != null) {
+        setState(() { _isValidating = false; _supabaseData = data; });
+        return;
+      }
+    }
+
+    // 2. Fallback: demo invite codes (always work offline)
+    if (!mounted) return;
+    final profile = InviteCodes.validate(trimmed);
+    setState(() {
+      _isValidating = false;
+      _validatedProfile = profile;
+      _errorMessage = profile == null
+          ? 'Code not recognised. Check with your care team or set up manually.'
+          : null;
     });
   }
 
-  void _continueWithCode() {
-    if (_validatedProfile == null) return;
-    InviteCodes.apply(_validatedProfile!);
-    context.go('/');
+  // ── Continue button ───────────────────────────────────────────────────────
+  Future<void> _continueWithCode() async {
+    if (_isApplying) return;
+    if (_supabaseData != null) {
+      await _applySupabaseData(_supabaseData!);
+    } else if (_validatedProfile != null) {
+      InviteCodes.apply(_validatedProfile!);
+      if (mounted) context.go('/');
+    }
+  }
+
+  Future<void> _applySupabaseData(Map<String, dynamic> data) async {
+    setState(() => _isApplying = true);
+    try {
+      await SupabaseService.applyPatientToSession(data);
+
+      final patientId = data['id'] as String;
+      // Persist for session recovery on next launch
+      SharedPreferences.getInstance()
+          .then((p) => p.setString('rehlah_patient_id', patientId));
+      // Mark code as used — fire-and-forget
+      SupabaseService.activatePatient(patientId); // ignore: unawaited_futures
+
+      if (mounted) context.go('/');
+    } catch (_) {
+      if (mounted) setState(() => _isApplying = false);
+    }
   }
 
   void _setupManually() => context.go('/onboarding');
@@ -142,7 +188,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Stack(children: [
-        // Background orbs
         Positioned(top: -80, right: -60,
           child: Container(width: 240, height: 240,
             decoration: BoxDecoration(shape: BoxShape.circle,
@@ -162,7 +207,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               children: [
                 const SizedBox(height: 20),
 
-                // Logo
                 Container(
                   width: 80, height: 80,
                   decoration: BoxDecoration(
@@ -200,7 +244,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
                 const SizedBox(height: 40),
 
-                // ── Invite code section ──────────────────────────────────
                 AnimatedCrossFade(
                   duration: const Duration(milliseconds: 280),
                   crossFadeState: _showCodeInput
@@ -212,7 +255,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
                 const SizedBox(height: 20),
 
-                // ── Divider ──────────────────────────────────────────────
                 Row(children: [
                   Expanded(child: Divider(
                     color: AppColors.border, thickness: 0.5)),
@@ -227,7 +269,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
                 const SizedBox(height: 20),
 
-                // ── Manual setup ─────────────────────────────────────────
                 GestureDetector(
                   onTap: _setupManually,
                   child: Container(
@@ -253,7 +294,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
                 const SizedBox(height: 10),
 
-                // ── Caregiver entry ───────────────────────────────────────
                 GestureDetector(
                   onTap: _showCaregiverEntry,
                   child: Container(
@@ -280,7 +320,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
                 const SizedBox(height: 10),
 
-                // ── Explore with sample data ──────────────────────────────
                 GestureDetector(
                   onTap: _loadDemo,
                   child: Container(
@@ -295,7 +334,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
                 const SizedBox(height: 24),
 
-                // ── Privacy note ─────────────────────────────────────────
                 Text(
                   '🔒 Your data stays yours. Rehlah never sells your health information.',
                   textAlign: TextAlign.center,
@@ -310,7 +348,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     );
   }
 
-  // ── Code prompt (before typing) ───────────────────────────────────────────
   Widget _buildCodePrompt() {
     return GestureDetector(
       onTap: () => setState(() => _showCodeInput = true),
@@ -340,17 +377,16 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     );
   }
 
-  // ── Code input (expanded) ─────────────────────────────────────────────────
   Widget _buildCodeInput() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header
         Row(children: [
           GestureDetector(
             onTap: () => setState(() {
               _showCodeInput = false;
               _validatedProfile = null;
+              _supabaseData = null;
               _errorMessage = null;
               _codeController.clear();
             }),
@@ -372,7 +408,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             color: AppColors.text3)),
         const SizedBox(height: 8),
 
-        // Code input field
         TextField(
           controller: _codeController,
           autofocus: true,
@@ -383,13 +418,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           onChanged: (v) {
             setState(() {
               _validatedProfile = null;
+              _supabaseData = null;
               _errorMessage = null;
             });
             if (v.trim().length >= 4) _validateCode(v);
           },
           onSubmitted: _validateCode,
           decoration: InputDecoration(
-            hintText: 'e.g. REHLAH-ACT-001',
+            hintText: 'e.g. REHLAH-ACT-001 or ABC-1234',
             hintStyle: const TextStyle(color: AppColors.text3,
               fontWeight: FontWeight.w300, letterSpacing: 0),
             filled: true,
@@ -400,7 +436,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     child: SizedBox(width: 18, height: 18,
                       child: CircularProgressIndicator(
                         strokeWidth: 2, color: AppColors.primary)))
-                : _validatedProfile != null
+                : _hasValidCode
                     ? const Icon(Icons.check_circle_rounded,
                         color: AppColors.teal, size: 20)
                     : null,
@@ -413,7 +449,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(13),
               borderSide: BorderSide(
-                color: _validatedProfile != null
+                color: _hasValidCode
                     ? AppColors.teal
                     : AppColors.primaryMid,
                 width: 1.5)),
@@ -424,7 +460,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           ),
         ),
 
-        // Error message
         if (_errorMessage != null) ...[
           const SizedBox(height: 8),
           Text(_errorMessage!,
@@ -433,8 +468,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               height: 1.5)),
         ],
 
-        // Validated profile preview
-        if (_validatedProfile != null) ...[
+        // ── Validated profile preview ──────────────────────────────────────
+        if (_hasValidCode) ...[
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(13),
@@ -444,17 +479,24 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               border: Border.all(
                 color: AppColors.teal.withOpacity(0.25), width: 0.5)),
             child: Row(children: [
-              Text(_validatedProfile!.scenarioEmoji,
+              Text(
+                _supabaseData != null ? '🏥' : _validatedProfile!.scenarioEmoji,
                 style: const TextStyle(fontSize: 22)),
               const SizedBox(width: 12),
               Expanded(child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Welcome, ${_validatedProfile!.name}',
+                  Text(
+                    'Welcome, ${_supabaseData?['name'] ?? _validatedProfile!.name}',
                     style: const TextStyle(fontFamily: 'Inter', fontSize: 14,
                       fontWeight: FontWeight.w600, color: AppColors.text1)),
                   const SizedBox(height: 2),
-                  Text(_validatedProfile!.scenarioLabel,
+                  Text(
+                    _supabaseData != null
+                      ? '${_supabaseData!['diagnosis'] ?? 'Breast cancer'} · '
+                        'Cycle ${_supabaseData!['cycle_number']} of '
+                        '${_supabaseData!['total_cycles']}'
+                      : _validatedProfile!.scenarioLabel,
                     style: const TextStyle(fontFamily: 'Inter', fontSize: 12,
                       color: AppColors.teal, fontWeight: FontWeight.w400,
                       height: 1.4)),
@@ -468,30 +510,35 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
         const SizedBox(height: 16),
 
-        // Continue button
+        // ── Continue button ────────────────────────────────────────────────
         GestureDetector(
-          onTap: _validatedProfile != null ? _continueWithCode : null,
+          onTap: _hasValidCode && !_isApplying
+              ? () => _continueWithCode()
+              : null,
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 14),
             decoration: BoxDecoration(
-              color: _validatedProfile != null
+              color: _hasValidCode && !_isApplying
                   ? AppColors.primary
                   : AppColors.primary.withOpacity(0.3),
               borderRadius: BorderRadius.circular(13),
-              boxShadow: _validatedProfile != null ? [BoxShadow(
+              boxShadow: _hasValidCode && !_isApplying ? [BoxShadow(
                 color: AppColors.primary.withOpacity(0.30),
                 blurRadius: 14, offset: const Offset(0, 4))] : null),
-            child: const Center(child: Text('Continue with code →',
-              style: TextStyle(fontFamily: 'Inter', fontSize: 15,
-                fontWeight: FontWeight.w500, color: Colors.white))),
+            child: _isApplying
+              ? const Center(child: SizedBox(width: 20, height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white)))
+              : const Center(child: Text('Continue with code →',
+                  style: TextStyle(fontFamily: 'Inter', fontSize: 15,
+                    fontWeight: FontWeight.w500, color: Colors.white))),
           ),
         ),
 
         const SizedBox(height: 10),
 
-        // Test codes hint (remove before production)
         GestureDetector(
           onTap: () => _showTestCodes(context),
           child: Center(child: Text('View test codes ↗',
@@ -504,7 +551,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     );
   }
 
-  // ── Test codes sheet (dev helper) ─────────────────────────────────────────
   void _showTestCodes(BuildContext context) {
     showModalBottomSheet(
       context: context,

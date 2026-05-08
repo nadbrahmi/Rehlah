@@ -62,6 +62,10 @@ class UserSession extends ChangeNotifier {
   int totalCycles = 8;
   int dayInCycle = 7;
 
+  // ── Supabase patient link ─────────────────────────────────────────────────
+  String? supabasePatientId;
+  DateTime? cycleStartDate;
+
   // ── Computed phase ────────────────────────────────────────────────────────
   ChemoPhase get currentPhase => ProtocolResolver.resolve(
     protocol, dayInCycle, isTaxolPhase: isTaxolPhase);
@@ -456,6 +460,39 @@ class UserSession extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Populate labs from Supabase rows (each row has nested `lab_metrics` list).
+  /// Marks as initialized so initDefaultLabs() won't run afterward.
+  void initLabsFromData(List<Map<String, dynamic>> labRows) {
+    _labsInitialized = true;
+    for (final row in labRows) {
+      final dateStr = row['date'] as String?;
+      if (dateStr == null) continue;
+      final date = DateTime.tryParse(dateStr);
+      if (date == null) continue;
+
+      final metricsRaw = row['lab_metrics'] as List<dynamic>? ?? [];
+      final metrics = metricsRaw.map((m) {
+        final map = m as Map<String, dynamic>;
+        return LabMetric(
+          name:          map['name']  as String? ?? '',
+          value:         (map['value']          as num?)?.toDouble() ?? 0,
+          unit:          map['unit']  as String? ?? '',
+          normalMin:     (map['normal_min']      as num?)?.toDouble() ?? 0,
+          normalMax:     (map['normal_max']      as num?)?.toDouble() ?? 100,
+          previousValue: (map['previous_value']  as num?)?.toDouble(),
+        );
+      }).toList();
+
+      _labs.add(LabResult(
+        id:        row['id']         as String? ?? 'lab_${_labs.length}',
+        panelName: row['panel_name'] as String? ?? 'Lab Results',
+        date:      date,
+        metrics:   metrics,
+        aiSummary: row['ai_summary'] as String?,
+      ));
+    }
+  }
+
   void initDefaultLabs() {
     if (_labsInitialized) return;
     _labsInitialized = true;
@@ -498,6 +535,43 @@ class UserSession extends ChangeNotifier {
   bool _medsInitialized = false;
 
   List<Medication> get medications => List.unmodifiable(_medications);
+
+  /// Populate medications from Supabase rows. Marks as initialized so
+  /// initDefaultMedications() won't run afterward.
+  void initMedicationsFromData(List<Map<String, dynamic>> meds) {
+    _medsInitialized = true;
+    for (final m in meds) {
+      _medications.add(Medication(
+        id: m['id'] as String? ?? 'med_${_medications.length}',
+        name: m['name'] as String? ?? '',
+        dose: m['dose'] as String? ?? '',
+        frequency: m['frequency'] as String? ?? 'Daily',
+        emoji: m['emoji'] as String? ?? '💊',
+        category: m['category'] as String? ?? 'chemo',
+        totalSupply: m['total_supply'] as int?,
+      ));
+    }
+  }
+
+  /// Populate appointments from Supabase rows. Marks as initialized so
+  /// initDefaultAppointments() won't run afterward.
+  void initAppointmentsFromData(List<Map<String, dynamic>> apts) {
+    _appointmentsInitialized = true;
+    for (final a in apts) {
+      final dtStr = a['date_time'] as String?;
+      if (dtStr == null) continue;
+      final dt = DateTime.tryParse(dtStr);
+      if (dt == null) continue;
+      _appointments.add(Appointment(
+        id: a['id'] as String? ?? 'apt_${_appointments.length}',
+        title: a['title'] as String? ?? 'Appointment',
+        doctorName: a['doctor_name'] as String? ?? '',
+        location: a['location'] as String? ?? '',
+        dateTime: dt,
+        isPast: dt.isBefore(DateTime.now()),
+      ));
+    }
+  }
 
   void initDefaultMedications() {
     if (_medsInitialized) return;

@@ -1,8 +1,5 @@
 /* ═══════════════════════════════════════════════════════
    Rehlah — Coordinator Onboarding Tool · app.js
-   Backend stubs marked // TODO(api): — replace with real
-   API calls when Firebase / Supabase / custom API is wired.
-   localStorage used for demo persistence end-to-end.
    ═══════════════════════════════════════════════════════ */
 
 // ─── Protocol definitions (clinical static data) ───
@@ -47,10 +44,195 @@ let currentMeds = [];
 let formData = {};
 const ONBOARDING_SCREENS = ['step1','step2','step3','step4'];
 
-// ─── localStorage helpers ───
+// ─── Supabase config — replace these values before deploying ───────────────
+// Get URL + anon key from: https://app.supabase.com → Project Settings → API
+const SUPABASE_URL = 'https://whafhfcbkilsnnfezxeu.supabase.co/'
+const SUPABASE_ANON_KEY = 'sb_publishable_4za9kUw2j1gdDNJgNdMcJA_GRy02mNR'
 
-// TODO(api): replace savePatient with POST /api/patients → server returns canonical code,
-// persists record, queues SMS to patient phone.
+let supabaseClient = null
+if (SUPABASE_URL !== 'YOUR_SUPABASE_URL' && window.supabase) {
+  supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+}
+
+// Maps web protocol keys → DB protocol_id values used by the Flutter app
+const PROTOCOL_ID_MAP = {
+  'AC-21':   'AC-T',
+  'Taxol-W': 'TC',
+  'Carbo-T': 'TC',
+  'CMF':     'CMF'
+}
+
+const TOTAL_CYCLES_MAP = {
+  'AC-21':   8,
+  'Taxol-W': 12,
+  'Carbo-T': 6,
+  'CMF':     6
+}
+
+// ─── Invite code generator (ABC-1234 format, no I/O/0/1 confusion) ─────────
+function generateInviteCode() {
+  const L = 'ABCDEFGHJKLMNPQRSTUVWXYZ'
+  const r = () => L[Math.floor(Math.random() * L.length)]
+  const d = () => Math.floor(Math.random() * 10)
+  return `${r()}${r()}${r()}-${d()}${d()}${d()}${d()}`
+}
+
+// ─── Protocol → medication list for Supabase insert ────────────────────────
+function getProtocolMedications(protocolId) {
+  const map = {
+    'AC-T': [
+      {name:'Doxorubicin',    dose:'60mg',  frequency:'Cycle day 1', emoji:'💊', category:'chemo'},
+      {name:'Cyclophosphamide',dose:'600mg', frequency:'Cycle day 1', emoji:'💊', category:'chemo'},
+      {name:'Ondansetron',    dose:'8mg',   frequency:'As needed',   emoji:'💊', category:'symptomatic'},
+      {name:'Dexamethasone',  dose:'4mg',   frequency:'Days 1-3',    emoji:'💊', category:'symptomatic'},
+    ],
+    'TC': [
+      {name:'Docetaxel',      dose:'75mg',  frequency:'Cycle day 1', emoji:'💊', category:'chemo'},
+      {name:'Cyclophosphamide',dose:'600mg', frequency:'Cycle day 1', emoji:'💊', category:'chemo'},
+      {name:'Ondansetron',    dose:'8mg',   frequency:'As needed',   emoji:'💊', category:'symptomatic'},
+    ],
+    'CMF': [
+      {name:'Cyclophosphamide',dose:'600mg', frequency:'Days 1+8', emoji:'💊', category:'chemo'},
+      {name:'Methotrexate',   dose:'40mg',  frequency:'Days 1+8', emoji:'💊', category:'chemo'},
+      {name:'Fluorouracil',   dose:'600mg', frequency:'Days 1+8', emoji:'💊', category:'chemo'},
+      {name:'Ondansetron',    dose:'8mg',   frequency:'As needed', emoji:'💊', category:'symptomatic'},
+    ],
+    'Anastrozole': [
+      {name:'Anastrozole', dose:'1mg', frequency:'Daily', emoji:'💊', category:'hormone_therapy'},
+    ],
+  }
+  return map[protocolId] || []
+}
+
+// ─── Supabase submission ────────────────────────────────────────────────────
+async function _submitToSupabase(code) {
+  const protocolId  = PROTOCOL_ID_MAP[selectedProtocol] || selectedProtocol
+  const totalCycles = TOTAL_CYCLES_MAP[selectedProtocol] || 8
+  const cycleNum    = parseInt(document.getElementById('cycle-num')?.value || '1')
+  const cycleStart  = document.getElementById('cycle-start')?.value || null
+  const apptDate    = document.getElementById('appt-date')?.value   || null
+  const patientName = document.getElementById('patient-name')?.value || ''
+  const patientDob  = document.getElementById('patient-dob')?.value  || null
+  const phoneRaw    = document.getElementById('patient-phone')?.value || ''
+  const patientEmail = document.getElementById('patient-email')?.value || ''
+  const cancerType  = document.getElementById('cancer-type')?.value  || 'Breast cancer'
+  const oncoEmail   = document.getElementById('onco-email')?.value   || ''
+  const coordEmail  = document.getElementById('coord-email')?.value  || ''
+
+  const { data: patient, error } = await supabaseClient
+    .from('patients')
+    .insert({
+      name:              patientName,
+      date_of_birth:     patientDob,
+      diagnosis:         cancerType,
+      protocol_id:       protocolId,
+      cycle_number:      cycleNum,
+      cycle_start_date:  cycleStart,
+      total_cycles:      totalCycles,
+      invite_code:       code,
+      oncologist_email:  oncoEmail || null,
+      coordinator_email: coordEmail || null,
+      patient_phone:     phoneRaw ? `+971${phoneRaw.replace(/\D/g, '')}` : null,
+      patient_email:     patientEmail || null,
+    })
+    .select()
+    .single()
+
+  if (error) throw error
+
+  // Use the meds the coordinator confirmed in the form; fall back to protocol defaults
+  const confirmedMeds = currentMeds.filter(m => m.checked)
+  const medsToInsert = confirmedMeds.length > 0
+    ? confirmedMeds.map(m => ({
+        patient_id: patient.id,
+        name:       m.name,
+        dose:       m.dose,
+        frequency:  m.freq || 'As prescribed',
+        emoji:      '💊',
+        category:   m.route === 'Oral' ? 'oral' : 'chemo',
+      }))
+    : getProtocolMedications(protocolId).map(m => ({ ...m, patient_id: patient.id }))
+
+  if (medsToInsert.length > 0) {
+    await supabaseClient.from('medications').insert(medsToInsert)
+  }
+
+  if (apptDate) {
+    await supabaseClient.from('appointments').insert({
+      patient_id:  patient.id,
+      title:       'Oncology appointment',
+      doctor_name: oncoEmail.split('@')[0] || 'Oncologist',
+      date_time:   new Date(apptDate).toISOString(),
+    })
+  }
+
+  return patient
+}
+
+// ─── Build localStorage record (demo / offline fallback) ───────────────────
+function _buildLocalRecord(code) {
+  const name     = document.getElementById('patient-name')?.value || 'PAT'
+  const phoneRaw = document.getElementById('patient-phone')?.value || ''
+  const onco     = document.getElementById('onco-email')?.value   || '—'
+  const appt     = document.getElementById('appt-date')?.value
+  return {
+    id:         crypto.randomUUID?.() || `local-${Date.now()}`,
+    inviteCode: code,
+    status:     'pending',
+    identity: {
+      name,
+      dob:          document.getElementById('patient-dob')?.value    || '',
+      phone:        phoneRaw ? `+971${phoneRaw.replace(/\D/g, '')}` : '',
+      email:        document.getElementById('patient-email')?.value  || '',
+      cancerType:   document.getElementById('cancer-type')?.value    || '',
+      cancerStage:  document.getElementById('cancer-stage')?.value   || '',
+      cancerSubtype:document.getElementById('cancer-subtype')?.value || '',
+    },
+    protocol: {
+      key:       selectedProtocol,
+      cycleNum:  parseInt(document.getElementById('cycle-num')?.value || '1'),
+      cycleStart:document.getElementById('cycle-start')?.value || '',
+      apptDate:  appt || '',
+      meds:      currentMeds.filter(m => m.checked),
+      oncoEmail: onco,
+      coordEmail:document.getElementById('coord-email')?.value || '',
+    },
+    createdAt:  new Date().toISOString(),
+    createdBy:  'coordinator',
+  }
+}
+
+// ─── Populate step 4 success screen ────────────────────────────────────────
+function _showInviteStep4(code) {
+  const name     = document.getElementById('patient-name')?.value || ''
+  const phoneRaw = document.getElementById('patient-phone')?.value || ''
+  const onco     = document.getElementById('onco-email')?.value   || '—'
+  const appt     = document.getElementById('appt-date')?.value
+  const cycleN   = document.getElementById('cycle-num')?.value
+  const firstName = name.split(' ')[0]
+
+  document.getElementById('generated-code').textContent = code
+  document.getElementById('inv-name').textContent  = name
+  document.getElementById('inv-proto').textContent = selectedProtocol
+    ? `${selectedProtocol} · Cycle ${cycleN}` : '—'
+  document.getElementById('inv-phone').textContent = phoneRaw
+    ? `+971 ${formatPhoneDisplay(phoneRaw)}` : '—'
+  document.getElementById('inv-onco').textContent  = onco
+  document.getElementById('inv-appt').textContent  = appt
+    ? `Report scheduled ${new Date(new Date(appt).getTime() - 2*86400000)
+        .toLocaleDateString('en-GB', {day:'numeric', month:'long'})}`
+    : 'Report generated 48h before appointment'
+
+  // Bilingual SMS preview (English + Arabic)
+  document.getElementById('sms-preview').innerHTML =
+    `Hello ${escapeHtml(firstName)}, your care team at Cleveland Clinic Abu Dhabi has enrolled you in Rehlah. Download the app and enter code <strong>${escapeHtml(code)}</strong> to begin. Your journey is supported. 🌿` +
+    `<br><br><span dir="rtl" style="display:block;text-align:right;font-family:'Almarai',sans-serif;font-size:13px;">` +
+    `مرحباً ${escapeHtml(firstName)}، قام فريق رعايتك بتسجيلك في رحلة. حمّل التطبيق وأدخل الرمز <strong>${escapeHtml(code)}</strong> للبدء. رحلتك مدعومة. 🌿</span>`
+
+  showScreen('step4')
+}
+
+// ─── localStorage helpers ───────────────────────────────────────────────────
 function savePatient(record) {
   const patients = getStoredPatients();
   patients.unshift(record);
@@ -62,7 +244,7 @@ function getStoredPatients() {
   catch { return []; }
 }
 
-// ─── Screen routing ───
+// ─── Screen routing ─────────────────────────────────────────────────────────
 
 function showScreen(id) {
   const tEl = document.getElementById('toast');
@@ -96,16 +278,15 @@ function showScreen(id) {
   } else {
     document.querySelectorAll('#sb-default .sb-nav').forEach(n => n.classList.remove('active'));
     if (id === 'dashboard') document.getElementById('sbn-dash')?.classList.add('active');
-    if (id === 'patients') document.getElementById('sbn-pat')?.classList.add('active');
+    if (id === 'patients')  document.getElementById('sbn-pat')?.classList.add('active');
 
-    // TODO(api): GET /api/patients?coordinatorId={me} — replace static rows with API response
     if (id === 'dashboard' || id === 'patients') renderDynamicPatients(id);
   }
 
-  window.scrollTo(0,0);
+  window.scrollTo(0, 0);
 }
 
-// ─── Form reset / lifecycle ───
+// ─── Form reset / lifecycle ──────────────────────────────────────────────────
 
 function resetForm() {
   ['patient-name','patient-dob','patient-phone','patient-email',
@@ -138,29 +319,29 @@ function startOnboarding() {
   const today = new Date().toISOString().split('T')[0];
   const cs = document.getElementById('cycle-start');
   if (cs && !cs.value) cs.value = today;
-  let appt = new Date(); appt.setDate(appt.getDate()+21);
+  let appt = new Date(); appt.setDate(appt.getDate() + 21);
   const ad = document.getElementById('appt-date');
   if (ad && !ad.value) ad.value = appt.toISOString().split('T')[0];
 }
 
 function cancelOnboarding() { showScreen('dashboard'); }
 
-function goToStep(n) { updateReview(); showScreen('step'+n); }
+function goToStep(n) { updateReview(); showScreen('step' + n); }
 
-// ─── Validation ───
+// ─── Validation ──────────────────────────────────────────────────────────────
 
 const STEP_REQUIRED = {
   1: [
     {id:'patient-name', label:'Full name'},
-    {id:'patient-dob', label:'Date of birth'},
-    {id:'patient-phone', label:'Mobile number'},
-    {id:'cancer-type', label:'Cancer type'}
+    {id:'patient-dob',  label:'Date of birth'},
+    {id:'patient-phone',label:'Mobile number'},
+    {id:'cancer-type',  label:'Cancer type'}
   ],
   2: [
     {id:'__protocol__', label:'Treatment protocol'},
-    {id:'cycle-start', label:'Cycle start date'},
-    {id:'appt-date', label:'Next appointment'},
-    {id:'onco-email', label:'Oncologist email'}
+    {id:'cycle-start',  label:'Cycle start date'},
+    {id:'appt-date',    label:'Next appointment'},
+    {id:'onco-email',   label:'Oncologist email'}
   ]
 };
 
@@ -169,7 +350,6 @@ function clearError(el) {
   if (f) f.classList.remove('error','shake');
 }
 
-// Phone normalization (UAE only): strip +971/00971/leading 0, keep digits, cap 9, pretty-format.
 function normalizePhone(input) {
   let digits = input.value.replace(/\D/g, '');
   if (digits.startsWith('00971')) digits = digits.slice(5);
@@ -213,8 +393,8 @@ function validatePhoneFormat(input) {
 
 function clearAllErrors() {
   document.querySelectorAll('.field.error').forEach(f => f.classList.remove('error','shake'));
-  const pg = document.getElementById('protocol-grid');
-  const pe = document.getElementById('proto-grid-error');
+  const pg  = document.getElementById('protocol-grid');
+  const pe  = document.getElementById('proto-grid-error');
   if (pg) pg.classList.remove('error');
   if (pe) pe.classList.remove('show');
   document.querySelectorAll('.meds-error-banner').forEach(b => b.remove());
@@ -228,9 +408,9 @@ function validateStep(stepNum) {
   required.forEach(req => {
     if (req.id === '__protocol__') {
       if (!selectedProtocol) {
-        const grid = document.getElementById('protocol-grid');
+        const grid  = document.getElementById('protocol-grid');
         const errEl = document.getElementById('proto-grid-error');
-        if (grid) grid.classList.add('error');
+        if (grid)  grid.classList.add('error');
         if (errEl) errEl.classList.add('show');
         errors.push({el: grid, label: req.label});
       }
@@ -319,10 +499,10 @@ function attemptStep(targetStep) {
   goToStep(targetStep);
 }
 
-// ─── Med list management ───
+// ─── Med list management ─────────────────────────────────────────────────────
 
 const ROUTE_OPTIONS = ['Oral','IV push','IV infusion','Subcutaneous','Intramuscular','Topical'];
-const FREQ_OPTIONS = ['Once daily','Twice daily','Three times daily','Weekly','Every cycle day 1','Days 1–3 of cycle','As needed'];
+const FREQ_OPTIONS  = ['Once daily','Twice daily','Three times daily','Weekly','Every cycle day 1','Days 1–3 of cycle','As needed'];
 
 function escapeHtml(s) {
   return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -331,10 +511,10 @@ function escapeHtml(s) {
 function renderMeds() {
   const list = document.getElementById('meds-list');
   if (!list) return;
-  list.innerHTML = currentMeds.map((m,i) => {
+  list.innerHTML = currentMeds.map((m, i) => {
     const checkedCls = m.checked ? 'checked' : '';
-    const routeOpts = ROUTE_OPTIONS.map(r => `<option ${r===m.route?'selected':''}>${r}</option>`).join('');
-    const freqOpts = FREQ_OPTIONS.map(f => `<option ${f===m.freq?'selected':''}>${f}</option>`).join('');
+    const routeOpts  = ROUTE_OPTIONS.map(r => `<option ${r===m.route?'selected':''}>${r}</option>`).join('');
+    const freqOpts   = FREQ_OPTIONS.map(f => `<option ${f===m.freq?'selected':''}>${f}</option>`).join('');
     return `
     <div class="med-item" data-idx="${i}">
       <div class="med-item-main">
@@ -344,7 +524,7 @@ function renderMeds() {
         <span class="med-name">${escapeHtml(m.name)}</span>
         <div class="med-meta">
           <span class="med-pill dose">${escapeHtml(m.dose)}</span>
-          ${m.freq ? `<span class="med-pill">${escapeHtml(m.freq)}</span>` : ''}
+          ${m.freq  ? `<span class="med-pill">${escapeHtml(m.freq)}</span>` : ''}
           ${m.route ? `<span class="med-pill route">${escapeHtml(m.route)}</span>` : ''}
         </div>
         <div class="med-actions">
@@ -378,7 +558,7 @@ function renderMeds() {
 function updateMedCountBadge() {
   const badge = document.getElementById('med-count-badge');
   if (!badge) return;
-  const total = currentMeds.length;
+  const total     = currentMeds.length;
   const confirmed = currentMeds.filter(m => m.checked).length;
   badge.textContent = `${confirmed} of ${total} confirmed`;
   badge.classList.toggle('warn', total > 0 && confirmed === 0);
@@ -408,7 +588,7 @@ function cancelEditMed(idx) {
 function saveEditMed(idx) {
   const row = document.querySelector(`.med-item[data-idx="${idx}"]`);
   if (!row || !currentMeds[idx]) return;
-  const get = sel => row.querySelector(`[data-edit="${sel}"]`)?.value.trim() || '';
+  const get  = sel => row.querySelector(`[data-edit="${sel}"]`)?.value.trim() || '';
   const name = get('name');
   if (!name) { showToast('Medication name is required', true); return; }
   currentMeds[idx] = { ...currentMeds[idx], name, dose: get('dose'), freq: get('freq'), route: get('route') };
@@ -428,10 +608,10 @@ function addCustomMed() { openMedModal(); }
 
 function openMedModal() {
   const m = document.getElementById('med-modal');
-  document.getElementById('med-modal-name').value = '';
-  document.getElementById('med-modal-dose').value = '';
+  document.getElementById('med-modal-name').value  = '';
+  document.getElementById('med-modal-dose').value  = '';
   document.getElementById('med-modal-route').value = 'Oral';
-  document.getElementById('med-modal-freq').value = 'Once daily';
+  document.getElementById('med-modal-freq').value  = 'Once daily';
   m.classList.add('show');
   setTimeout(() => document.getElementById('med-modal-name').focus(), 50);
 }
@@ -441,10 +621,10 @@ function closeMedModal() {
 }
 
 function saveMedFromModal() {
-  const name = document.getElementById('med-modal-name').value.trim();
-  const dose = document.getElementById('med-modal-dose').value.trim();
+  const name  = document.getElementById('med-modal-name').value.trim();
+  const dose  = document.getElementById('med-modal-dose').value.trim();
   const route = document.getElementById('med-modal-route').value;
-  const freq = document.getElementById('med-modal-freq').value;
+  const freq  = document.getElementById('med-modal-freq').value;
   if (!name) { showToast('Medication name is required', true); return; }
   if (!dose) { showToast('Dose is required', true); return; }
   currentMeds.push({ name, dose, route, freq, checked: true });
@@ -453,185 +633,152 @@ function saveMedFromModal() {
   showToast(`${name} added`);
 }
 
-// ─── Protocol selection ───
+// ─── Protocol selection ───────────────────────────────────────────────────────
 
 function selectProtocol(el, key) {
   document.querySelectorAll('.proto').forEach(p => p.classList.remove('selected'));
   el.classList.add('selected');
   selectedProtocol = key;
-  const grid = document.getElementById('protocol-grid');
+  const grid  = document.getElementById('protocol-grid');
   const errEl = document.getElementById('proto-grid-error');
-  if (grid) grid.classList.remove('error');
+  if (grid)  grid.classList.remove('error');
   if (errEl) errEl.classList.remove('show');
   document.getElementById('cycle-card').style.display = 'block';
-  document.getElementById('meds-card').style.display = 'block';
+  document.getElementById('meds-card').style.display  = 'block';
   currentMeds = protocols[key].meds.map(m => ({ ...m }));
   renderMeds();
   updateCycleDisplay();
   updateReview();
 }
 
-// ─── Cycle display ───
+// ─── Cycle display ────────────────────────────────────────────────────────────
 
 function updateCycleDisplay() {
   if (!selectedProtocol) return;
   const start = document.getElementById('cycle-start').value;
   if (!start) return;
-  const cycleLen = protocols[selectedProtocol].cycleLen;
-  const nadir = protocols[selectedProtocol].nadir;
+  const cycleLen  = protocols[selectedProtocol].cycleLen;
+  const nadir     = protocols[selectedProtocol].nadir;
   const startDate = new Date(start);
-  const today = new Date();
-  const diff = Math.floor((today - startDate) / 86400000);
-  const cycleDay = Math.max(1, (diff % cycleLen) + 1);
-  let phase = cycleDay <= 5 ? 'Post-infusion' : cycleDay <= 14 ? 'Nadir window' : 'Recovery';
-  const isNadir = phase === 'Nadir window';
-  const display = document.getElementById('cycle-display');
+  const today     = new Date();
+  const diff      = Math.floor((today - startDate) / 86400000);
+  const cycleDay  = Math.max(1, (diff % cycleLen) + 1);
+  const phase     = cycleDay <= 5 ? 'Post-infusion' : cycleDay <= 14 ? 'Nadir window' : 'Recovery';
+  const isNadir   = phase === 'Nadir window';
+  const display   = document.getElementById('cycle-display');
   display.style.display = 'grid';
   document.getElementById('cycle-day-display').innerHTML = `Day ${cycleDay}<span class="small">/ ${cycleLen}</span>`;
   const phaseEl = document.getElementById('cycle-phase-display');
   phaseEl.textContent = phase;
-  phaseEl.className = 'cycle-val' + (isNadir ? ' warn' : '');
+  phaseEl.className   = 'cycle-val' + (isNadir ? ' warn' : '');
   document.getElementById('nadir-display').innerHTML = `Days ${nadir}<span class="small">of cycle</span>`;
   updateReview();
 }
 
-// ─── Review panel ───
+// ─── Review panel ─────────────────────────────────────────────────────────────
 
 function updateReview() {
-  const name = document.getElementById('patient-name')?.value || '—';
-  const dob = document.getElementById('patient-dob')?.value;
-  const phoneRaw = document.getElementById('patient-phone')?.value || '';
-  const phone = phoneRaw ? `+971 ${formatPhoneDisplay(phoneRaw)}` : '—';
-  const email = document.getElementById('patient-email')?.value || '—';
-  const cancer = document.getElementById('cancer-type')?.value || '—';
-  const stage = document.getElementById('cancer-stage')?.value || '—';
-  const subtype = document.getElementById('cancer-subtype')?.value || '—';
-  const cycleNum = document.getElementById('cycle-num')?.value || '—';
-  const cycleStart = document.getElementById('cycle-start')?.value || '';
-  const appt = document.getElementById('appt-date')?.value || '';
-  const onco = document.getElementById('onco-email')?.value || '—';
-  const coord = document.getElementById('coord-email')?.value || '—';
+  const name      = document.getElementById('patient-name')?.value || '—';
+  const dob       = document.getElementById('patient-dob')?.value;
+  const phoneRaw  = document.getElementById('patient-phone')?.value || '';
+  const phone     = phoneRaw ? `+971 ${formatPhoneDisplay(phoneRaw)}` : '—';
+  const email     = document.getElementById('patient-email')?.value || '—';
+  const cancer    = document.getElementById('cancer-type')?.value   || '—';
+  const stage     = document.getElementById('cancer-stage')?.value  || '—';
+  const subtype   = document.getElementById('cancer-subtype')?.value || '—';
+  const cycleNum  = document.getElementById('cycle-num')?.value     || '—';
+  const cycleStart = document.getElementById('cycle-start')?.value  || '';
+  const appt      = document.getElementById('appt-date')?.value     || '';
+  const onco      = document.getElementById('onco-email')?.value    || '—';
+  const coord     = document.getElementById('coord-email')?.value   || '—';
 
   const set = (id, val) => {
-    const el = document.getElementById(id); if(!el) return;
+    const el = document.getElementById(id); if (!el) return;
     el.textContent = val;
     if (val === '—') el.classList.add('muted'); else el.classList.remove('muted');
   };
-  set('rv-name', name);
-  set('rv-dob', dob ? new Date(dob).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}) : '—');
-  set('rv-phone', phone);
-  set('rv-email', email);
-  set('rv-cancer', cancer);
-  set('rv-stage', stage);
-  set('rv-subtype', subtype || '—');
-  set('rv-protocol', selectedProtocol || '—');
-  set('rv-cycle', cycleNum !== '—' ? `Cycle ${cycleNum}` : '—');
-  set('rv-cyclestart', cycleStart ? new Date(cycleStart).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}) : '—');
-  set('rv-appt', appt ? new Date(appt).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}) : '—');
-  set('rv-onco', onco);
-  set('rv-coord', coord);
-  set('rv-proto-meds', selectedProtocol || 'selected protocol');
+  set('rv-name',      name);
+  set('rv-dob',       dob ? new Date(dob).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}) : '—');
+  set('rv-phone',     phone);
+  set('rv-email',     email);
+  set('rv-cancer',    cancer);
+  set('rv-stage',     stage);
+  set('rv-subtype',   subtype || '—');
+  set('rv-protocol',  selectedProtocol || '—');
+  set('rv-cycle',     cycleNum !== '—' ? `Cycle ${cycleNum}` : '—');
+  set('rv-cyclestart',cycleStart ? new Date(cycleStart).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}) : '—');
+  set('rv-appt',      appt ? new Date(appt).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}) : '—');
+  set('rv-onco',      onco);
+  set('rv-coord',     coord);
+  set('rv-proto-meds',selectedProtocol || 'selected protocol');
 
   if (selectedProtocol && cycleStart) {
-    const cycleLen = protocols[selectedProtocol].cycleLen;
+    const cycleLen  = protocols[selectedProtocol].cycleLen;
     const startDate = new Date(cycleStart);
-    const today = new Date();
-    const diff = Math.floor((today - startDate) / 86400000);
-    const cycleDay = Math.max(1, (diff % cycleLen) + 1);
-    let phase = cycleDay <= 5 ? 'Post-infusion' : cycleDay <= 14 ? 'Nadir' : 'Recovery';
+    const today     = new Date();
+    const diff      = Math.floor((today - startDate) / 86400000);
+    const cycleDay  = Math.max(1, (diff % cycleLen) + 1);
+    const phase     = cycleDay <= 5 ? 'Post-infusion' : cycleDay <= 14 ? 'Nadir' : 'Recovery';
     set('rv-cyclephase', `Day ${cycleDay} · ${phase} phase`);
   } else {
-    set('rv-cyclephase','—');
+    set('rv-cyclephase', '—');
   }
   formData = { name, phone, onco, appt };
 }
 
-// ─── Invite code generation ───
+// ─── Invite code generation (Step 3 → Step 4) ────────────────────────────────
 
-function generateInvite() {
-  updateReview();
-  const name = document.getElementById('patient-name')?.value || 'PAT';
-  const rawInitials = name.trim().split(/\s+/).map(w => w[0]?.toUpperCase() || '').join('').replace(/[^A-Z]/g, '');
-  const initials = (rawInitials.substring(0,3) + 'XXX').substring(0,3);
-  const num = Math.floor(1000 + Math.random() * 9000);
-  const code = `${initials}-${num}`;
+async function generateInvite() {
+  updateReview()
+  const btn      = document.querySelector('#screen-step3 .btn-primary')
+  const origHTML = btn?.innerHTML
+  if (btn) { btn.disabled = true; btn.textContent = 'Enrolling…' }
 
-  const phoneRaw = document.getElementById('patient-phone')?.value || '';
-  const onco = document.getElementById('onco-email')?.value || '—';
-  const appt = document.getElementById('appt-date')?.value;
-  const cycleN = document.getElementById('cycle-num')?.value;
+  const code = generateInviteCode()
 
-  document.getElementById('generated-code').textContent = code;
-  document.getElementById('inv-name').textContent = name;
-  document.getElementById('inv-proto').textContent = selectedProtocol ? `${selectedProtocol} · Cycle ${cycleN}` : '—';
-  document.getElementById('inv-phone').textContent = phoneRaw ? `+971 ${formatPhoneDisplay(phoneRaw)}` : '—';
-  document.getElementById('inv-onco').textContent = onco;
-  document.getElementById('inv-appt').textContent = appt
-    ? `Report scheduled ${new Date(new Date(appt).getTime() - 2*86400000).toLocaleDateString('en-GB',{day:'numeric',month:'long'})}`
-    : 'Report generated 48h before appointment';
+  try {
+    if (supabaseClient) {
+      await _submitToSupabase(code)
+    } else {
+      // Demo / offline mode — persist to localStorage
+      savePatient(_buildLocalRecord(code))
+    }
+  } catch (err) {
+    console.error('Enrollment error:', err)
+    showToast('Enrollment failed — please try again', true)
+    if (btn) { btn.disabled = false; if (origHTML) btn.innerHTML = origHTML }
+    return
+  }
 
-  const firstName = name.split(' ')[0];
-  document.getElementById('sms-preview').innerHTML =
-    `Hello ${escapeHtml(firstName)}, your care team at Cleveland Clinic Abu Dhabi has enrolled you in Rehlah. Download the app and enter code <strong>${code}</strong> to begin. Your journey is supported. 🌿`;
-
-  // TODO(api): POST /api/patients → server returns canonical code, persists record, queues SMS.
-  // For now: build record and save to localStorage for demo.
-  const record = {
-    id: crypto.randomUUID?.() || `local-${Date.now()}`,
-    inviteCode: code,
-    status: 'pending',
-    identity: {
-      name,
-      dob: document.getElementById('patient-dob')?.value || '',
-      phone: phoneRaw ? `+971${phoneRaw.replace(/\D/g,'')}` : '',
-      email: document.getElementById('patient-email')?.value || '',
-      cancerType: document.getElementById('cancer-type')?.value || '',
-      cancerStage: document.getElementById('cancer-stage')?.value || '',
-      cancerSubtype: document.getElementById('cancer-subtype')?.value || '',
-    },
-    protocol: {
-      key: selectedProtocol,
-      cycleNum: parseInt(document.getElementById('cycle-num')?.value || '1'),
-      cycleStart: document.getElementById('cycle-start')?.value || '',
-      apptDate: appt || '',
-      meds: currentMeds.filter(m => m.checked),
-      oncoEmail: onco,
-      coordEmail: document.getElementById('coord-email')?.value || '',
-    },
-    createdAt: new Date().toISOString(),
-    createdBy: 'coordinator',
-  };
-  savePatient(record);
-
-  showScreen('step4');
+  if (btn) { btn.disabled = false; if (origHTML) btn.innerHTML = origHTML }
+  _showInviteStep4(code)
 }
 
-// ─── Resend invite ───
+// ─── Resend invite ────────────────────────────────────────────────────────────
 
-// TODO(api): POST /api/patients/{id}/resend → re-trigger SMS with same code.
 function resendInvite(name, phone) {
   const masked = phone.replace(/(\+\d+ \d+ )(\d+)( \d+)/, (_, a, b, c) => a + 'xxx' + c);
   showToast(`Invite code resent to ${masked}`);
 }
 
-// ─── Patient table (localStorage-backed) ───
+// ─── Patient table ────────────────────────────────────────────────────────────
 
 const DEMO_PATIENTS = [
-  {inviteCode:'NAD-7291', identity:{name:'Nadia R.'}, protocol:{key:'AC-21',cycleNum:4}, status:'active', _sub:'AC-T · Cycle 4 · Day 18'},
-  {inviteCode:'FAT-4418', identity:{name:'Fatima A.'}, protocol:{key:'AC-21',cycleNum:2}, status:'active', _sub:'AC-T · Cycle 2 · Day 5'},
-  {inviteCode:'MAR-9032', identity:{name:'Maryam H.'}, protocol:{key:'Taxol-W',cycleNum:3}, status:'pending', _sub:'Taxol weekly · Week 3'},
-  {inviteCode:'LAY-2201', identity:{name:'Layla M.'}, protocol:{key:'CMF',cycleNum:1}, status:'active', _sub:'CMF · Cycle 1 · Day 3'},
+  {inviteCode:'NAD-7291', identity:{name:'Nadia R.'},   protocol:{key:'AC-21',cycleNum:4}, status:'active',  _sub:'AC-T · Cycle 4 · Day 18'},
+  {inviteCode:'FAT-4418', identity:{name:'Fatima A.'},  protocol:{key:'AC-21',cycleNum:2}, status:'active',  _sub:'AC-T · Cycle 2 · Day 5'},
+  {inviteCode:'MAR-9032', identity:{name:'Maryam H.'},  protocol:{key:'Taxol-W',cycleNum:3},status:'pending',_sub:'Taxol weekly · Week 3'},
+  {inviteCode:'LAY-2201', identity:{name:'Layla M.'},   protocol:{key:'CMF',cycleNum:1},   status:'active',  _sub:'CMF · Cycle 1 · Day 3'},
 ];
 
 function initials(name) {
-  return (name || '').trim().split(/\s+/).map(w => w[0]?.toUpperCase() || '').join('').slice(0,2) || 'P';
+  return (name || '').trim().split(/\s+/).map(w => w[0]?.toUpperCase() || '').join('').slice(0, 2) || 'P';
 }
 
 function patientRow(p) {
-  const statusCls = p.status === 'active' ? 'active' : 'pending';
+  const statusCls      = p.status === 'active' ? 'active' : 'pending';
   const statusDotColor = p.status === 'active' ? 'var(--ok)' : 'var(--warn)';
-  const statusLabel = p.status === 'active' ? 'Active' : 'Pending';
-  const actionHtml = p.status === 'pending'
+  const statusLabel    = p.status === 'active' ? 'Active' : 'Pending';
+  const actionHtml     = p.status === 'pending'
     ? `<a class="tr-link" onclick="resendInvite('${escapeHtml(p.identity.name)}','${escapeHtml(p.identity.phone||'+971 50 000 0000')}')">Resend →</a>`
     : `<a class="tr-link">View →</a>`;
   const sub = p._sub || `${p.protocol.key} · Cycle ${p.protocol.cycleNum}`;
@@ -647,26 +794,21 @@ function patientRow(p) {
 
 function renderDynamicPatients(screenId) {
   const stored = getStoredPatients();
-  const all = [...stored, ...DEMO_PATIENTS];
+  const all    = [...stored, ...DEMO_PATIENTS];
 
   const dashTable = document.getElementById('dash-table-body');
-  const patTable = document.getElementById('patients-table-body');
+  const patTable  = document.getElementById('patients-table-body');
 
-  const dashRows = all.slice(0,4).map(patientRow).join('');
-  const allRows = all.map(patientRow).join('');
+  if (dashTable) dashTable.innerHTML = all.slice(0, 4).map(patientRow).join('');
+  if (patTable)  patTable.innerHTML  = all.map(patientRow).join('');
 
-  if (dashTable) dashTable.innerHTML = dashRows;
-  if (patTable) patTable.innerHTML = allRows;
-
-  // Update active count stat
   const activeCount = document.getElementById('stat-active-count');
   if (activeCount) {
-    const active = all.filter(p => p.status === 'active').length;
-    activeCount.textContent = active;
+    activeCount.textContent = all.filter(p => p.status === 'active').length;
   }
 }
 
-// ─── Toast ───
+// ─── Toast ────────────────────────────────────────────────────────────────────
 
 function showToast(msg, isError) {
   const t = document.getElementById('toast');
@@ -677,7 +819,7 @@ function showToast(msg, isError) {
   window.__toastT = setTimeout(() => t.classList.remove('show'), 2600);
 }
 
-// ─── Copy invite code ───
+// ─── Copy invite code ─────────────────────────────────────────────────────────
 
 function copyCode() {
   const code = document.getElementById('generated-code').textContent;
@@ -693,13 +835,11 @@ function copyCode() {
   showToast(`Code ${code} copied to clipboard`);
 }
 
-// ─── Init ───
+// ─── Init ─────────────────────────────────────────────────────────────────────
 
 window.addEventListener('DOMContentLoaded', () => {
-  // Default cycle-start to today when page loads
   const today = new Date().toISOString().split('T')[0];
-  const cs = document.getElementById('cycle-start');
+  const cs    = document.getElementById('cycle-start');
   if (cs) cs.value = today;
-  // Show dashboard and hydrate with localStorage patients
   showScreen('dashboard');
 });

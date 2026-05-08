@@ -1,9 +1,9 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/shared_widgets.dart';
-import '../../../../core/utils/models.dart';
 import '../../../../core/utils/user_session.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -178,7 +178,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.65),
             borderRadius: AppRadius.fullBR,
-            border: Border.all(color: Colors.white.withOpacity(0.8), width: 0.5)),
+            border: Border.all(color: Colors.white.withOpacity(0.8), width: 0.5),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.10),
+                blurRadius: 8, offset: const Offset(0, 2)),
+            ]),
           child: Text(
             hasCheckedIn ? 'View today\'s check-in →' : 'Begin check-in →',
             style: AppText.bodySemibold.copyWith(
@@ -941,12 +946,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             style: TextStyle(fontSize: 18)))),
         const SizedBox(width: 11),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(phase.name, style: AppText.bodySemibold),
+          Row(children: [
+            Expanded(child: Text(phase.name, style: AppText.bodySemibold)),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.peach.withOpacity(0.12),
+                borderRadius: AppRadius.fullBR),
+              child: Text('$progressPct%',
+                style: AppText.caption.copyWith(
+                  color: AppColors.peach,
+                  fontWeight: FontWeight.w600, fontSize: 10))),
+          ]),
           const SizedBox(height: 1),
-          Text('${session.protocol.name} · Cycle ${session.currentCycle} of ${session.totalCycles} · $progressPct% complete',
+          Text('${session.protocol.name} · Cycle ${session.currentCycle} of ${session.totalCycles}',
             style: AppText.bodySecondary),
           const SizedBox(height: 7),
-          AppProgressBar(value: progress, foreground: AppColors.peach),
+          AppProgressBar(value: progress, foreground: AppColors.peach, height: 4),
         ])),
       ]),
     );
@@ -986,24 +1002,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               d.hasData
                   ? Text(d.emoji,
                       style: const TextStyle(fontSize: 15))
-                  : Container(
-                      width: 20, height: 20,
-                      decoration: BoxDecoration(
-                        color: isToday
-                            ? AppColors.primaryLight
-                            : AppColors.background2,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: isToday
-                              ? AppColors.primaryMid
-                              : AppColors.border,
-                          width: 0.5)),
-                      child: Center(child: Text('·',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isToday
-                              ? AppColors.primary
-                              : AppColors.text3)))),
+                  : isToday
+                      ? _DashedCircle(
+                          size: 20,
+                          color: AppColors.primary,
+                          child: Text('+',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary)))
+                      : Container(
+                          width: 20, height: 20,
+                          decoration: BoxDecoration(
+                            color: AppColors.background2,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: AppColors.border,
+                              width: 0.5)),
+                          child: Center(child: Text('·',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.text3)))),
               const SizedBox(height: 3),
               Text(d.label, style: AppText.caption.copyWith(
                 fontSize: 9,
@@ -1024,7 +1043,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  // ── Quick tiles ───────────────────────────────────────────────────────────
+  // ── Quick tiles (2×2 grid) ────────────────────────────────────────────────
   Widget _buildQuickTiles(BuildContext context, UserSession session) {
     final hasRefill = session.hasRefillAlert;
     final medsSubLabel = hasRefill
@@ -1036,117 +1055,123 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         session.medications.isNotEmpty &&
         session.medsTakenTodayCount == session.medications.length;
 
-    final tiles = [
-      (
-        label: 'Ask AI',
-        sub: 'Any question',
-        icon: Icons.auto_awesome_rounded,
-        iconBg: AppColors.primaryLight,
-        iconColor: AppColors.primary,
-        route: '/ai-chat',
-        alert: false,
-        done: false,
-      ),
-      (
-        label: 'Appointments',
-        sub: session.upcomingAppointments.isNotEmpty
-            ? 'In ${session.upcomingAppointments.first.daysUntil} days'
-            : 'No upcoming',
-        icon: Icons.calendar_month_rounded,
-        iconBg: AppColors.peachLight,
-        iconColor: AppColors.peach,
-        route: '/care/appointments',
-        alert: false,
-        done: false,
-      ),
-      (
-        label: 'Medications',
-        sub: medsSubLabel,
-        icon: Icons.medication_rounded,
-        iconBg: hasRefill
-            ? AppColors.peachLight
-            : medsTaken ? AppColors.tealLight : AppColors.tealLight,
-        iconColor: hasRefill ? AppColors.peach : AppColors.teal,
-        route: '/care/medications',
-        alert: hasRefill,
-        done: medsTaken,
-      ),
-    ];
+    session.initDefaultLabs();
+    final labs = session.labs;
+    final abnormalCount = labs.isEmpty
+        ? 0
+        : labs.first.metrics
+            .where((m) => m.value < m.normalMin || m.value > m.normalMax)
+            .length;
+    final labSub = labs.isEmpty
+        ? 'No results yet'
+        : abnormalCount > 0 ? '$abnormalCount abnormal' : 'All normal';
+    final labAlert = abnormalCount > 0;
+
+    Widget tile({
+      required String label,
+      required String sub,
+      required IconData icon,
+      required Color iconBg,
+      required Color iconColor,
+      required String route,
+      bool alert = false,
+      bool done = false,
+    }) =>
+        Expanded(
+          child: GestureDetector(
+            onTap: () => context.push(route),
+            child: Container(
+              padding: const EdgeInsets.all(13),
+              decoration: BoxDecoration(
+                color: alert
+                    ? AppColors.peach.withOpacity(0.07)
+                    : done
+                        ? AppColors.teal.withOpacity(0.05)
+                        : AppColors.surface,
+                borderRadius: AppRadius.mdBR,
+                border: Border.all(
+                  color: alert
+                      ? AppColors.peach.withOpacity(0.30)
+                      : done
+                          ? AppColors.teal.withOpacity(0.25)
+                          : AppColors.border,
+                  width: alert ? 1.0 : 0.5),
+                boxShadow: alert
+                    ? [BoxShadow(
+                        color: AppColors.peach.withOpacity(0.08),
+                        blurRadius: 8, offset: const Offset(0, 2))]
+                    : null),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 34, height: 34,
+                    decoration: BoxDecoration(
+                      color: iconBg,
+                      borderRadius: AppRadius.smBR),
+                    child: Icon(icon, color: iconColor, size: 16)),
+                  const SizedBox(height: 9),
+                  Text(label,
+                    style: AppText.bodySemibold.copyWith(
+                      fontSize: 12,
+                      color: alert ? AppColors.peach : AppColors.text1)),
+                  const SizedBox(height: 2),
+                  Text(sub,
+                    style: AppText.caption.copyWith(
+                      fontSize: 10,
+                      color: alert
+                          ? AppColors.peach.withOpacity(0.8)
+                          : done ? AppColors.teal : AppColors.text3),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+                ]),
+            ),
+          ),
+        );
+
+    final apptSub = session.upcomingAppointments.isNotEmpty
+        ? 'In ${session.upcomingAppointments.first.daysUntil} days'
+        : 'No upcoming';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14),
-      child: Row(children: tiles.map((t) {
-        final idx = tiles.indexOf(t);
-        return Expanded(child: GestureDetector(
-          onTap: () => context.push(t.route),
-          child: Container(
-            margin: EdgeInsets.only(right: idx < tiles.length - 1 ? 7 : 0),
-            padding: const EdgeInsets.all(13),
-            decoration: BoxDecoration(
-              color: t.alert
-                  ? AppColors.peach.withOpacity(0.07)
-                  : t.done
-                      ? AppColors.teal.withOpacity(0.05)
-                      : AppColors.surface,
-              borderRadius: AppRadius.mdBR,
-              border: Border.all(
-                color: t.alert
-                    ? AppColors.peach.withOpacity(0.30)
-                    : t.done
-                        ? AppColors.teal.withOpacity(0.25)
-                        : AppColors.border,
-                width: t.alert ? 1.0 : 0.5),
-              boxShadow: t.alert ? [
-                BoxShadow(
-                  color: AppColors.peach.withOpacity(0.08),
-                  blurRadius: 8, offset: const Offset(0, 2))
-              ] : null),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-              Container(width: 34, height: 34,
-                decoration: BoxDecoration(
-                  color: t.iconBg,
-                  borderRadius: AppRadius.smBR),
-                child: Icon(t.icon, color: t.iconColor, size: 16)),
-              const SizedBox(height: 9),
-              Text(t.label,
-                style: AppText.bodySemibold.copyWith(
-                  fontSize: 12,
-                  color: t.alert ? AppColors.peach : AppColors.text1)),
-              const SizedBox(height: 2),
-              Text(t.sub,
-                style: AppText.caption.copyWith(
-                  fontSize: 10,
-                  color: t.alert ? AppColors.peach.withOpacity(0.8)
-                      : t.done ? AppColors.teal
-                      : AppColors.text3),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis),
-            ]),
-          ),
-        ));
-      }).toList()),
+      child: Column(children: [
+        Row(children: [
+          tile(
+            label: 'Ask AI', sub: 'Any question',
+            icon: Icons.auto_awesome_rounded,
+            iconBg: AppColors.primaryLight, iconColor: AppColors.primary,
+            route: '/ai-chat'),
+          const SizedBox(width: 7),
+          tile(
+            label: 'Appointments', sub: apptSub,
+            icon: Icons.calendar_month_rounded,
+            iconBg: AppColors.peachLight, iconColor: AppColors.peach,
+            route: '/care/appointments'),
+        ]),
+        const SizedBox(height: 7),
+        Row(children: [
+          tile(
+            label: 'Medications', sub: medsSubLabel,
+            icon: Icons.medication_rounded,
+            iconBg: hasRefill ? AppColors.peachLight : AppColors.tealLight,
+            iconColor: hasRefill ? AppColors.peach : AppColors.teal,
+            route: '/care/medications',
+            alert: hasRefill, done: medsTaken),
+          const SizedBox(width: 7),
+          tile(
+            label: 'Lab results', sub: labSub,
+            icon: Icons.biotech_rounded,
+            iconBg: labAlert ? AppColors.peachLight : AppColors.blueLight,
+            iconColor: labAlert ? AppColors.peach : AppColors.blue,
+            route: '/care/labs',
+            alert: labAlert),
+        ]),
+      ]),
     );
   }
 
   // ── Next appointment ──────────────────────────────────────────────────────
-  List<Appointment> _monitoringAppointments() {
-    final now = DateTime.now();
-    return [
-      Appointment(
-        id: 'mon1', title: 'Oncology surveillance review',
-        doctorName: 'Dr. Sarah Chen', location: 'Oncology Clinic',
-        dateTime: DateTime(now.year, now.month + 1, 15, 10, 30),
-      ),
-      Appointment(
-        id: 'mon2', title: 'Annual mammogram',
-        doctorName: 'Radiology Dept', location: 'Breast Imaging Centre',
-        dateTime: DateTime(now.year, now.month + 2, 8, 9, 0),
-      ),
-    ];
-  }
-
   Widget _buildNextAppointment(BuildContext context) {
     final session = UserSession();
     session.initDefaultAppointments();
@@ -1197,10 +1222,49 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 }
 
-class _TileData {
-  final String label, sublabel, route;
-  final IconData icon;
-  final Color iconBg, iconColor;
-  const _TileData(this.label, this.sublabel, this.icon,
-      this.iconBg, this.iconColor, this.route);
+class _DashedCircle extends StatelessWidget {
+  final double size;
+  final Color color;
+  final Widget? child;
+
+  const _DashedCircle({required this.size, required this.color, this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _DashedCirclePainter(color: color),
+      child: SizedBox(
+        width: size, height: size,
+        child: Center(child: child),
+      ),
+    );
+  }
+}
+
+class _DashedCirclePainter extends CustomPainter {
+  final Color color;
+  const _DashedCirclePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke;
+    final radius = (size.width / 2) - 1;
+    final center = Offset(size.width / 2, size.height / 2);
+    const dashCount = 8;
+    const gapRatio = 0.4;
+    const dashAngle = 2 * math.pi / dashCount;
+    for (int i = 0; i < dashCount; i++) {
+      final startAngle = i * dashAngle;
+      final sweepAngle = dashAngle * (1 - gapRatio);
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        startAngle, sweepAngle, false, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_DashedCirclePainter old) => old.color != color;
 }

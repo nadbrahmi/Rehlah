@@ -19,6 +19,9 @@ dependencies:
   # Navigation
   go_router: ^13.2.0
 
+  # Backend
+  supabase_flutter: ^2.3.0
+
   # Local storage
   hive_flutter: ^1.1.0
   shared_preferences: ^2.2.3
@@ -42,4 +45,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - env
   
