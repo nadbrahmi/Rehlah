@@ -91,6 +91,10 @@ class _MedicationsScreenState extends State<MedicationsScreen> {
             ]),
           )),
 
+          // Tamoxifen / hormone therapy streak counter
+          if (_session.hormoneTherapyMed != null)
+            SliverToBoxAdapter(child: _buildTamoxifenStreakCard()),
+
           // Refill alert banner
           if (_session.hasRefillAlert)
             SliverToBoxAdapter(child: Container(
@@ -227,6 +231,85 @@ class _MedicationsScreenState extends State<MedicationsScreen> {
           const SliverToBoxAdapter(child: SizedBox(height: 24)),
         ]),
       ),
+    );
+  }
+
+  Widget _buildTamoxifenStreakCard() {
+    final days = _session.hormoneTherapyDays;
+    final med = _session.hormoneTherapyMed!;
+    final milestone = days >= 180 ? '🏆 180 days'
+        : days >= 90 ? '🥈 90 days'
+        : days >= 30 ? '🥉 30 days'
+        : null;
+    final nextMilestone = days < 30 ? 30 : days < 90 ? 90 : days < 180 ? 180 : null;
+    final daysToNext = nextMilestone != null ? nextMilestone - days : null;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: AppRadius.mdBR,
+        border: Border.all(color: AppColors.primaryMid, width: 0.5),
+        boxShadow: [BoxShadow(
+          color: AppColors.primary.withOpacity(0.06),
+          blurRadius: 8, offset: const Offset(0, 2))]),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Text(med.emoji, style: const TextStyle(fontSize: 16)),
+          const SizedBox(width: 8),
+          Expanded(child: Text('${med.name} · الالتزام | Streak',
+            style: AppText.bodySemibold.copyWith(fontSize: 13))),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.primaryLight,
+              borderRadius: AppRadius.fullBR),
+            child: Text('$days days 🔥',
+              style: AppText.caption.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w700, fontSize: 12))),
+        ]),
+        const SizedBox(height: 10),
+        // Progress bar toward next milestone
+        if (nextMilestone != null) ...[
+          Row(children: [
+            Expanded(child: Stack(children: [
+              Container(height: 6,
+                decoration: BoxDecoration(
+                  color: AppColors.background2,
+                  borderRadius: AppRadius.fullBR)),
+              FractionallySizedBox(
+                widthFactor: (days / nextMilestone).clamp(0.0, 1.0),
+                child: Container(height: 6,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: AppRadius.fullBR))),
+            ])),
+            const SizedBox(width: 10),
+            Text('$daysToNext days to $nextMilestone 🎯',
+              style: AppText.caption.copyWith(fontSize: 10, color: AppColors.text3)),
+          ]),
+          const SizedBox(height: 6),
+        ],
+        if (milestone != null) ...[
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            margin: const EdgeInsets.only(bottom: 6),
+            decoration: BoxDecoration(
+              color: AppColors.goldLight,
+              borderRadius: AppRadius.smBR),
+            child: Text('$milestone milestone reached! تهانينا 🎉',
+              style: AppText.caption.copyWith(
+                color: AppColors.gold,
+                fontWeight: FontWeight.w600, fontSize: 11))),
+        ],
+        Text(
+          'تناول التاموكسيفن بانتظام يقلل خطر الانتكاس بشكل كبير — كل يوم مهم.\n'
+          'Tamoxifen taken consistently reduces recurrence risk significantly. Every day counts.',
+          style: AppText.caption.copyWith(
+            fontSize: 11, color: AppColors.text3, height: 1.5)),
+      ]),
     );
   }
 

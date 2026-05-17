@@ -16,13 +16,16 @@ class _CheckInScreenState extends State<CheckInScreen> {
   late ChemoPhase _phase;
   late List<ProtocolSymptom> _symptoms;
 
-  // Steps: 0=greeting, 1..N=symptom, N+1=watchSymptoms (if any), then mood, note
+  // Steps: 0=greeting, 1..N=symptom, N+1=watchSymptoms (if any),
+  //        then physActivity+HADS (if recovery), then mood, note
   int _step = 0;
   MoodLevel _mood = MoodLevel.okay;
   bool _moodSelected = false;
   final Map<String, String> _symptomAnswers = {}; // key → 'none'|'mild'|'significant'
   final Map<String, bool> _interferenceAnswers = {}; // key → yes/no
   String _note = '';
+  String? _physicalActivity; // 'none' | 'light' | 'moderate'
+  final Map<String, int> _hadsScores = {}; // hads_tense/worry/panic/relaxed: 0–3
 
   static const _scores = {'none': 1.0, 'mild': 4.0, 'significant': 7.0};
 
@@ -53,19 +56,31 @@ class _CheckInScreenState extends State<CheckInScreen> {
   bool get _isWatchScreen =>
       _phase.watchSymptoms.isNotEmpty &&
       _step == _symptoms.length + 1;
-  bool get _isMood {
-    final offset = _phase.watchSymptoms.isNotEmpty ? 1 : 0;
-    return _step == _symptoms.length + 1 + offset;
-  }
-  bool get _isNote {
-    final offset = _phase.watchSymptoms.isNotEmpty ? 1 : 0;
-    return _step == _symptoms.length + 2 + offset;
-  }
 
-  int get _totalDots {
-    final offset = _phase.watchSymptoms.isNotEmpty ? 1 : 0;
-    return _symptoms.length + 2 + offset; // symptoms + watch? + mood + note
-  }
+  // Recovery phase: days 15–21 of any AC-T/TC/CMF cycle
+  bool get _isRecoveryPhase =>
+      !_session.isMonitoring &&
+      _phase.name.toLowerCase().contains('recovery');
+
+  int get _watchOffset => _phase.watchSymptoms.isNotEmpty ? 1 : 0;
+  int get _recoveryOffset => _isRecoveryPhase ? 2 : 0; // physActivity + HADS
+
+  bool get _isPhysActivityStep =>
+      _isRecoveryPhase &&
+      _step == _symptoms.length + 1 + _watchOffset;
+
+  bool get _isHadsStep =>
+      _isRecoveryPhase &&
+      _step == _symptoms.length + 2 + _watchOffset;
+
+  bool get _isMood =>
+      _step == _symptoms.length + 1 + _watchOffset + _recoveryOffset;
+
+  bool get _isNote =>
+      _step == _symptoms.length + 2 + _watchOffset + _recoveryOffset;
+
+  int get _totalDots =>
+      _symptoms.length + 2 + _watchOffset + _recoveryOffset;
 
   ProtocolSymptom? get _currentSymptom =>
       _isSymptom ? _symptoms[_step - 1] : null;
@@ -97,6 +112,8 @@ class _CheckInScreenState extends State<CheckInScreen> {
     };
     _session.interferenceAnswers = _interferenceAnswers;
     if (_note.isNotEmpty) _session.checkInNote = _note;
+    _session.physicalActivity = _physicalActivity;
+    _session.hadsScores = Map.from(_hadsScores);
     _session.lastCheckIn = DateTime.now();
     _session.saveCheckIn();
     context.go('/checkin/success');
@@ -126,11 +143,12 @@ class _CheckInScreenState extends State<CheckInScreen> {
     );
   }
 
-  // ── Top bar ────────────────────────────────────────────────────────────────
+  // ── Top bar with phase context banner ─────────────────────────────────────
   Widget _buildTopBar() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-      child: Row(children: [
+    return Column(children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
+        child: Row(children: [
         GestureDetector(
           onTap: _back,
           child: Container(
@@ -169,8 +187,39 @@ class _CheckInScreenState extends State<CheckInScreen> {
           child: Text(_phasePillLabel(),
             style: TextStyle(fontFamily: 'Inter', fontSize: 10,
               fontWeight: FontWeight.w600, color: _phaseColor()))),
-      ]),
-    );
+        ]),
+      ),
+      // Phase context banner — visible on all non-greeting steps
+      if (!_isGreeting && !_session.isMonitoring)
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: _phaseColor().withOpacity(0.07),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: _phaseColor().withOpacity(0.20))),
+            child: Row(children: [
+              Text(_phaseIcon(), style: const TextStyle(fontSize: 11)),
+              const SizedBox(width: 6),
+              Expanded(child: Text(_phaseContextLine(),
+                style: TextStyle(fontFamily: 'Inter', fontSize: 11,
+                  color: _phaseColor(), fontWeight: FontWeight.w500))),
+            ]),
+          ),
+        ),
+    ]);
+  }
+
+  String _phaseContextLine() {
+    final day = _session.dayInCycle;
+    if (_session.isNadirWindow)
+      return 'الناضير — Day $day | Nadir window · مناعتك في أدنى مستوياتها';
+    if (_isRecoveryPhase)
+      return 'أسبوع التعافي — Day $day | Recovery week · تتحسن الأعداد';
+    if (_phase.name.contains('Infusion') || _phase.name.contains('infusion'))
+      return 'بعد الحقن — Day $day | Post-infusion · إدارة آثار العلاج';
+    return '${_session.protocol.name} — Day $day · ${_phase.name}';
   }
 
   Color _phaseColor() {
@@ -192,6 +241,8 @@ class _CheckInScreenState extends State<CheckInScreen> {
     if (_isGreeting) return _buildGreeting();
     if (_isSymptom) return _buildSymptomStep(_currentSymptom!);
     if (_isWatchScreen) return _buildWatchScreen();
+    if (_isPhysActivityStep) return _buildPhysicalActivityStep();
+    if (_isHadsStep) return _buildHadsStep();
     if (_isMood) return _buildMoodStep();
     if (_isNote) return _buildNoteStep();
     return _buildGreeting();
@@ -599,6 +650,181 @@ class _CheckInScreenState extends State<CheckInScreen> {
         _primaryBtn('I understand — continue →', _next),
       ]),
     );
+  }
+
+  // ── Physical activity step (recovery phase only) ───────────────────────────
+  Widget _buildPhysicalActivityStep() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(22, 22, 22, 28),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text('النشاط البدني | PHYSICAL ACTIVITY',
+          style: const TextStyle(fontFamily: 'Inter', fontSize: 11,
+            fontWeight: FontWeight.w700, color: Color(0xFF6B9E78),
+            letterSpacing: 0.08)),
+        const SizedBox(height: 8),
+        const Text('هل كنتِ قادرة على ممارسة\nأي نشاط بدني اليوم؟',
+          style: TextStyle(fontFamily: 'Inter',
+            fontSize: 22, fontWeight: FontWeight.w300,
+            color: Color(0xFF2C2C2C), height: 1.3)),
+        const SizedBox(height: 4),
+        const Text('Were you able to do any physical activity today?',
+          style: TextStyle(fontFamily: 'Inter',
+            fontSize: 13, color: Color(0xFF7A7A7A))),
+        const SizedBox(height: 16),
+        _physActivityCard('none', '🛋️', 'لا شيء | None', 'لم أتحرك اليوم | No movement today'),
+        const SizedBox(height: 8),
+        _physActivityCard('light', '🚶', 'خفيف | Light', 'مشي أو حركة خفيفة | Walking or gentle movement'),
+        const SizedBox(height: 8),
+        _physActivityCard('moderate', '🏃', 'معتدل | Moderate', 'نشاط أكثر | More active than usual'),
+        Expanded(child: Align(
+          alignment: Alignment.bottomCenter,
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Text(
+              '💡 النشاط البدني الخفيف أثناء الشفاء يساعد على تقليل الإرهاق.\n'
+              'Light activity during recovery is recommended by ASCO to reduce fatigue.',
+              style: const TextStyle(fontFamily: 'Inter', fontSize: 11,
+                color: Color(0xFF7A7A7A), height: 1.5)),
+          ),
+        )),
+        _primaryBtn('Continue →', _physicalActivity != null ? _next : null),
+      ]),
+    );
+  }
+
+  Widget _physActivityCard(String val, String emoji, String label, String sub) {
+    final sel = _physicalActivity == val;
+    const selColor = Color(0xFF6B9E78);
+    const selBg = Color(0xFFEAF3EC);
+    return GestureDetector(
+      onTap: () => setState(() => _physicalActivity = val),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          color: sel ? selBg : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: sel ? selColor : const Color(0xFFEDE9E3),
+            width: sel ? 2 : 1.5)),
+        child: Row(children: [
+          Text(emoji, style: const TextStyle(fontSize: 24)),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: TextStyle(fontFamily: 'Inter',
+                fontSize: 14, fontWeight: FontWeight.w600,
+                color: sel ? selColor : const Color(0xFF2C2C2C))),
+              Text(sub, style: const TextStyle(fontFamily: 'Inter',
+                fontSize: 12, color: Color(0xFF7A7A7A))),
+            ])),
+          Container(
+            width: 22, height: 22,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: sel ? selColor : Colors.white,
+              border: Border.all(
+                color: sel ? selColor : const Color(0xFFDDD9D0), width: 2)),
+            child: sel ? const Icon(Icons.check_rounded, size: 12,
+              color: Colors.white) : null),
+        ]),
+      ),
+    );
+  }
+
+  // ── HADS anxiety subscale step (recovery phase only) ──────────────────────
+  Widget _buildHadsStep() {
+    final allAnswered = _hadsScores.length == 4;
+    final questions = [
+      ('hads_tense', 'هل تشعرين بالتوتر؟', 'Do you feel tense or wound up?',
+       ['لا على الإطلاق\nNot at all', 'أحياناً\nOccasionally', 'كثيراً\nA lot', 'معظم الوقت\nMost of the time']),
+      ('hads_worry', 'هل تراودك أفكار مقلقة؟', 'Do worrying thoughts go through your mind?',
+       ['نادراً\nOccasionally', 'أحياناً\nFrom time to time', 'كثيراً\nA lot', 'معظم الوقت\nMost of the time']),
+      ('hads_panic', 'هل تشعرين بخوف مفاجئ؟', 'Do you get a sudden frightened feeling?',
+       ['لا على الإطلاق\nNot at all', 'أحياناً\nOccasionally', 'نعم، كثيراً\nQuite often', 'كثيراً جداً\nVery often']),
+      ('hads_relaxed', 'هل يمكنك الجلوس والاسترخاء؟', 'Can you sit at ease and feel relaxed?',
+       ['نعم، تماماً\nDefinitely', 'عادةً\nUsually', 'نادراً\nNot often', 'لا على الإطلاق\nNot at all']),
+    ];
+
+    return Column(children: [
+      Expanded(child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(22, 22, 22, 0),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('الصحة النفسية | EMOTIONAL WELLBEING',
+            style: const TextStyle(fontFamily: 'Inter', fontSize: 11,
+              fontWeight: FontWeight.w700, color: Color(0xFF6B9E78),
+              letterSpacing: 0.08)),
+          const SizedBox(height: 8),
+          const Text('كيف شعرتِ عاطفياً\nهذا الأسبوع؟',
+            style: TextStyle(fontFamily: 'Inter',
+              fontSize: 22, fontWeight: FontWeight.w300,
+              color: Color(0xFF2C2C2C), height: 1.3)),
+          const SizedBox(height: 4),
+          const Text('How have you been feeling emotionally this week?',
+            style: TextStyle(fontFamily: 'Inter',
+              fontSize: 13, color: Color(0xFF7A7A7A))),
+          const SizedBox(height: 18),
+          ...questions.map((q) {
+            final key = q.$1;
+            final arabicQ = q.$2;
+            final englishQ = q.$3;
+            final options = q.$4;
+            final current = _hadsScores[key];
+            return Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: current != null
+                      ? AppColors.primaryMid : const Color(0xFFEDE9E3))),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(arabicQ, style: const TextStyle(fontFamily: 'Inter',
+                  fontSize: 14, fontWeight: FontWeight.w500,
+                  color: Color(0xFF2C2C2C))),
+                Text(englishQ, style: const TextStyle(fontFamily: 'Inter',
+                  fontSize: 11, color: Color(0xFF7A7A7A))),
+                const SizedBox(height: 10),
+                Row(children: List.generate(4, (i) {
+                  final sel = current == i;
+                  return Expanded(child: Padding(
+                    padding: EdgeInsets.only(right: i < 3 ? 5 : 0),
+                    child: GestureDetector(
+                      onTap: () => setState(() => _hadsScores[key] = i),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 130),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: sel ? AppColors.primaryLight : const Color(0xFFF5F3F0),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: sel ? AppColors.primaryMid : const Color(0xFFEDE9E3),
+                            width: sel ? 1.5 : 1)),
+                        child: Column(children: [
+                          Text('$i', style: TextStyle(
+                            fontFamily: 'Inter', fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: sel ? AppColors.primary : const Color(0xFF7A7A7A))),
+                          const SizedBox(height: 2),
+                          Text(options[i].split('\n')[0],
+                            style: TextStyle(fontFamily: 'Inter', fontSize: 8,
+                              color: sel ? AppColors.primary : const Color(0xFF7A7A7A)),
+                            textAlign: TextAlign.center, maxLines: 2),
+                        ]),
+                      ),
+                    ),
+                  ));
+                })),
+              ]),
+            );
+          }),
+        ]),
+      )),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(22, 8, 22, 28),
+        child: _primaryBtn('Continue →', allAnswered ? _next : null)),
+    ]);
   }
 
   // ── Mood step ──────────────────────────────────────────────────────────────

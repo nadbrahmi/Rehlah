@@ -14,6 +14,8 @@ class CheckInRecord {
   final String note;
   final int dayInCycle;
   final int cycle;
+  final String? physicalActivity; // 'none' | 'light' | 'moderate'
+  final Map<String, int> hadsScores; // hads_tense/worry/panic/relaxed: 0–3
 
   const CheckInRecord({
     required this.date,
@@ -24,7 +26,30 @@ class CheckInRecord {
     required this.note,
     required this.dayInCycle,
     required this.cycle,
+    this.physicalActivity,
+    this.hadsScores = const {},
   });
+
+  // HADS anxiety subscale score (0–12); -1 if not measured
+  int get hadsAnxietyScore {
+    if (hadsScores.isEmpty) return -1;
+    final t = hadsScores['hads_tense'] ?? 0;
+    final w = hadsScores['hads_worry'] ?? 0;
+    final p = hadsScores['hads_panic'] ?? 0;
+    final rel = hadsScores['hads_relaxed'] ?? 3; // reverse-scored
+    return t + w + p + (3 - rel);
+  }
+
+  String get hadsAnxietyLevel {
+    final s = hadsAnxietyScore;
+    if (s < 0) return 'not_measured';
+    if (s <= 4) return 'low';
+    if (s <= 7) return 'moderate';
+    return 'high';
+  }
+
+  bool get hasInterferenceToday =>
+      interferenceAnswers.values.any((v) => v == true);
 
   // Severity summary for display
   String get severitySummary {
@@ -90,6 +115,8 @@ class UserSession extends ChangeNotifier {
   Map<String, bool> interferenceAnswers = {};
   String checkInNote = '';
   DateTime? lastCheckIn;
+  String? physicalActivity;
+  Map<String, int> hadsScores = {};
 
   // ── Check-in history (last 30 entries) ───────────────────────────────────
   final List<CheckInRecord> _history = [];
@@ -118,6 +145,8 @@ class UserSession extends ChangeNotifier {
       note: checkInNote,
       dayInCycle: dayInCycle,
       cycle: currentCycle,
+      physicalActivity: physicalActivity,
+      hadsScores: Map.from(hadsScores),
     ));
 
     if (_history.length > 30) {

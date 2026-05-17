@@ -195,10 +195,54 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   // ── Nadir cards ───────────────────────────────────────────────────────────
   Widget _buildNadirCard(UserSession session) {
-    return NadirCard(
-      title: '⚠ Nadir window — Day ${session.dayInCycle}',
-      body: 'Your immune system is at its lowest. Avoid crowds, monitor temperature twice daily. Call your team if fever reaches 38°C.',
-    );
+    return Column(children: [
+      NadirCard(
+        title: '⚠ الناضير | Nadir window — Day ${session.dayInCycle}',
+        body: 'Your immune system is at its lowest. Avoid crowds, monitor temperature twice daily.',
+      ),
+      // "When to call" routing card — mirrors Gustave Roussy triage flow
+      Container(
+        margin: const EdgeInsets.fromLTRB(14, 6, 14, 0),
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFFF3E8),
+          borderRadius: AppRadius.mdBR,
+          border: Border.all(color: AppColors.peach.withOpacity(0.35), width: 0.5)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('متى تتصلين؟ | WHEN TO CALL',
+            style: AppText.label.copyWith(
+              fontSize: 10, color: AppColors.peach)),
+          const SizedBox(height: 8),
+          _whenToCallRow('🌡️', 'Fever ≥ 38°C',
+            'اتصلي بممرضة الكيمياء | Call chemo nurse now',
+            AppColors.peach),
+          const SizedBox(height: 6),
+          _whenToCallRow('🫁', 'Breathlessness at rest',
+            'اتصلي بمنسق الرعاية | Call care coordinator',
+            AppColors.peach),
+          const SizedBox(height: 6),
+          _whenToCallRow('🔴', 'Chest pain / severe bleeding',
+            'اتصلي بالطوارئ | Emergency line — do not wait',
+            AppColors.rose),
+          const SizedBox(height: 6),
+          _whenToCallRow('💊', 'Medication questions',
+            'اتصلي بممرضة الكيمياء | Chemo nurse',
+            AppColors.primary),
+        ]),
+      ),
+    ]);
+  }
+
+  Widget _whenToCallRow(String icon, String symptom, String action, Color color) {
+    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(icon, style: const TextStyle(fontSize: 13)),
+      const SizedBox(width: 8),
+      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(symptom, style: AppText.bodySemibold.copyWith(fontSize: 12)),
+        Text(action, style: AppText.caption.copyWith(
+          fontSize: 11, color: color, fontWeight: FontWeight.w500)),
+      ])),
+    ]);
   }
 
   Widget _buildNadirApproachingCard() {

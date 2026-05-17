@@ -451,8 +451,13 @@ class MonitoringSymptomLibrary {
     anxiety, sleep, mood, fatigue, hotFlashes, nightSweats, cognitiveFog,
   ];
 
+  // Endocrine therapy side effects that persist into monitoring phase
+  static const endocrineSymptoms = [
+    jointPain, hotFlashes, nightSweats, vaginalDiscomfort, weightChanges,
+  ];
+
   static const List<ProtocolSymptom> standardSymptoms = [
     fatigue, jointPain, hotFlashes, nightSweats,
-    cognitiveFog, sleep, mood, vaginalDiscomfort,
+    cognitiveFog, sleep, mood, vaginalDiscomfort, weightChanges,
   ];
 }

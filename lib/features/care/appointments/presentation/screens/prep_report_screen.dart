@@ -188,8 +188,12 @@ class PrepReportScreen extends StatelessWidget {
             ]),
           )),
 
-          // ── Section 2: Mood & Functional Trend ───────────────────────────
-          SliverToBoxAdapter(child: _sectionHeader('2', 'Mood & Functional Trend')),
+          // ── Section 2: In her own words ──────────────────────────────────
+          SliverToBoxAdapter(child: _sectionHeader('2', 'في كلماتها | In Her Own Words')),
+          SliverToBoxAdapter(child: _buildPatientVoiceSection(periodRecords)),
+
+          // ── Section 3: Mood & Functional Trend ───────────────────────────
+          SliverToBoxAdapter(child: _sectionHeader('3', 'Mood & Functional Trend')),
           SliverToBoxAdapter(child: SurfaceCard(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               if (moodValues.isEmpty)
@@ -258,8 +262,8 @@ class PrepReportScreen extends StatelessWidget {
             ]),
           )),
 
-          // ── Section 3: Symptom Flags ──────────────────────────────────────
-          SliverToBoxAdapter(child: _sectionHeader('3', 'Symptom Flags')),
+          // ── Section 4: Symptom Flags ──────────────────────────────────────
+          SliverToBoxAdapter(child: _sectionHeader('4', 'Symptom Flags')),
           SliverToBoxAdapter(child: SurfaceCard(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               if (flags.isEmpty)
@@ -279,8 +283,12 @@ class PrepReportScreen extends StatelessWidget {
             ]),
           )),
 
-          // ── Section 4: Medication Adherence ──────────────────────────────
-          SliverToBoxAdapter(child: _sectionHeader('4', 'Medication Adherence')),
+          // ── Section 5: Functional Status ─────────────────────────────────
+          SliverToBoxAdapter(child: _sectionHeader('5', 'الوضع الوظيفي | Functional Status')),
+          SliverToBoxAdapter(child: _buildFunctionalStatusSection(periodRecords)),
+
+          // ── Section 6: Medication Adherence ──────────────────────────────
+          SliverToBoxAdapter(child: _sectionHeader('6', 'Medication Adherence')),
           SliverToBoxAdapter(child: SurfaceCard(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               // Adherence bar
@@ -366,8 +374,8 @@ class PrepReportScreen extends StatelessWidget {
             ]),
           )),
 
-          // ── Section 5: Lab Correlation ────────────────────────────────────
-          SliverToBoxAdapter(child: _sectionHeader('5', 'Lab Correlation')),
+          // ── Section 7: Lab Correlation ────────────────────────────────────
+          SliverToBoxAdapter(child: _sectionHeader('7', 'Lab Correlation')),
           SliverToBoxAdapter(child: SurfaceCard(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               // AI correlation based on symptoms
@@ -503,6 +511,169 @@ class PrepReportScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildPatientVoiceSection(List<CheckInRecord> records) {
+    final notes = records
+        .where((r) => r.note.trim().isNotEmpty)
+        .toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+
+    return SurfaceCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        if (notes.isEmpty)
+          Text(
+            'No notes recorded in the last 14 days. When the patient writes in their own words, those notes appear here — verbatim and unedited.',
+            style: AppText.bodySecondary.copyWith(
+              fontStyle: FontStyle.italic, fontSize: 12))
+        else ...[
+          Text(
+            'Verbatim notes from the last ${notes.length} check-in${notes.length > 1 ? 's' : ''} — unedited, as written by the patient.',
+            style: AppText.caption.copyWith(fontSize: 10, color: AppColors.text3)),
+          const SizedBox(height: 10),
+          ...notes.take(5).map((r) => Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.04),
+              borderRadius: AppRadius.smBR,
+              border: Border.all(
+                color: AppColors.primary.withOpacity(0.15), width: 0.5)),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(DateFormat('d MMM').format(r.date),
+                style: AppText.caption.copyWith(
+                  fontSize: 10, color: AppColors.text3)),
+              const SizedBox(height: 4),
+              Text('"${r.note.trim()}"',
+                style: AppText.body.copyWith(
+                  fontSize: 13, fontStyle: FontStyle.italic,
+                  color: AppColors.text1, height: 1.6)),
+            ]),
+          )),
+        ],
+      ]),
+    );
+  }
+
+  Widget _buildFunctionalStatusSection(List<CheckInRecord> records) {
+    final interferenceDays =
+        records.where((r) => r.hasInterferenceToday).length;
+
+    // Physical activity distribution from recovery phase records
+    final recoveryRecords =
+        records.where((r) => r.physicalActivity != null).toList();
+    final noneCount =
+        recoveryRecords.where((r) => r.physicalActivity == 'none').length;
+    final lightCount =
+        recoveryRecords.where((r) => r.physicalActivity == 'light').length;
+    final moderateCount =
+        recoveryRecords.where((r) => r.physicalActivity == 'moderate').length;
+
+    // HADS anxiety from recovery records
+    final hadsRecords =
+        records.where((r) => r.hadsAnxietyScore >= 0).toList();
+    final avgHads = hadsRecords.isEmpty
+        ? -1.0
+        : hadsRecords.map((r) => r.hadsAnxietyScore).reduce((a, b) => a + b) /
+            hadsRecords.length;
+
+    // Consecutive elevated HADS (≥8) recovery phases
+    final elevatedHads =
+        hadsRecords.where((r) => r.hadsAnxietyScore >= 8).length;
+
+    return SurfaceCard(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // Interference count
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: interferenceDays > 7
+                ? AppColors.peach.withOpacity(0.07)
+                : AppColors.teal.withOpacity(0.07),
+            borderRadius: AppRadius.smBR,
+            border: Border.all(
+              color: interferenceDays > 7
+                  ? AppColors.peach.withOpacity(0.2)
+                  : AppColors.teal.withOpacity(0.2),
+              width: 0.5)),
+          child: Row(children: [
+            Text(interferenceDays > 7 ? '⚠' : '✓',
+              style: const TextStyle(fontSize: 14)),
+            const SizedBox(width: 8),
+            Expanded(child: Text(
+              'On $interferenceDays of ${records.length} days, symptoms interfered with normal daily activities.',
+              style: AppText.bodySemibold.copyWith(fontSize: 13))),
+          ]),
+        ),
+
+        // Physical activity (if recovery data available)
+        if (recoveryRecords.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text('PHYSICAL ACTIVITY · أسبوع التعافي',
+            style: AppText.label.copyWith(fontSize: 10)),
+          const SizedBox(height: 6),
+          Row(children: [
+            _statBox('$noneCount', 'None 🛋️', AppColors.rose),
+            const SizedBox(width: 6),
+            _statBox('$lightCount', 'Light 🚶', AppColors.peach),
+            const SizedBox(width: 6),
+            _statBox('$moderateCount', 'Moderate 🏃', AppColors.teal),
+          ]),
+          const SizedBox(height: 4),
+          Text(
+            'Reported on ${recoveryRecords.length} recovery-phase check-in${recoveryRecords.length > 1 ? 's' : ''}. '
+            'Physical activity during treatment reduces fatigue and improves survival outcomes (ASCO/ESMO).',
+            style: AppText.caption.copyWith(
+              fontSize: 10, color: AppColors.text3, height: 1.5)),
+        ],
+
+        // HADS anxiety indicator
+        if (hadsRecords.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Divider(color: AppColors.border, height: 1, thickness: 0.5),
+          const SizedBox(height: 10),
+          Text('HADS ANXIETY INDICATOR · مؤشر القلق',
+            style: AppText.label.copyWith(fontSize: 10)),
+          const SizedBox(height: 6),
+          Row(children: [
+            Expanded(child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: avgHads >= 8
+                    ? AppColors.peach.withOpacity(0.08)
+                    : avgHads >= 5
+                        ? AppColors.gold.withOpacity(0.08)
+                        : AppColors.teal.withOpacity(0.08),
+                borderRadius: AppRadius.smBR,
+                border: Border.all(
+                  color: avgHads >= 8
+                      ? AppColors.peach.withOpacity(0.25)
+                      : avgHads >= 5
+                          ? AppColors.gold.withOpacity(0.25)
+                          : AppColors.teal.withOpacity(0.25),
+                  width: 0.5)),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    avgHads >= 8 ? '🔴 High anxiety' : avgHads >= 5 ? '🟡 Moderate anxiety' : '🟢 Low anxiety',
+                    style: AppText.bodySemibold.copyWith(fontSize: 13)),
+                  Text(
+                    'Avg HADS score ${avgHads.toStringAsFixed(1)} / 12 · '
+                    'Based on ${hadsRecords.length} recovery-phase check-in${hadsRecords.length > 1 ? 's' : ''}',
+                    style: AppText.caption.copyWith(fontSize: 10, color: AppColors.text3)),
+                  if (elevatedHads >= 2)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        '⚠ Elevated anxiety on $elevatedHads consecutive recovery phases — consider psychosocial referral.',
+                        style: AppText.caption.copyWith(
+                          fontSize: 11, color: AppColors.peach, height: 1.4))),
+                ]),
+            )),
+          ]),
+        ],
+      ]),
+    );
+  }
+
   Widget _buildSymptomFlag(_SymptomFlag f, int totalDays) {
     final sev = f.avgScore >= 7 ? 'high'
         : f.avgScore >= 4 ? 'moderate' : 'low';
@@ -542,9 +713,19 @@ class PrepReportScreen extends StatelessWidget {
           _flagPill(sev.capitalize(), sevColor),
         ]),
         const SizedBox(height: 6),
-        Text('"$talkingPoint"',
-          style: AppText.bodySecondary.copyWith(
-            fontSize: 11, fontStyle: FontStyle.italic, height: 1.5)),
+        Container(
+          padding: const EdgeInsets.all(9),
+          decoration: BoxDecoration(
+            color: AppColors.blue.withOpacity(0.04),
+            borderRadius: AppRadius.smBR,
+            border: Border.all(color: AppColors.blue.withOpacity(0.15), width: 0.5)),
+          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('💬', style: TextStyle(fontSize: 11)),
+            const SizedBox(width: 6),
+            Expanded(child: Text(talkingPoint,
+              style: AppText.bodySecondary.copyWith(
+                fontSize: 11, fontStyle: FontStyle.italic, height: 1.5))),
+          ])),
       ]),
     );
   }
@@ -675,23 +856,26 @@ class PrepReportScreen extends StatelessWidget {
   }
 
   String _symptomTalkingPoint(String key, double avg, int days) {
-    const tips = {
-      'fatigue': 'Ask about impact on daily activities and whether dose adjustment warrants discussion',
-      'nausea': 'Currently managed — confirm anti-emetic regimen is still effective',
-      'fever': 'Clarify fever threshold protocol and when to call emergency line',
-      'pain': 'Describe location, type and duration — ask about pain management options',
-      'mouth_sores': 'Ask about mouthwash protocol and whether dose reduction is appropriate',
-      'neuropathy': 'Document affected areas — dose reduction may be indicated if worsening',
-      'breathlessness': 'Clarify onset triggers — may warrant anaemia assessment',
-      'mood': 'Discuss emotional support options and whether psychological referral would help',
-      'sleep': 'Ask about sleep hygiene support or pharmacological options',
-      'appetite': 'Ask about nutritional supplements and dietitian referral',
-      'infection': 'Clarify infection signs and emergency contact protocol',
-      'vomiting': 'Review anti-emetic medication — may need adjustment',
-      'joint_pain': 'Document severity and functional impact — consider physio referral',
+    // Framed as shared decision prompts (co-construction), not one-way summaries
+    const prompts = {
+      'fatigue': 'Fatigue is limiting daily activity — discuss together what level of activity is realistic and manageable this cycle',
+      'nausea': 'Nausea has been present this period — explore together whether the current anti-emetic approach is working and what to adjust',
+      'fever': 'Temperature monitoring has flagged concerns — decide together the threshold and exact contact to call, day or night',
+      'pain': 'Pain is affecting daily life — explore together where it is, what type, and what management options are realistic right now',
+      'mouth_sores': 'Mouth sores are interfering with eating — discuss together the mouthwash protocol and whether a dose adjustment is the right call',
+      'neuropathy': 'Tingling and numbness are present — document together the affected areas and decide whether dose adjustment is warranted',
+      'breathlessness': 'Breathlessness has been reported — explore together what triggers it and whether an anaemia assessment is needed now',
+      'mood': 'Mood has been difficult this period — explore together what support would actually help: psychological referral, a peer group, or another option',
+      'sleep': 'Sleep has been disrupted — decide together what to try first: sleep hygiene, relaxation techniques, or pharmacological support',
+      'appetite': 'Appetite has been reduced — discuss together whether nutritional supplements or a dietitian referral would help most right now',
+      'infection': 'Signs of infection concern have been reported — agree together on the exact symptoms to watch and the specific number to call',
+      'vomiting': 'Vomiting has occurred — review together whether the anti-emetic medication needs to be changed or adjusted',
+      'joint_pain': 'Joint pain is affecting movement — discuss together its functional impact and whether physiotherapy referral is the right next step',
+      'anxiety': 'Anxiety has been elevated this period — explore together what form of support would be most helpful right now',
+      'hot_flashes': 'Hot flashes are frequent — discuss together management options and whether current hormone therapy plan needs reviewing',
     };
-    return tips[key] ??
-        'Discuss severity (avg ${avg.toStringAsFixed(1)}/10 over $days days) and management options';
+    return prompts[key] ??
+        'This symptom has been present for $days of 14 days (avg ${avg.toStringAsFixed(1)}/10) — discuss together what is manageable this cycle';
   }
 }
 
