@@ -6,7 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/config/env.dart';
 import 'core/services/supabase_service.dart';
-import 'core/theme/app_theme.dart';
+import 'theme/rehlah_theme.dart';
 import 'core/utils/app_router.dart';
 
 void main() async {
@@ -57,7 +57,7 @@ class RehlahApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'Rehlah · رحلة',
-      theme: buildAppTheme(),
+      theme: buildRehlahTheme(),
       routerConfig: appRouter,
       debugShowCheckedModeBanner: false,
       localizationsDelegates: const [

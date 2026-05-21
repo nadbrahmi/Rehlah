@@ -1,1 +1,1 @@
-export 'lab_results_screen.dart' show LabAddScreen;
+export 'lab_results_screen.dart' show AddLabScreen;

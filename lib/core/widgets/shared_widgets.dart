@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../theme/app_theme.dart';
+
+import '../../theme/rehlah_theme.dart';
 import '../utils/user_session.dart';
 
 // ── App Header (used on all main screens) ────────────────────────────────────
@@ -56,11 +57,11 @@ class _AppHeaderState extends State<AppHeader> {
               onTap: () => context.go(widget.backRoute),
               child: Row(children: [
                 Icon(Icons.arrow_back_ios_new_rounded, size: 15,
-                  color: AppColors.text2.withOpacity(0.4)),
+                  color: RColors.sand700.withValues(alpha: 0.4)),
                 const SizedBox(width: 4),
                 Text(widget.backLabel ?? 'Back',
-                  style: AppText.caption.copyWith(
-                    color: AppColors.text2, fontSize: 11)),
+                  style: RText.small.copyWith(
+                    color: RColors.sand700, fontSize: 11)),
               ]),
             ),
           if (widget.showBack) const SizedBox(height: 10),
@@ -72,7 +73,7 @@ class _AppHeaderState extends State<AppHeader> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     RichText(text: TextSpan(
-                      style: AppText.displayTitle,
+                      style: RText.display,
                       children: widget.title.contains('|')
                           ? [
                               TextSpan(text: widget.title.split('|')[0]),
@@ -85,27 +86,27 @@ class _AppHeaderState extends State<AppHeader> {
                     if (widget.subtitle != null) ...[
                       const SizedBox(height: 3),
                       Text(widget.subtitle!,
-                        style: AppText.bodySecondary),
+                        style: RText.bodyMuted),
                     ],
                   ],
                 ),
               ),
               const SizedBox(width: 12),
               GestureDetector(
-                onTap: () => context.push('/profile'),
+                onTap: () => context.go('/profile'),
                 child: Container(
                   width: 38, height: 38,
                   decoration: BoxDecoration(
-                    color: AppColors.primaryLight,
+                    color: RColors.teal50,
                     shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.primaryMid, width: 0.5),
+                    border: Border.all(color: RColors.teal100, width: 0.5),
                   ),
                   child: Center(
                     child: Text(initial,
                       style: const TextStyle(
-                        fontFamily: 'Inter', fontSize: 15,
+                        fontSize: 15,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.primary,
+                        color: RColors.teal700,
                       )),
                   ),
                 ),
@@ -119,34 +120,76 @@ class _AppHeaderState extends State<AppHeader> {
 }
 
 
+enum HeroVariant { teal, plum, sage }
+
 class HeroCard extends StatelessWidget {
   final Widget child;
   final List<Color>? gradientColors;
   final VoidCallback? onTap;
+  final HeroVariant variant;
 
-  const HeroCard({super.key, required this.child, this.gradientColors, this.onTap});
+  const HeroCard({
+    super.key,
+    required this.child,
+    this.gradientColors,
+    this.onTap,
+    this.variant = HeroVariant.teal,
+  });
+
+  List<Color> _gradient() {
+    if (gradientColors != null) return gradientColors!;
+    return switch (variant) {
+      HeroVariant.teal => const [RColors.teal700, RColors.teal600],
+      HeroVariant.plum => const [RColors.plum700, RColors.plum500],
+      HeroVariant.sage => const [RColors.sage700, RColors.sage500],
+    };
+  }
+
+  static const _radius = BorderRadius.all(Radius.circular(24));
 
   @override
   Widget build(BuildContext context) {
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+        margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            begin: const Alignment(-0.6, -0.8),
-            end: const Alignment(1, 1),
-            colors: gradientColors ?? const [
-              AppColors.heroGrad1, AppColors.heroGrad2,
-              AppColors.heroGrad3, AppColors.heroGrad4,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: _gradient(),
+          ),
+          borderRadius: _radius,
+        ),
+        child: ClipRRect(
+          borderRadius: _radius,
+          child: Stack(
+            children: [
+              // Saffron decorative bloom — top-end corner, mirrors in RTL
+              Positioned(
+                top: -28,
+                right: isRtl ? null : -20,
+                left: isRtl ? -20 : null,
+                child: Container(
+                  width: 112, height: 112,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        RColors.saffron300.withValues(alpha: 0.28),
+                        RColors.saffron300.withValues(alpha: 0),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
+                child: child,
+              ),
             ],
           ),
-          borderRadius: AppRadius.lgBR,
-          border: Border.all(color: Colors.white.withOpacity(0.8), width: 0.5),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: child,
         ),
       ),
     );
@@ -171,19 +214,15 @@ class SurfaceCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: margin ?? const EdgeInsets.fromLTRB(14, 8, 14, 0),
-        padding: padding ?? const EdgeInsets.all(13),
+        margin: margin ?? const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        padding: padding ?? const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: aiTinted
-              ? AppColors.primary.withOpacity(0.05)
-              : AppColors.surface,
-          borderRadius: AppRadius.mdBR,
-          border: Border.all(
-            color: aiTinted
-                ? AppColors.primary.withOpacity(0.18)
-                : AppColors.border,
-            width: 0.5,
-          ),
+          color: aiTinted ? RColors.teal50 : RColors.surface,
+          borderRadius: RRadius.lgBR,
+          border: aiTinted
+              ? Border.all(color: RColors.teal100, width: 1)
+              : null,
+          boxShadow: RShadow.shadow2,
         ),
         child: child,
       ),
@@ -202,10 +241,10 @@ class SectionLabel extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(14, 16, 14, 6),
       child: Text(
         text.toUpperCase(),
-        style: AppText.label.copyWith(
+        style: RText.eyebrow.copyWith(
           fontSize: 10,
           letterSpacing: 0.8,
-          color: AppColors.text3,
+          color: RColors.sand400,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -231,7 +270,7 @@ class PillBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: AppRadius.fullBR,
+        borderRadius: RRadius.pillBR,
         border: Border.all(
           color: borderColor ?? bg,
           width: 0.5,
@@ -239,7 +278,7 @@ class PillBadge extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: AppText.caption.copyWith(
+        style: RText.small.copyWith(
           color: textColor, fontWeight: FontWeight.w500, fontSize: 10,
         ),
       ),
@@ -260,9 +299,9 @@ class HeroPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       margin: const EdgeInsets.only(bottom: 9),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.55),
-        borderRadius: AppRadius.fullBR,
-        border: Border.all(color: Colors.white.withOpacity(0.7), width: 0.5),
+        color: Colors.white.withValues(alpha: 0.55),
+        borderRadius: RRadius.pillBR,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.7), width: 0.5),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -271,14 +310,14 @@ class HeroPill extends StatelessWidget {
             Container(
               width: 5, height: 5,
               decoration: const BoxDecoration(
-                shape: BoxShape.circle, color: AppColors.primary,
+                shape: BoxShape.circle, color: RColors.teal700,
               ),
             ),
             const SizedBox(width: 4),
           ],
           Text(text,
-            style: AppText.caption.copyWith(
-              color: AppColors.primaryDark,
+            style: RText.small.copyWith(
+              color: RColors.teal900,
               fontWeight: FontWeight.w500, fontSize: 10,
             ),
           ),
@@ -312,61 +351,77 @@ class ToolRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = alertTinted
-        ? AppColors.peach.withOpacity(0.05)
-        : successTinted
-            ? AppColors.teal.withOpacity(0.04)
-            : aiTinted
-                ? AppColors.primary.withOpacity(0.05)
-                : AppColors.surface;
-    final borderColor = alertTinted
-        ? AppColors.peach.withOpacity(0.22)
-        : successTinted
-            ? AppColors.teal.withOpacity(0.18)
-            : aiTinted
-                ? AppColors.primary.withOpacity(0.18)
-                : AppColors.border;
+    final Color bg;
+    if (alertTinted) {
+      bg = RColors.clay100;
+    } else if (successTinted) {
+      bg = RColors.sage100;
+    } else if (aiTinted) {
+      bg = RColors.teal50;
+    } else {
+      bg = RColors.surface;
+    }
+
+    final Color titleColor;
+    if (alertTinted) {
+      titleColor = RColors.clay700;
+    } else if (aiTinted) {
+      titleColor = RColors.teal700;
+    } else {
+      titleColor = RColors.sand900;
+    }
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 12),
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+        constraints: const BoxConstraints(minHeight: 60),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: AppRadius.mdBR,
-          border: Border.all(color: borderColor, width: 0.5),
+          borderRadius: RRadius.mdBR,
+          boxShadow: RShadow.shadow1,
         ),
         child: Row(
           children: [
             Container(
               width: 36, height: 36,
-              decoration: BoxDecoration(color: iconBg, borderRadius: AppRadius.smBR),
+              decoration: BoxDecoration(
+                color: iconBg,
+                borderRadius: RRadius.smBR,
+              ),
               child: Center(child: icon),
             ),
-            const SizedBox(width: 11),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(title,
-                    style: AppText.bodySemibold.copyWith(
-                      color: alertTinted
-                          ? AppColors.peach
-                          : aiTinted ? AppColors.primary : AppColors.text1,
+                    style: RText.body.copyWith(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: titleColor,
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text(subtitle, style: AppText.bodySecondary),
+                  Text(subtitle,
+                    style: RText.small.copyWith(
+                      fontSize: 11,
+                      color: RColors.sand500,
+                    ),
+                  ),
                 ],
               ),
             ),
             if (trailing != null) ...[
-              const SizedBox(width: 8), trailing!,
+              const SizedBox(width: 8),
+              trailing!,
+            ] else ...[
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right_rounded,
+                size: 18, color: RColors.sand300),
             ],
-            const SizedBox(width: 6),
-            Icon(Icons.chevron_right_rounded,
-              size: 18, color: AppColors.text1.withOpacity(0.18)),
           ],
         ),
       ),
@@ -386,18 +441,18 @@ class NadirCard extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.fromLTRB(14, 9, 14, 0),
       padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: AppColors.peachLight,
-        borderRadius: AppRadius.mdBR,
-        border: const Border(left: BorderSide(color: AppColors.peach, width: 3)),
+      decoration: const BoxDecoration(
+        color: RColors.clay100,
+        borderRadius: RRadius.mdBR,
+        border: Border(left: BorderSide(color: RColors.clay500, width: 3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(title,
-            style: AppText.bodySemibold.copyWith(color: AppColors.peach)),
+            style: RText.body.copyWith(fontWeight: FontWeight.w500).copyWith(color: RColors.clay500)),
           const SizedBox(height: 3),
-          Text(body, style: AppText.bodySecondary),
+          Text(body, style: RText.bodyMuted),
         ],
       ),
     );
@@ -417,9 +472,9 @@ class EncouragementCard extends StatelessWidget {
       margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(
-        color: AppColors.teal.withOpacity(0.06),
-        borderRadius: AppRadius.mdBR,
-        border: Border.all(color: AppColors.teal.withOpacity(0.18), width: 0.5),
+        color: RColors.teal600.withValues(alpha: 0.06),
+        borderRadius: RRadius.mdBR,
+        border: Border.all(color: RColors.teal600.withValues(alpha: 0.18), width: 0.5),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -428,7 +483,7 @@ class EncouragementCard extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(text,
-              style: AppText.body.copyWith(color: AppColors.teal)),
+              style: RText.body.copyWith(color: RColors.teal600)),
           ),
         ],
       ),
@@ -449,24 +504,24 @@ class InsightCard extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.05),
-        borderRadius: AppRadius.mdBR,
+        color: RColors.teal700.withValues(alpha: 0.05),
+        borderRadius: RRadius.mdBR,
         border: Border.all(
-          color: AppColors.primary.withOpacity(0.13), width: 0.5),
+          color: RColors.teal700.withValues(alpha: 0.13), width: 0.5),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('✦', style: TextStyle(color: AppColors.primary, fontSize: 14)),
+          const Text('✦', style: TextStyle(color: RColors.teal700, fontSize: 14)),
           const SizedBox(width: 8),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title,
-                  style: AppText.bodySemibold.copyWith(color: AppColors.primary)),
+                  style: RText.body.copyWith(fontWeight: FontWeight.w500).copyWith(color: RColors.teal700)),
                 const SizedBox(height: 3),
-                Text(body, style: AppText.bodySecondary),
+                Text(body, style: RText.bodyMuted),
               ],
             ),
           ),
@@ -490,79 +545,137 @@ class AppProgressBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: AppRadius.fullBR,
+      borderRadius: RRadius.pillBR,
       child: LinearProgressIndicator(
         value: value,
         minHeight: height,
-        backgroundColor: AppColors.primaryLight,
-        valueColor: AlwaysStoppedAnimation(foreground ?? AppColors.primary),
+        backgroundColor: RColors.teal50,
+        valueColor: AlwaysStoppedAnimation(foreground ?? RColors.teal700),
       ),
     );
   }
 }
 
 // ── Bottom Nav ───────────────────────────────────────────────────────────────
-class AppBottomNav extends StatelessWidget {
+class AppBottomNav extends StatefulWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
-  final bool checkInDone;
 
   const AppBottomNav({
     super.key,
     required this.currentIndex,
     required this.onTap,
-    this.checkInDone = false,
   });
 
   @override
+  State<AppBottomNav> createState() => _AppBottomNavState();
+}
+
+class _AppBottomNavState extends State<AppBottomNav> {
+  @override
+  void initState() {
+    super.initState();
+    UserSession().addListener(_rebuild);
+  }
+
+  @override
+  void dispose() {
+    UserSession().removeListener(_rebuild);
+    super.dispose();
+  }
+
+  void _rebuild() { if (mounted) setState(() {}); }
+
+  @override
   Widget build(BuildContext context) {
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final checkInDone = UserSession().checkedInToday;
+
     return Container(
-      height: 64 + MediaQuery.of(context).padding.bottom,
-      decoration: BoxDecoration(
-        color: AppColors.background.withOpacity(0.97),
-        border: const Border(top: BorderSide(color: AppColors.border, width: 0.5)),
-      ),
-      child: Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom / 2),
-        child: Row(
+      color: Colors.transparent,
+      padding: EdgeInsets.fromLTRB(16, 0, 16, 38 + bottomPadding),
+      child: SizedBox(
+        height: 86, // 64 nav + 22 FAB overhang
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.bottomCenter,
           children: [
-            _NavItem(icon: Icons.home_outlined, activeIcon: Icons.home_rounded,
-              label: 'Home', active: currentIndex == 0, onTap: () => onTap(0)),
-            _NavItem(icon: Icons.monitor_heart_outlined, activeIcon: Icons.monitor_heart_rounded,
-              label: 'My Health', active: currentIndex == 1, onTap: () => onTap(1)),
-            // FAB slot
-            Expanded(
-              child: Center(
-                child: GestureDetector(
-                  onTap: () => onTap(5),
-                  child: Container(
-                    width: 44, height: 44,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: checkInDone
-                            ? [const Color(0xFF3DB87A), const Color(0xFF2A9060)]
-                            : [const Color(0xFF9B70E0), AppColors.primaryDark],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppColors.background, width: 2.5),
-                      boxShadow: [
-                        checkInDone ? AppShadows.fabTeal : AppShadows.fab,
-                      ],
+            // Nav pill
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: 64,
+                decoration: const BoxDecoration(
+                  color: RColors.surface,
+                  borderRadius: RRadius.xlBR,
+                  boxShadow: RShadow.shadow3,
+                ),
+                child: Row(
+                  children: [
+                    _NavItem(
+                      icon: Icons.home_outlined,
+                      activeIcon: Icons.home_rounded,
+                      label: 'Today',
+                      active: widget.currentIndex == 0,
+                      onTap: () => widget.onTap(0),
                     ),
-                    child: Icon(
-                      checkInDone ? Icons.check_rounded : Icons.add_rounded,
-                      color: Colors.white, size: 20,
+                    _NavItem(
+                      icon: Icons.favorite_border_rounded,
+                      activeIcon: Icons.favorite_rounded,
+                      label: 'Care',
+                      active: widget.currentIndex == 1,
+                      onTap: () => widget.onTap(1),
+                    ),
+                    const Expanded(child: SizedBox()), // FAB spacer
+                    _NavItem(
+                      icon: Icons.people_outline_rounded,
+                      activeIcon: Icons.people_rounded,
+                      label: 'Connect',
+                      active: widget.currentIndex == 3,
+                      onTap: () => widget.onTap(3),
+                    ),
+                    _NavItem(
+                      icon: Icons.person_outline_rounded,
+                      activeIcon: Icons.person_rounded,
+                      label: 'Profile',
+                      active: widget.currentIndex == 4,
+                      onTap: () => widget.onTap(4),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            // FAB — floats above nav bar centre
+            Positioned(
+              top: 0,
+              child: GestureDetector(
+                onTap: () => widget.onTap(5),
+                child: Container(
+                  width: 60, height: 60,
+                  decoration: const BoxDecoration(
+                    color: RColors.sand50, // 4 px border ring
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Container(
+                      width: 52, height: 52,
+                      decoration: BoxDecoration(
+                        color: checkInDone ? RColors.sage500 : RColors.saffron500,
+                        shape: BoxShape.circle,
+                        boxShadow: RShadow.shadow3,
+                      ),
+                      child: Icon(
+                        checkInDone ? Icons.check_rounded : Icons.add_rounded,
+                        color: RColors.surface,
+                        size: 22,
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-            _NavItem(icon: Icons.local_hospital_outlined, activeIcon: Icons.local_hospital_rounded,
-              label: 'Care', active: currentIndex == 2, onTap: () => onTap(2)),
-            _NavItem(icon: Icons.people_outline_rounded, activeIcon: Icons.people_rounded,
-              label: 'Connect', active: currentIndex == 3, onTap: () => onTap(3)),
           ],
         ),
       ),
@@ -578,12 +691,16 @@ class _NavItem extends StatelessWidget {
   final VoidCallback onTap;
 
   const _NavItem({
-    required this.icon, required this.activeIcon,
-    required this.label, required this.active, required this.onTap,
+    required this.icon,
+    required this.activeIcon,
+    required this.label,
+    required this.active,
+    required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final color = active ? RColors.teal700 : RColors.sand400;
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -591,17 +708,14 @@ class _NavItem extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              active ? activeIcon : icon,
-              size: 22,
-              color: active ? AppColors.primary : AppColors.text1.withOpacity(0.18),
-            ),
-            const SizedBox(height: 2),
+            Icon(active ? activeIcon : icon, size: 22, color: color),
+            const SizedBox(height: 3),
             Text(
               label,
-              style: AppText.caption.copyWith(
-                fontSize: 9, fontWeight: FontWeight.w500,
-                color: active ? AppColors.primary : AppColors.text3,
+              style: RText.eyebrow.copyWith(
+                fontSize: 10,
+                letterSpacing: 0,
+                color: color,
               ),
             ),
           ],

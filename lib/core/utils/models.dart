@@ -155,13 +155,13 @@ class UserProfile {
 
   static UserProfile get sample => UserProfile(
     name: 'Nadia',
-    cancerType: 'Breast cancer',
+    cancerType: 'Breast cancer · Grade II · ER+/PR+',
     stage: 'Stage II',
-    treatmentPhase: 'Chemotherapy',
-    treatmentStarted: DateTime(2026, 3, 4),
-    totalCycles: 12,
-    currentCycle: 6,
-    currentDayInCycle: 7,
+    treatmentPhase: 'In chemotherapy',
+    treatmentStarted: DateTime(2025, 12, 16),
+    totalCycles: 8,
+    currentCycle: 5,
+    currentDayInCycle: 4,
   );
 
   bool get isNadirWindow =>
@@ -204,6 +204,28 @@ class AppConfig {
 abstract class MockData {
   static final profile = UserProfile.sample;
 
+  static List<Map<String, dynamic>> get checkinHistory {
+    final now = DateTime.now();
+    const jp = [7,6,7,8,7,5,4,3,4,5,6,7,7,6];
+    const nr = [6,6,7,7,6,5,5,4,5,6,6,7,6,5];
+    const ft = [5,4,5,5,4,3,4,4,5,5,4,5,5,4];
+    const fv = [1,0,1,0,0,0,1,0,0,1,0,0,0,0];
+    const ms = [5,5,4,4,5,6,6,5,4,4,5,5,4,5];
+    return List.generate(14, (i) => {
+      'patient_id': 'demo',
+      'created_at': now.subtract(Duration(days: i)).toIso8601String(),
+      'joint_pain': jp[i],
+      'neuropathy': nr[i],
+      'fatigue':    ft[i],
+      'fever':      fv[i],
+      'mood_score': ms[i],
+      'notes': i == 2
+          ? 'أصابعي تتنمل باستمرار منذ الدورة الخامسة، ولم يختفِ التنميل بين الدورتين هذه المرة'
+          : '',
+      'interference_flag': jp[i] >= 7,
+    });
+  }
+
   static final labs = [
     LabResult(
       id: 'cbc-apr20',
@@ -237,21 +259,21 @@ abstract class MockData {
 
   static final appointments = [
     Appointment(
-      id: 'apt1', title: 'Oncology follow-up',
-      doctorName: 'Dr. Sarah Chen', location: 'Oncology Clinic',
-      dateTime: DateTime.now().add(const Duration(days: 4))
-          .copyWith(hour: 10, minute: 30, second: 0),
+      id: 'apt1', title: 'Consultation oncologie · Dr. Ben Abid',
+      doctorName: 'Dr. Ben Abid', location: 'Oncologie ambulatoire',
+      dateTime: DateTime.now().add(const Duration(days: 2))
+          .copyWith(hour: 10, minute: 0, second: 0),
     ),
     Appointment(
-      id: 'apt2', title: 'Chemo session #7',
+      id: 'apt2', title: 'Chemo session #6',
       doctorName: '', location: 'Infusion Suite B',
-      dateTime: DateTime.now().add(const Duration(days: 11))
+      dateTime: DateTime.now().add(const Duration(days: 17))
           .copyWith(hour: 9, minute: 0, second: 0),
     ),
     Appointment(
-      id: 'apt3', title: 'Chemo session #6',
+      id: 'apt3', title: 'Chemo session #5',
       doctorName: '', location: 'Infusion Suite B',
-      dateTime: DateTime.now().subtract(const Duration(days: 10))
+      dateTime: DateTime.now().subtract(const Duration(days: 4))
           .copyWith(hour: 9, minute: 0, second: 0),
       isPast: true,
     ),

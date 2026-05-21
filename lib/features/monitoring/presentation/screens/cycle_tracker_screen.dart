@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/shared_widgets.dart';
+import '../../../../theme/rehlah_theme.dart';
 import '../../../../core/utils/user_session.dart';
 
 class PeriodEntry {
@@ -36,7 +35,6 @@ class _CycleTrackerScreenState extends State<CycleTrackerScreen> {
   final List<PeriodEntry> _periods = [];
   DateTime _focusedMonth = DateTime.now();
   int _tabIndex = 0;
-  int _scanViewMonth = 0; // offset from next month
 
   @override
   void initState() {
@@ -57,18 +55,16 @@ class _CycleTrackerScreenState extends State<CycleTrackerScreen> {
         flowLevel: 2,
       ));
     }
-    // Default to showing the month with the next period/fertile window
-    final now = DateTime.now();
-    _focusedMonth = DateTime(now.year, now.month);
+    _focusedMonth = DateTime(DateTime.now().year, DateTime.now().month);
   }
 
   // ── Cycle calculations ────────────────────────────────────────────────────
+
   DateTime? get _lastPeriodStart {
     if (_periods.isEmpty && _session.lastPeriodDate == null) return null;
     if (_periods.isNotEmpty) {
-      final sorted = [..._periods]..sort(
-          (a, b) => b.startDate.compareTo(a.startDate));
-      return sorted.first.startDate;
+      return ([..._periods]..sort((a, b) => b.startDate.compareTo(a.startDate)))
+          .first.startDate;
     }
     return _session.lastPeriodDate;
   }
@@ -98,8 +94,7 @@ class _CycleTrackerScreenState extends State<CycleTrackerScreen> {
     if (last == null) return false;
     DateTime next = last.add(Duration(days: _session.cycleLength));
     final avgDuration = _periods.isNotEmpty
-        ? (_periods.map((p) => p.duration).reduce((a, b) => a + b) /
-            _periods.length).round()
+        ? (_periods.map((p) => p.duration).reduce((a, b) => a + b) / _periods.length).round()
         : 5;
     for (int i = 0; i < 12; i++) {
       if (!_isPeriodDay(date)) {
@@ -114,11 +109,9 @@ class _CycleTrackerScreenState extends State<CycleTrackerScreen> {
     return false;
   }
 
-  // Fertile window: 5 days before ovulation + ovulation day
   bool _isFertileDay(DateTime date) {
     final next = _nextPeriodDate();
     if (next == null) return false;
-    // Ovulation ~14 days before next period
     final ovulation = next.subtract(const Duration(days: 14));
     final fertileStart = ovulation.subtract(const Duration(days: 5));
     return !date.isBefore(DateTime(fertileStart.year, fertileStart.month, fertileStart.day)) &&
@@ -130,602 +123,646 @@ class _CycleTrackerScreenState extends State<CycleTrackerScreen> {
     if (next == null) return false;
     final ovulation = next.subtract(const Duration(days: 14));
     return date.year == ovulation.year &&
-        date.month == ovulation.month &&
-        date.day == ovulation.day;
+        date.month == ovulation.month && date.day == ovulation.day;
   }
 
   List<(DateTime, DateTime)> _optimalWindowsInMonth(DateTime month) {
     if (_session.menstrualStatus != 'regular') return [];
     final last = _lastPeriodStart;
     if (last == null) return [];
-
     final windows = <(DateTime, DateTime)>[];
     final monthStart = DateTime(month.year, month.month, 1);
     final monthEnd = DateTime(month.year, month.month + 1, 0);
     final planningMin = DateTime.now().add(const Duration(days: 14));
-
-    // Start far enough back to catch windows that begin before monthStart
     DateTime cycleStart = last;
-    while (cycleStart.isAfter(
-        monthStart.subtract(Duration(days: _session.cycleLength + 14)))) {
+    while (cycleStart.isAfter(monthStart.subtract(Duration(days: _session.cycleLength + 14)))) {
       cycleStart = cycleStart.subtract(Duration(days: _session.cycleLength));
     }
-
-    // Scan forward through enough cycles to cover the month
     for (int i = 0; i < 12; i++) {
-      final ws = cycleStart.add(const Duration(days: 6));  // day 7
-      final we = cycleStart.add(const Duration(days: 13)); // day 14
-
-      // Window overlaps with this month AND is far enough in future to plan
-      if (!we.isBefore(monthStart) && !ws.isAfter(monthEnd) &&
-          !we.isBefore(planningMin)) {
+      final ws = cycleStart.add(const Duration(days: 6));
+      final we = cycleStart.add(const Duration(days: 13));
+      if (!we.isBefore(monthStart) && !ws.isAfter(monthEnd) && !we.isBefore(planningMin)) {
         final cs = ws.isBefore(monthStart) ? monthStart : ws;
         final ce = we.isAfter(monthEnd) ? monthEnd : we;
         windows.add((cs, ce));
       }
-
       cycleStart = cycleStart.add(Duration(days: _session.cycleLength));
-      // Stop once cycle starts are well past the month
       if (cycleStart.isAfter(monthEnd.add(const Duration(days: 14)))) break;
     }
     return windows;
   }
 
+  // ── Build ─────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: RColors.sand50,
       body: SafeArea(
+        bottom: false,
         child: Column(children: [
-          _buildHeader(),
-          _buildTabs(),
+          _topbar(),
+          _tabs(),
           Expanded(child: _tabIndex == 0
-              ? _buildPeriodTracker()
-              : _buildScanCalendar()),
+              ? _periodTracker()
+              : _scanCalendar()),
         ]),
       ),
     );
   }
 
-  Widget _buildHeader() => Padding(
-    padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      GestureDetector(
-        onTap: () => context.go('/'),
-        child: Row(children: [
-          Icon(Icons.arrow_back_ios_new_rounded, size: 15,
-            color: AppColors.text2.withOpacity(0.4)),
-          const SizedBox(width: 4),
-          Text('Home', style: AppText.caption.copyWith(color: AppColors.text2)),
-        ]),
+  // ── Topbar ────────────────────────────────────────────────────────────────
+
+  Widget _topbar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: Row(children: [
+        _iconBtn(Icons.chevron_left_rounded,
+            onTap: () => context.canPop() ? context.pop() : context.go('/')),
+        const Expanded(child: Center(child: Text('Cycle tracker',
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700,
+              letterSpacing: -0.2)))),
+        _iconBtn(Icons.tune_rounded, onTap: _showSettingsSheet),
+      ]),
+    );
+  }
+
+  Widget _iconBtn(IconData icon, {required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36, height: 36,
+        decoration: BoxDecoration(
+          color: RColors.surface, shape: BoxShape.circle,
+          border: Border.all(color: RColors.sand200),
+        ),
+        child: Icon(icon, color: RColors.sand700, size: 20),
       ),
-      const SizedBox(height: 8),
-      RichText(text: TextSpan(style: AppText.displayTitle, children: const [
-        TextSpan(text: 'Cycle & '),
-        TextSpan(text: 'scan tracker',
-          style: TextStyle(fontWeight: FontWeight.w700)),
-      ])),
-    ]),
-  );
+    );
+  }
 
-  Widget _buildTabs() => Padding(
-    padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
-    child: Container(
-      height: 36, padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.08),
-        borderRadius: AppRadius.fullBR),
-      child: Row(
-        children: ['Period tracker', 'Scan calendar']
-            .asMap().entries.map((e) {
-          final active = e.key == _tabIndex;
-          return Expanded(child: GestureDetector(
-            onTap: () => setState(() => _tabIndex = e.key),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              decoration: BoxDecoration(
-                color: active ? AppColors.surface : Colors.transparent,
-                borderRadius: AppRadius.fullBR,
-                boxShadow: active ? [BoxShadow(
-                  color: AppColors.primary.withOpacity(0.10),
-                  blurRadius: 4)] : null),
-              child: Center(child: Text(e.value,
-                style: AppText.body.copyWith(
-                  fontSize: 12,
-                  color: active ? AppColors.primary : AppColors.text3,
-                  fontWeight: active ? FontWeight.w500 : FontWeight.w400)))),
-          ));
-        }).toList(),
-      ),
-    ),
-  );
+  // ── Tabs ──────────────────────────────────────────────────────────────────
 
-  // ── Period Tracker ────────────────────────────────────────────────────────
-  Widget _buildPeriodTracker() {
-    final nextPeriod = _nextPeriodDate();
-    final daysUntil = nextPeriod != null
-        ? nextPeriod.difference(DateTime.now()).inDays : null;
-
-    return Column(children: [
-      // Stats strip
-      Padding(
-        padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
-        child: Row(children: [
-          _miniStat(
-            daysUntil != null ? '$daysUntil' : '—',
-            'days to\nnext period', AppColors.rose),
-          const SizedBox(width: 6),
-          _miniStat('${_session.cycleLength}', 'cycle\nlength', AppColors.primary),
-          const SizedBox(width: 6),
-          _miniStat(
-            _periods.isNotEmpty
-                ? '${(_periods.map((p) => p.duration).reduce((a, b) => a + b) / _periods.length).round()}'
-                : '—',
-            'avg period\ndays', AppColors.teal),
-          const SizedBox(width: 6),
-          // Settings button
-          GestureDetector(
-            onTap: _showSettingsSheet,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: AppRadius.mdBR,
-                border: Border.all(color: AppColors.border, width: 0.5)),
-              child: Column(children: [
-                const Icon(Icons.tune_rounded, size: 16, color: AppColors.text2),
-                const SizedBox(height: 2),
-                Text('Settings', style: AppText.caption.copyWith(
-                  fontSize: 9, color: AppColors.text3)),
-              ]),
-            ),
-          ),
-        ]),
-      ),
-
-      // Month navigation
-      Padding(
-        padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+  Widget _tabs() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+      child: Container(
+        height: 36, padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: RColors.sand100,
+          borderRadius: RRadius.pillBR,
+          border: Border.all(color: RColors.sand200)),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _navBtn(Icons.chevron_left_rounded,
-                () => setState(() => _focusedMonth = DateTime(
-                    _focusedMonth.year, _focusedMonth.month - 1))),
-            Text(DateFormat('MMMM yyyy').format(_focusedMonth),
-              style: AppText.bodySemibold.copyWith(fontSize: 15)),
-            _navBtn(Icons.chevron_right_rounded,
-                () => setState(() => _focusedMonth = DateTime(
-                    _focusedMonth.year, _focusedMonth.month + 1))),
-          ],
+          children: ['Period tracker', 'Scan planner'].asMap().entries.map((e) {
+            final active = e.key == _tabIndex;
+            return Expanded(child: GestureDetector(
+              onTap: () => setState(() => _tabIndex = e.key),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                decoration: BoxDecoration(
+                  color: active ? RColors.surface : Colors.transparent,
+                  borderRadius: RRadius.pillBR,
+                  boxShadow: active
+                      ? [BoxShadow(color: RColors.teal700.withValues(alpha: 0.08),
+                          blurRadius: 4)]
+                      : null),
+                child: Center(child: Text(e.value,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: active ? RColors.teal700 : RColors.sand400,
+                    fontWeight: active ? FontWeight.w600 : FontWeight.w400)))),
+            ));
+          }).toList(),
         ),
       ),
+    );
+  }
 
-      // Cycle info for this month
-      _buildMonthCycleInfo(_focusedMonth),
+  // ── Period tracker ────────────────────────────────────────────────────────
 
-      // Calendar
+  Widget _periodTracker() {
+    final nextPeriod = _nextPeriodDate();
+    final daysUntil  = nextPeriod?.difference(DateTime.now()).inDays;
+
+    return Column(children: [
       Expanded(child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-        child: Column(children: [
-          _buildCompactCalendar(_focusedMonth),
-          const SizedBox(height: 8),
-          _buildLegend(),
+        padding: const EdgeInsets.only(bottom: 100),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const SizedBox(height: 10),
+          _phaseBanner(daysUntil, nextPeriod),
           const SizedBox(height: 12),
-          _buildPeriodHistory(),
-          const SizedBox(height: 80),
+          _calendarCard(),
+          const SizedBox(height: 12),
+          _statsRow(daysUntil),
+          const SizedBox(height: 12),
+          if (_periods.isNotEmpty) _periodHistory(),
+          const SizedBox(height: 12),
+          _nextCycleTileOrEmpty(nextPeriod, daysUntil),
+          const SizedBox(height: 20),
         ]),
       )),
-
-      // Log button
-      Padding(
-        padding: const EdgeInsets.fromLTRB(14, 0, 14, 16),
-        child: GestureDetector(
-          onTap: _showLogPeriodSheet,
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 13),
-            decoration: BoxDecoration(
-              color: AppColors.rose,
-              borderRadius: AppRadius.fullBR,
-              boxShadow: [BoxShadow(
-                color: AppColors.rose.withOpacity(0.28),
-                blurRadius: 10, offset: const Offset(0, 3))]),
-            child: const Center(child: Text('+ Log period',
-              style: TextStyle(fontFamily: 'Inter', fontSize: 14,
-                fontWeight: FontWeight.w500, color: Colors.white))))),
-      ),
+      _logButton(),
     ]);
   }
 
-  Widget _miniStat(String value, String label, Color color) {
-    return Expanded(child: Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+  Widget _phaseBanner(int? daysUntil, DateTime? nextPeriod) {
+    final hasData = _lastPeriodStart != null;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.07),
-        borderRadius: AppRadius.smBR,
-        border: Border.all(color: color.withOpacity(0.12), width: 0.5)),
+        gradient: const LinearGradient(
+          colors: [RColors.saffron100, RColors.sand100],
+          begin: Alignment.centerLeft, end: Alignment.centerRight),
+        borderRadius: RRadius.mdBR,
+        border: Border.all(color: RColors.saffron300, width: 0.5),
+      ),
+      child: Row(children: [
+        Container(
+          width: 36, height: 36,
+          decoration: const BoxDecoration(
+            color: RColors.saffron500, shape: BoxShape.circle),
+          child: Center(child: Text(
+            hasData ? '${_session.cycleLength}d' : '?',
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
+                color: RColors.sand950))),
+        ),
+        const SizedBox(width: 12),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(
+            hasData ? 'Cycle · ${_session.cycleLength} days' : 'Set up your cycle',
+            style: const TextStyle(fontSize: 10.5, letterSpacing: 1.2,
+                fontWeight: FontWeight.w500, color: RColors.saffron700)),
+          const SizedBox(height: 2),
+          Text(
+            hasData && nextPeriod != null
+                ? 'Next period ~${DateFormat('d MMM').format(nextPeriod)}'
+                : 'Log your first period to start',
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700,
+                color: RColors.sand950)),
+          if (daysUntil != null)
+            Text('in $daysUntil days',
+              style: const TextStyle(fontSize: 11, color: RColors.sand700)),
+        ])),
+      ]),
+    );
+  }
+
+  Widget _calendarCard() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: RColors.surface,
+        borderRadius: RRadius.lgBR,
+        border: Border.all(color: RColors.sand200),
+      ),
       child: Column(children: [
-        Text(value, style: TextStyle(fontFamily: 'Inter', fontSize: 16,
-          fontWeight: FontWeight.w600, color: color)),
-        Text(label, style: AppText.caption.copyWith(
-          fontSize: 8, color: AppColors.text3, height: 1.3),
+        // Month nav header
+        Row(children: [
+          _calNavBtn(Icons.chevron_left_rounded,
+              () => setState(() => _focusedMonth =
+                  DateTime(_focusedMonth.year, _focusedMonth.month - 1))),
+          Expanded(child: Center(child: Text(
+            DateFormat('MMMM yyyy').format(_focusedMonth),
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700,
+                letterSpacing: -0.2)))),
+          _calNavBtn(Icons.chevron_right_rounded,
+              () => setState(() => _focusedMonth =
+                  DateTime(_focusedMonth.year, _focusedMonth.month + 1))),
+        ]),
+        const SizedBox(height: 12),
+        // DOW headers — Monday first
+        Row(children: ['Mo','Tu','We','Th','Fr','Sa','Su'].map((d) =>
+          Expanded(child: Center(child: Text(d,
+            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w500,
+                color: RColors.sand400))))).toList()),
+        const SizedBox(height: 6),
+        // Grid
+        _calGrid(_focusedMonth),
+        // Legend
+        const SizedBox(height: 12),
+        Container(height: 0.5, color: RColors.sand200),
+        const SizedBox(height: 10),
+        Wrap(spacing: 14, runSpacing: 6, children: [
+          _legendItem(RColors.teal700,    Colors.white,       'Today'),
+          _legendItem(RColors.saffron100, RColors.saffron700, 'Period'),
+          _legendItem(RColors.sage100,    RColors.sage500,    'Fertile'),
+          _legendItem(RColors.sage500,    Colors.white,       'Ovulation'),
+          _legendItem(RColors.clay100,    RColors.clay700,    'Predicted'),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _calNavBtn(IconData icon, VoidCallback onTap) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      width: 28, height: 28,
+      decoration: const BoxDecoration(
+          color: RColors.sand100, borderRadius: RRadius.smBR),
+      child: Icon(icon, size: 14, color: RColors.sand700)),
+  );
+
+  Widget _calGrid(DateTime month) {
+    final firstDay    = DateTime(month.year, month.month, 1);
+    final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
+    final offset      = (firstDay.weekday - 1) % 7; // Mon=0 … Sun=6
+    final now         = DateTime.now();
+
+    final cells = <Widget>[
+      for (int i = 0; i < offset; i++) const SizedBox.shrink(),
+      for (int d = 1; d <= daysInMonth; d++)
+        _dayCell(DateTime(month.year, month.month, d), now),
+    ];
+
+    return GridView.count(
+      crossAxisCount: 7,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 4,
+      crossAxisSpacing: 4,
+      children: cells,
+    );
+  }
+
+  Widget _dayCell(DateTime date, DateTime now) {
+    final isToday     = date.year == now.year &&
+        date.month == now.month && date.day == now.day;
+    final isPeriod    = _isPeriodDay(date);
+    final isOvul      = _isOvulationDay(date);
+    final isFertile   = !isOvul && _isFertileDay(date);
+    final isPredicted = !isPeriod && !isOvul && !isFertile &&
+        _isPredictedPeriod(date);
+
+    Color bg        = Colors.transparent;
+    Color textColor = RColors.sand700;
+    bool  bold      = false;
+    Color? dotColor;
+
+    if (isToday) {
+      bg = RColors.teal700; textColor = Colors.white; bold = true;
+    } else if (isPeriod) {
+      bg = RColors.saffron100; textColor = RColors.saffron700; bold = true;
+      dotColor = RColors.saffron500;
+    } else if (isOvul) {
+      bg = RColors.sage500; textColor = Colors.white; bold = true;
+      dotColor = Colors.white;
+    } else if (isFertile) {
+      bg = RColors.sage100; textColor = RColors.sage700;
+      dotColor = RColors.sage500;
+    } else if (isPredicted) {
+      bg = RColors.clay100; textColor = RColors.clay700;
+    }
+
+    return GestureDetector(
+      onTap: () => _showDayInfo(date, isPeriod, isFertile, isOvul, isPredicted),
+      child: Container(
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Stack(alignment: Alignment.center, children: [
+          Center(child: Text('${date.day}',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: bold ? FontWeight.w700 : FontWeight.w400,
+              color: textColor,
+              fontFeatures: const [FontFeature.tabularFigures()]))),
+          if (dotColor != null)
+            Positioned(
+              bottom: 3,
+              child: Container(
+                width: 4, height: 4,
+                decoration: BoxDecoration(
+                  color: dotColor, shape: BoxShape.circle))),
+        ]),
+      ),
+    );
+  }
+
+  Widget _legendItem(Color bg, Color dotColor, String label) {
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Container(
+        width: 10, height: 10,
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(3),
+          border: bg == Colors.transparent
+              ? Border.all(color: RColors.sand200) : null),
+      ),
+      const SizedBox(width: 5),
+      Text(label,
+          style: const TextStyle(fontSize: 11, color: RColors.sand700)),
+    ]);
+  }
+
+  Widget _statsRow(int? daysUntil) {
+    final avgDays = _periods.isNotEmpty
+        ? (_periods.map((p) => p.duration).reduce((a, b) => a + b) / _periods.length).round()
+        : null;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(children: [
+        _statChip(
+          daysUntil != null ? '$daysUntil' : '—',
+          'days to next', RColors.clay500),
+        const SizedBox(width: 8),
+        _statChip('${_session.cycleLength}', 'cycle length', RColors.teal700),
+        const SizedBox(width: 8),
+        _statChip(avgDays != null ? '$avgDays' : '—',
+            'avg period days', RColors.sage500),
+      ]),
+    );
+  }
+
+  Widget _statChip(String value, String label, Color color) {
+    return Expanded(child: Container(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.07),
+        borderRadius: RRadius.mdBR,
+        border: Border.all(color: color.withValues(alpha: 0.15), width: 0.5)),
+      child: Column(children: [
+        Text(value, style: TextStyle(fontSize: 18,
+            fontWeight: FontWeight.w700, color: color)),
+        const SizedBox(height: 2),
+        Text(label, style: const TextStyle(
+            fontSize: 9, color: RColors.sand400, height: 1.3),
           textAlign: TextAlign.center),
       ]),
     ));
   }
 
-  Widget _navBtn(IconData icon, VoidCallback onTap) => GestureDetector(
-    onTap: onTap,
-    child: Container(
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: AppColors.surface, shape: BoxShape.circle,
-        border: Border.all(color: AppColors.border, width: 0.5)),
-      child: Icon(icon, size: 18, color: AppColors.text2)));
+  Widget _periodHistory() {
+    final sorted = [..._periods]
+      ..sort((a, b) => b.startDate.compareTo(a.startDate));
 
-  Widget _buildMonthCycleInfo(DateTime month) {
-    final next = _nextPeriodDate();
-    if (next == null) return const SizedBox(height: 4);
-
-    final monthStart = DateTime(month.year, month.month, 1);
-    final monthEnd = DateTime(month.year, month.month + 1, 0);
-    final ovulation = next.subtract(const Duration(days: 14));
-    final fertileStart = ovulation.subtract(const Duration(days: 5));
-
-    final items = <String>[];
-
-    // Check if period is in this month
-    for (final p in _periods) {
-      if (!p.endDate.isBefore(monthStart) && !p.startDate.isAfter(monthEnd)) {
-        items.add('🔴 Period: ${DateFormat('d').format(p.startDate)}–${DateFormat('d MMM').format(p.endDate)}');
-      }
-    }
-
-    // Fertile window in this month
-    if (!fertileStart.isAfter(monthEnd) && !ovulation.isBefore(monthStart)) {
-      final fs = fertileStart.isBefore(monthStart) ? monthStart : fertileStart;
-      items.add('🌿 Fertile: ${DateFormat('d').format(fs)}–${DateFormat('d MMM').format(ovulation)}');
-    }
-
-    // Ovulation in this month
-    if (ovulation.month == month.month && ovulation.year == month.year) {
-      items.add('🟢 Ovulation: ${DateFormat('d MMM').format(ovulation)}');
-    }
-
-    // Predicted next period in this month
-    if (next.month == month.month && next.year == month.year) {
-      items.add('🔮 Next period: ~${DateFormat('d MMM').format(next)}');
-    }
-
-    if (items.isEmpty) return const SizedBox(height: 4);
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(14, 6, 14, 0),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.04),
-        borderRadius: AppRadius.mdBR,
-        border: Border.all(color: AppColors.primaryMid, width: 0.5)),
-      child: Wrap(
-        spacing: 12, runSpacing: 4,
-        children: items.map((item) => Text(item,
-          style: AppText.caption.copyWith(fontSize: 11))).toList(),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const Text('RECENT PERIODS',
+            style: TextStyle(fontSize: 10.5, letterSpacing: 1.4,
+                fontWeight: FontWeight.w500, color: RColors.sand500)),
+          const Spacer(),
+          GestureDetector(
+            onTap: _showSettingsSheet,
+            child: const Text('Edit settings',
+              style: TextStyle(fontSize: 11, color: RColors.teal700,
+                  fontWeight: FontWeight.w500))),
+        ]),
+        const SizedBox(height: 8),
+        ...sorted.take(3).map((p) => Container(
+          margin: const EdgeInsets.only(bottom: 6),
+          padding: const EdgeInsets.fromLTRB(14, 11, 14, 11),
+          decoration: BoxDecoration(
+            color: RColors.surface, borderRadius: RRadius.mdBR,
+            border: Border.all(color: RColors.sand200)),
+          child: Row(children: [
+            Container(width: 8, height: 8,
+              decoration: BoxDecoration(
+                color: RColors.saffron500.withValues(alpha: 0.6),
+                shape: BoxShape.circle)),
+            const SizedBox(width: 10),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(DateFormat('d MMM yyyy').format(p.startDate),
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500,
+                    color: RColors.sand950)),
+              Text('${p.duration} days · ${_flowLabel(p.flowLevel)}',
+                style: const TextStyle(fontSize: 11, color: RColors.sand500)),
+            ])),
+            GestureDetector(
+              onTap: () => _showEditPeriodSheet(p),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: const BoxDecoration(
+                  color: RColors.sand100, borderRadius: RRadius.pillBR),
+                child: const Text('Edit',
+                  style: TextStyle(fontSize: 10, color: RColors.sand700,
+                      fontWeight: FontWeight.w500)))),
+          ]),
+        )),
+      ]),
     );
   }
 
-  Widget _buildCompactCalendar(DateTime month) {
-    final firstDay = DateTime(month.year, month.month, 1);
-    final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
-    final startWeekday = firstDay.weekday % 7;
-    final now = DateTime.now();
-
-    return Column(children: [
-      // Headers
-      Row(children: ['S','M','T','W','T','F','S'].map((d) =>
-        Expanded(child: Center(child: Text(d,
-          style: AppText.caption.copyWith(
-            fontSize: 11, color: AppColors.text3,
-            fontWeight: FontWeight.w600))))).toList()),
-      const SizedBox(height: 4),
-      // Grid
-      GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 7, mainAxisSpacing: 2, crossAxisSpacing: 2,
-          childAspectRatio: 1),
-        itemCount: startWeekday + daysInMonth,
-        itemBuilder: (_, i) {
-          if (i < startWeekday) return const SizedBox.shrink();
-          final day = i - startWeekday + 1;
-          final date = DateTime(month.year, month.month, day);
-          return _buildDayCell(date, now);
-        },
-      ),
-    ]);
-  }
-
-  Widget _buildDayCell(DateTime date, DateTime now) {
-    final isToday = date.year == now.year &&
-        date.month == now.month && date.day == now.day;
-    final isPeriod = _isPeriodDay(date);
-    final isOvulation = _isOvulationDay(date);
-    final isFertile = !isOvulation && _isFertileDay(date);
-    final isPredicted = !isPeriod && !isOvulation && !isFertile &&
-        _isPredictedPeriod(date);
-
-    Color? bg;
-    Color textColor = AppColors.text2;
-    Widget? dot;
-
-    if (isPeriod) {
-      bg = const Color(0xFFFFCDD2); // strong pink
-      textColor = const Color(0xFFB71C1C);
-    } else if (isOvulation) {
-      bg = const Color(0xFF2E7D32); // deep green
-      textColor = Colors.white;
-      dot = Container(
-        width: 4, height: 4,
-        margin: const EdgeInsets.only(top: 1),
-        decoration: const BoxDecoration(
-          color: Colors.white, shape: BoxShape.circle));
-    } else if (isFertile) {
-      bg = const Color(0xFFC8E6C9); // light green
-      textColor = const Color(0xFF2E7D32);
-    } else if (isPredicted) {
-      bg = const Color(0xFFFFEBEE); // very light pink
-      textColor = const Color(0xFFE57373);
+  Widget _nextCycleTileOrEmpty(DateTime? nextPeriod, int? daysUntil) {
+    if (nextPeriod == null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: RColors.surface, borderRadius: RRadius.mdBR,
+            border: Border.all(color: RColors.sand200)),
+          child: Row(children: [
+            Container(width: 36, height: 36,
+              decoration: const BoxDecoration(
+                color: RColors.saffron100, borderRadius: RRadius.smBR),
+              child: const Icon(Icons.calendar_today_rounded,
+                  color: RColors.saffron700, size: 18)),
+            const SizedBox(width: 12),
+            const Expanded(child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('No cycle data yet',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500,
+                    color: RColors.sand950)),
+              Text('Log your first period to get predictions',
+                style: TextStyle(fontSize: 11, color: RColors.sand500)),
+            ])),
+          ]),
+        ),
+      );
     }
 
     return GestureDetector(
-      onTap: () => _showDayInfo(date, isPeriod, isFertile, isOvulation, isPredicted),
+      onTap: () {},
       child: Container(
-        margin: const EdgeInsets.all(1),
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
         decoration: BoxDecoration(
-          color: bg,
-          shape: BoxShape.circle,
-          border: isToday ? Border.all(
-            color: AppColors.primary, width: 2) : null),
-        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text('${date.day}', style: TextStyle(
-            fontFamily: 'Inter', fontSize: 12,
-            fontWeight: isToday || isPeriod || isOvulation
-                ? FontWeight.w700 : FontWeight.w400,
-            color: isToday && bg == null ? AppColors.primary : textColor)),
-          if (dot != null) dot,
+          color: RColors.surface, borderRadius: RRadius.mdBR,
+          border: Border.all(color: RColors.sand200)),
+        child: Row(children: [
+          Container(width: 36, height: 36,
+            decoration: const BoxDecoration(
+              color: RColors.saffron100, borderRadius: RRadius.smBR),
+            child: const Icon(Icons.circle_outlined,
+                color: RColors.saffron700, size: 18)),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            const Text('Next period',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                  color: RColors.sand950)),
+            Text('${DateFormat('d MMM').format(nextPeriod)} · in $daysUntil days',
+              style: const TextStyle(fontSize: 11, color: RColors.sand500)),
+          ])),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+            height: 22,
+            decoration: const BoxDecoration(
+              color: RColors.sky100, borderRadius: RRadius.pillBR),
+            child: Row(mainAxisSize: MainAxisSize.min, children: [
+              Container(width: 5, height: 5,
+                decoration: const BoxDecoration(
+                  color: RColors.sky500, shape: BoxShape.circle)),
+              const SizedBox(width: 5),
+              const Text('Predicted',
+                style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w500,
+                    color: RColors.sand700, height: 1)),
+            ]),
+          ),
         ]),
       ),
     );
   }
 
-  Widget _buildLegend() => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 14),
-    child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-      _legendDot(const Color(0xFFFFCDD2), const Color(0xFFB71C1C), 'Period'),
-      const SizedBox(width: 12),
-      _legendDot(const Color(0xFFC8E6C9), const Color(0xFF2E7D32), 'Fertile'),
-      const SizedBox(width: 12),
-      _legendDot(const Color(0xFF2E7D32), Colors.white, 'Ovulation'),
-      const SizedBox(width: 12),
-      _legendDot(const Color(0xFFFFEBEE), const Color(0xFFE57373), 'Predicted'),
-    ]),
-  );
-
-  Widget _legendDot(Color bg, Color textColor, String label) => Row(children: [
-    Container(width: 12, height: 12,
-      decoration: BoxDecoration(color: bg, shape: BoxShape.circle,
-        border: Border.all(
-          color: textColor.withOpacity(0.3), width: 0.5))),
-    const SizedBox(width: 4),
-    Text(label, style: AppText.caption.copyWith(fontSize: 10)),
-  ]);
-
-  Widget _buildPeriodHistory() {
-    if (_periods.isEmpty) return const SizedBox.shrink();
-    final sorted = [..._periods]
-        ..sort((a, b) => b.startDate.compareTo(a.startDate));
-
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text('RECENT PERIODS', style: AppText.label.copyWith(fontSize: 10)),
-        GestureDetector(
-          onTap: _showSettingsSheet,
-          child: Text('Edit cycle settings →',
-            style: AppText.caption.copyWith(
-              color: AppColors.primary, fontSize: 11,
-              fontWeight: FontWeight.w500))),
-      ]),
-      const SizedBox(height: 8),
-      ...sorted.take(3).map((p) => Container(
-        margin: const EdgeInsets.only(bottom: 6),
-        padding: const EdgeInsets.all(11),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: AppRadius.mdBR,
-          border: Border.all(color: AppColors.border, width: 0.5)),
-        child: Row(children: [
-          Container(width: 8, height: 8,
-            decoration: BoxDecoration(
-              color: AppColors.rose.withOpacity(0.5),
-              shape: BoxShape.circle)),
-          const SizedBox(width: 10),
-          Expanded(child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(DateFormat('d MMM yyyy').format(p.startDate),
-                style: AppText.bodySemibold.copyWith(fontSize: 13)),
-              Text('${p.duration} days · ${_flowLabel(p.flowLevel)}',
-                style: AppText.caption.copyWith(fontSize: 11)),
-            ],
-          )),
-          // Edit button
-          GestureDetector(
-            onTap: () => _showEditPeriodSheet(p),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.background2,
-                borderRadius: AppRadius.fullBR),
-              child: Text('Edit',
-                style: AppText.caption.copyWith(
-                  fontSize: 10, color: AppColors.text2)))),
-        ]),
-      )),
-    ]);
+  Widget _logButton() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: RColors.surface,
+        border: Border(top: BorderSide(color: RColors.sand200, width: 0.5))),
+      padding: EdgeInsets.fromLTRB(
+          16, 10, 16, 16 + MediaQuery.of(context).padding.bottom),
+      child: GestureDetector(
+        onTap: _showLogPeriodSheet,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          decoration: BoxDecoration(
+            color: RColors.clay500,
+            borderRadius: RRadius.pillBR,
+            boxShadow: [BoxShadow(
+              color: RColors.clay500.withValues(alpha: 0.25),
+              blurRadius: 10, offset: const Offset(0, 3))]),
+          child: const Center(child: Text('+ Log period',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600,
+                color: Colors.white))),
+        ),
+      ),
+    );
   }
 
-  String _flowLabel(int level) {
-    return {1: 'Light', 2: 'Moderate', 3: 'Heavy'}[level] ?? '';
-  }
+  String _flowLabel(int level) =>
+      {1: 'Light', 2: 'Moderate', 3: 'Heavy'}[level] ?? '';
 
-  // ── Scan Calendar ─────────────────────────────────────────────────────────
-  Widget _buildScanCalendar() {
-    final now = DateTime.now();
-    // Show 6 months starting from next month
+  // ── Scan planner ──────────────────────────────────────────────────────────
+
+  Widget _scanCalendar() {
+    final now    = DateTime.now();
     final months = List.generate(6, (i) =>
         DateTime(now.year, now.month + i + 1));
 
     return Column(children: [
       // Info banner
       Container(
-        margin: const EdgeInsets.fromLTRB(14, 10, 14, 0),
-        padding: const EdgeInsets.all(11),
+        margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+        padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
         decoration: BoxDecoration(
-          color: AppColors.teal.withOpacity(0.06),
-          borderRadius: AppRadius.mdBR,
-          border: Border.all(
-            color: AppColors.teal.withOpacity(0.18), width: 0.5)),
+          color: RColors.teal50, borderRadius: RRadius.mdBR,
+          border: Border.all(color: RColors.teal100)),
         child: Row(children: [
-          const Text('📅', style: TextStyle(fontSize: 14)),
-          const SizedBox(width: 8),
+          const Text('📅', style: TextStyle(fontSize: 16)),
+          const SizedBox(width: 10),
           Expanded(child: Text(
             _session.menstrualStatus == 'regular'
-                ? 'Green = optimal scan window (Days 7–14). Book MRI or Mammogram 4–6 weeks ahead.'
-                : 'No cycle restriction. Schedule MRI / Mammogram at any convenient time.',
-            style: AppText.caption.copyWith(
-              color: AppColors.teal, fontSize: 11, height: 1.5))),
+                ? 'Teal = optimal scan window (Days 7–14). Book MRI or Mammogram 4–6 weeks ahead.'
+                : 'No cycle restriction — schedule MRI / Mammogram at any convenient time.',
+            style: const TextStyle(fontSize: 11, color: RColors.teal700,
+                height: 1.5))),
         ]),
       ),
-
       Expanded(child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(14, 8, 14, 24),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         itemCount: months.length,
-        itemBuilder: (_, i) => _buildScanMonthCard(months[i]),
+        itemBuilder: (_, i) => _scanMonthCard(months[i]),
       )),
     ]);
   }
 
-  Widget _buildScanMonthCard(DateTime month) {
-    final windows = _optimalWindowsInMonth(month);
-    final firstDay = DateTime(month.year, month.month, 1);
+  Widget _scanMonthCard(DateTime month) {
+    final windows     = _optimalWindowsInMonth(month);
+    final firstDay    = DateTime(month.year, month.month, 1);
     final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
-    final startWeekday = firstDay.weekday % 7;
+    final offset      = (firstDay.weekday - 1) % 7;
+    final hasWindows  = windows.isNotEmpty;
+    final noRestriction = _session.menstrualStatus != 'regular';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadius.mdBR,
+        color: RColors.surface, borderRadius: RRadius.mdBR,
         border: Border.all(
-          color: windows.isNotEmpty
-              ? AppColors.teal.withOpacity(0.2)
-              : AppColors.border,
-          width: windows.isNotEmpty ? 1 : 0.5)),
+          color: hasWindows ? RColors.teal200 : RColors.sand200,
+          width: hasWindows ? 1 : 0.5)),
       child: Column(children: [
         // Month header
         Padding(
-          padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
           child: Row(children: [
             Text(DateFormat('MMMM yyyy').format(month),
-              style: AppText.bodySemibold),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600,
+                  color: RColors.sand950)),
             const Spacer(),
-            if (windows.isNotEmpty)
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.tealLight,
-                  borderRadius: AppRadius.fullBR),
-                child: Text(
-                  windows.length == 1
-                      ? '1 window'
-                      : '${windows.length} windows',
-                  style: AppText.caption.copyWith(
-                    color: AppColors.teal,
-                    fontWeight: FontWeight.w600, fontSize: 10)))
-            else if (_session.menstrualStatus != 'regular')
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryLight,
-                  borderRadius: AppRadius.fullBR),
-                child: Text('Any time',
-                  style: AppText.caption.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w600, fontSize: 10))),
+            if (hasWindows)
+              _scanPill('${windows.length} window${windows.length > 1 ? "s" : ""}',
+                  RColors.teal50, RColors.teal700)
+            else if (noRestriction)
+              _scanPill('Any time', RColors.teal50, RColors.teal700),
           ]),
         ),
-
-        // Day headers
+        // DOW
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10),
-          child: Row(children: ['S','M','T','W','T','F','S'].map((d) =>
+          child: Row(children: ['Mo','Tu','We','Th','Fr','Sa','Su'].map((d) =>
             Expanded(child: Center(child: Text(d,
-              style: AppText.caption.copyWith(
-                fontSize: 9, color: AppColors.text3,
-                fontWeight: FontWeight.w600))))).toList()),
+              style: const TextStyle(fontSize: 9, color: RColors.sand400,
+                  fontWeight: FontWeight.w500))))).toList()),
         ),
         const SizedBox(height: 4),
-
         // Grid
         Padding(
-          padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+          padding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
           child: GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 7, mainAxisSpacing: 2,
-              crossAxisSpacing: 2, childAspectRatio: 1.1),
-            itemCount: startWeekday + daysInMonth,
+              crossAxisSpacing: 0, childAspectRatio: 1.1),
+            itemCount: offset + daysInMonth,
             itemBuilder: (_, i) {
-              if (i < startWeekday) return const SizedBox.shrink();
-              final day = i - startWeekday + 1;
+              if (i < offset) return const SizedBox.shrink();
+              final day  = i - offset + 1;
               final date = DateTime(month.year, month.month, day);
-              return _buildScanDayCell(date, windows);
+              return _scanDayCell(date, windows, noRestriction);
             },
           ),
         ),
-
         // Window labels
-        if (windows.isNotEmpty)
+        if (hasWindows)
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 0, 14, 10),
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: double.infinity, height: 0.5,
-                  color: AppColors.border),
-                const SizedBox(height: 8),
+                Container(height: 0.5, color: RColors.sand200),
+                const SizedBox(height: 10),
                 ...windows.map((w) => Padding(
-                  padding: const EdgeInsets.only(bottom: 3),
+                  padding: const EdgeInsets.only(bottom: 4),
                   child: Row(children: [
                     Container(width: 8, height: 8,
-                      decoration: BoxDecoration(
-                        color: AppColors.teal.withOpacity(0.35),
-                        shape: BoxShape.circle)),
-                    const SizedBox(width: 6),
+                      decoration: const BoxDecoration(
+                        color: RColors.teal200, shape: BoxShape.circle)),
+                    const SizedBox(width: 8),
                     Text(
                       '${DateFormat('d MMM').format(w.$1)} – ${DateFormat('d MMM').format(w.$2)}',
-                      style: AppText.bodySemibold.copyWith(
-                        color: AppColors.teal, fontSize: 12)),
+                      style: const TextStyle(fontSize: 12,
+                          fontWeight: FontWeight.w600, color: RColors.teal700)),
                     const SizedBox(width: 6),
-                    Text('· Best time to book',
-                      style: AppText.caption.copyWith(
-                        color: AppColors.text3, fontSize: 10)),
+                    const Text('· Best time to book',
+                      style: TextStyle(fontSize: 10, color: RColors.sand400)),
                   ]),
                 )),
               ],
@@ -735,42 +772,59 @@ class _CycleTrackerScreenState extends State<CycleTrackerScreen> {
     );
   }
 
-  Widget _buildScanDayCell(DateTime date, List<(DateTime, DateTime)> windows) {
+  Widget _scanDayCell(DateTime date, List<(DateTime, DateTime)> windows,
+      bool noRestriction) {
     final isOptimal = windows.any((w) =>
         !date.isBefore(DateTime(w.$1.year, w.$1.month, w.$1.day)) &&
         !date.isAfter(DateTime(w.$2.year, w.$2.month, w.$2.day)));
 
-    // Determine position for rounded ends
-    BorderRadius? radius;
-    for (final w in windows) {
-      final isStart = date.year == w.$1.year &&
-          date.month == w.$1.month && date.day == w.$1.day;
-      final isEnd = date.year == w.$2.year &&
-          date.month == w.$2.month && date.day == w.$2.day;
-      if (isStart && isEnd) {
-        radius = BorderRadius.circular(8);
-      } else if (isStart) {
-        radius = const BorderRadius.horizontal(left: Radius.circular(8));
-      } else if (isEnd) {
-        radius = const BorderRadius.horizontal(right: Radius.circular(8));
-      } else if (isOptimal) {
-        radius = BorderRadius.zero;
+    BorderRadius radius = BorderRadius.circular(6);
+    if (isOptimal) {
+      for (final w in windows) {
+        final isStart = date.year == w.$1.year &&
+            date.month == w.$1.month && date.day == w.$1.day;
+        final isEnd   = date.year == w.$2.year &&
+            date.month == w.$2.month && date.day == w.$2.day;
+        if (isStart && isEnd) {
+          radius = BorderRadius.circular(8);
+        } else if (isStart) {
+          radius = const BorderRadius.horizontal(left: Radius.circular(8));
+        } else if (isEnd) {
+          radius = const BorderRadius.horizontal(right: Radius.circular(8));
+        } else {
+          radius = BorderRadius.zero;
+        }
       }
     }
 
     return Container(
       decoration: BoxDecoration(
-        color: isOptimal ? AppColors.teal.withOpacity(0.14) : Colors.transparent,
-        borderRadius: radius ?? BorderRadius.circular(6)),
+        color: noRestriction
+            ? RColors.teal700.withValues(alpha: 0.06)
+            : isOptimal
+                ? RColors.teal700.withValues(alpha: 0.12)
+                : Colors.transparent,
+        borderRadius: radius),
       child: Center(child: Text('${date.day}',
         style: TextStyle(
-          fontFamily: 'Inter', fontSize: 11,
-          fontWeight: isOptimal ? FontWeight.w600 : FontWeight.w400,
-          color: isOptimal ? AppColors.teal : AppColors.text2))),
+          fontSize: 11,
+          fontWeight: isOptimal || noRestriction
+              ? FontWeight.w600 : FontWeight.w400,
+          color: isOptimal || noRestriction
+              ? RColors.teal700 : RColors.sand700,
+          fontFeatures: const [FontFeature.tabularFigures()]))),
     );
   }
 
+  Widget _scanPill(String label, Color bg, Color fg) => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+    decoration: BoxDecoration(color: bg, borderRadius: RRadius.pillBR),
+    child: Text(label,
+      style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: fg)),
+  );
+
   // ── Sheets ────────────────────────────────────────────────────────────────
+
   void _showSettingsSheet() {
     int cycleLen = _session.cycleLength;
     String status = _session.menstrualStatus;
@@ -779,9 +833,9 @@ class _CycleTrackerScreenState extends State<CycleTrackerScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
+      backgroundColor: RColors.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => StatefulBuilder(
         builder: (ctx, setS) => Padding(
           padding: EdgeInsets.fromLTRB(20, 16, 20,
@@ -789,14 +843,15 @@ class _CycleTrackerScreenState extends State<CycleTrackerScreen> {
           child: Column(mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start, children: [
             Center(child: Container(width: 36, height: 4,
-              decoration: BoxDecoration(color: AppColors.border,
-                borderRadius: BorderRadius.circular(2)))),
+              decoration: const BoxDecoration(
+                color: RColors.sand200, borderRadius: RRadius.pillBR))),
             const SizedBox(height: 16),
-            Text('CYCLE SETTINGS', style: AppText.label.copyWith(fontSize: 10)),
+            const Text('CYCLE SETTINGS',
+              style: TextStyle(fontSize: 10.5, letterSpacing: 1.4,
+                  fontWeight: FontWeight.w500, color: RColors.sand500)),
             const SizedBox(height: 14),
-
-            // Cycle length
-            Text('Cycle length', style: AppText.bodySecondary),
+            const Text('Cycle length',
+              style: TextStyle(fontSize: 13, color: RColors.sand500)),
             const SizedBox(height: 8),
             Row(children: [
               GestureDetector(
@@ -804,24 +859,22 @@ class _CycleTrackerScreenState extends State<CycleTrackerScreen> {
                 child: _circleBtn(Icons.remove_rounded)),
               const SizedBox(width: 16),
               Text('$cycleLen days',
-                style: AppText.sectionHeading.copyWith(
-                  color: AppColors.primary, fontSize: 18)),
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700,
+                    color: RColors.teal700)),
               const SizedBox(width: 16),
               GestureDetector(
                 onTap: () => setS(() => cycleLen = (cycleLen + 1).clamp(21, 45)),
                 child: _circleBtn(Icons.add_rounded)),
             ]),
-
             const SizedBox(height: 16),
-
-            // Menstrual status
-            Text('Current menstrual status', style: AppText.bodySecondary),
+            const Text('Current menstrual status',
+              style: TextStyle(fontSize: 13, color: RColors.sand500)),
             const SizedBox(height: 8),
             ...[
-              ('regular', '🔄', 'Regular cycles'),
-              ('irregular', '〰️', 'Irregular cycles'),
+              ('regular',    '🔄', 'Regular cycles'),
+              ('irregular',  '〰️', 'Irregular cycles'),
               ('amenorrhea', '⏸️', 'No period yet'),
-              ('menopause', '🍂', 'Menopause'),
+              ('menopause',  '🍂', 'Menopause'),
             ].map((opt) {
               final sel = status == opt.$1;
               return GestureDetector(
@@ -829,29 +882,27 @@ class _CycleTrackerScreenState extends State<CycleTrackerScreen> {
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 120),
                   margin: const EdgeInsets.only(bottom: 6),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12, vertical: 9),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
                   decoration: BoxDecoration(
-                    color: sel
-                        ? AppColors.primaryLight : AppColors.background,
-                    borderRadius: AppRadius.mdBR,
+                    color: sel ? RColors.teal50 : RColors.sand50,
+                    borderRadius: RRadius.mdBR,
                     border: Border.all(
-                      color: sel ? AppColors.primaryMid : AppColors.border,
+                      color: sel ? RColors.teal100 : RColors.sand200,
                       width: 0.5)),
                   child: Row(children: [
                     Text(opt.$2, style: const TextStyle(fontSize: 16)),
                     const SizedBox(width: 10),
-                    Text(opt.$3, style: AppText.bodySemibold.copyWith(
-                      color: sel ? AppColors.primary : AppColors.text1,
-                      fontSize: 13)),
-                    if (sel) ...[const Spacer(),
-                      Icon(Icons.check_rounded, size: 16,
-                        color: AppColors.primary)],
+                    Text(opt.$3,
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500,
+                          color: sel ? RColors.teal700 : RColors.sand900)),
+                    if (sel) ...[
+                      const Spacer(),
+                      const Icon(Icons.check_rounded, size: 16,
+                          color: RColors.teal700)],
                   ]),
                 ),
               );
             }),
-
             const SizedBox(height: 14),
             GestureDetector(
               onTap: () {
@@ -862,16 +913,15 @@ class _CycleTrackerScreenState extends State<CycleTrackerScreen> {
               },
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 13),
+                padding: const EdgeInsets.symmetric(vertical: 14),
                 decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: AppRadius.fullBR,
+                  color: RColors.teal700, borderRadius: RRadius.pillBR,
                   boxShadow: [BoxShadow(
-                    color: AppColors.primary.withOpacity(0.3),
+                    color: RColors.teal700.withValues(alpha: 0.3),
                     blurRadius: 10, offset: const Offset(0, 3))]),
                 child: const Center(child: Text('Save settings',
-                  style: TextStyle(fontFamily: 'Inter', fontSize: 14,
-                    fontWeight: FontWeight.w500, color: Colors.white)))),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600,
+                      color: Colors.white)))),
             ),
           ]),
         ),
@@ -881,19 +931,17 @@ class _CycleTrackerScreenState extends State<CycleTrackerScreen> {
 
   Widget _circleBtn(IconData icon) => Container(
     padding: const EdgeInsets.all(8),
-    decoration: BoxDecoration(
-      color: AppColors.primaryLight, shape: BoxShape.circle,
-      border: Border.all(color: AppColors.primaryMid, width: 0.5)),
-    child: Icon(icon, size: 18, color: AppColors.primary));
+    decoration: const BoxDecoration(
+      color: RColors.teal50, shape: BoxShape.circle),
+    child: Icon(icon, size: 18, color: RColors.teal700));
 
-  void _showLogPeriodSheet() => _showPeriodSheet(null, setState);
-  void _showEditPeriodSheet(PeriodEntry p) => _showPeriodSheet(p, setState);
+  void _showLogPeriodSheet()                 => _showPeriodSheet(null, setState);
+  void _showEditPeriodSheet(PeriodEntry p)   => _showPeriodSheet(p, setState);
 
   void _showPeriodSheet(PeriodEntry? existing, StateSetter outerSetState) {
-    // Use lists so reassignment inside StatefulBuilder is visible to save button
     final dates = [
       existing?.startDate ?? DateTime.now(),
-      existing?.endDate ?? DateTime.now().add(const Duration(days: 4)),
+      existing?.endDate   ?? DateTime.now().add(const Duration(days: 4)),
     ];
     int flowLevel = existing?.flowLevel ?? 2;
     final symptoms = <String>{...?existing?.symptoms};
@@ -902,9 +950,9 @@ class _CycleTrackerScreenState extends State<CycleTrackerScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
+      backgroundColor: RColors.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => StatefulBuilder(
         builder: (ctx, setS) => Padding(
           padding: EdgeInsets.fromLTRB(20, 16, 20,
@@ -913,28 +961,25 @@ class _CycleTrackerScreenState extends State<CycleTrackerScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start, children: [
             Center(child: Container(width: 36, height: 4,
-              decoration: BoxDecoration(color: AppColors.border,
-                borderRadius: BorderRadius.circular(2)))),
+              decoration: const BoxDecoration(
+                color: RColors.sand200, borderRadius: RRadius.pillBR))),
             const SizedBox(height: 12),
             Text(isEdit ? 'EDIT PERIOD' : 'LOG PERIOD',
-              style: AppText.label.copyWith(fontSize: 10)),
+              style: const TextStyle(fontSize: 10.5, letterSpacing: 1.4,
+                  fontWeight: FontWeight.w500, color: RColors.sand500)),
             const SizedBox(height: 12),
-
-            // Start date
             _dateRow('Start date', dates[0], () async {
               final p = await _pickDate(dates[0]);
               if (p != null) setS(() => dates[0] = p);
-            }, AppColors.rose),
+            }),
             const SizedBox(height: 8),
             _dateRow('End date', dates[1], () async {
               final p = await _pickDate(dates[1], allowFuture: true);
               if (p != null) setS(() => dates[1] = p);
-            }, AppColors.rose),
-
+            }),
             const SizedBox(height: 12),
-
-            // Flow
-            Text('Flow level', style: AppText.bodySecondary),
+            const Text('Flow level',
+              style: TextStyle(fontSize: 13, color: RColors.sand500)),
             const SizedBox(height: 6),
             Row(children: [1, 2, 3].map((l) {
               final sel = flowLevel == l;
@@ -947,58 +992,52 @@ class _CycleTrackerScreenState extends State<CycleTrackerScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   decoration: BoxDecoration(
                     color: sel
-                        ? AppColors.rose.withOpacity(0.10)
-                        : AppColors.background,
-                    borderRadius: AppRadius.mdBR,
+                        ? RColors.clay500.withValues(alpha: 0.10)
+                        : RColors.sand50,
+                    borderRadius: RRadius.mdBR,
                     border: Border.all(
                       color: sel
-                          ? AppColors.rose.withOpacity(0.3)
-                          : AppColors.border,
+                          ? RColors.clay500.withValues(alpha: 0.3)
+                          : RColors.sand200,
                       width: 0.5)),
                   child: Center(child: Text(labels[l]!,
-                    style: AppText.caption.copyWith(
-                      color: sel ? AppColors.rose : AppColors.text2,
-                      fontWeight: sel ? FontWeight.w600 : FontWeight.w400,
-                      fontSize: 10)))),
-              ));
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: sel ? RColors.clay500 : RColors.sand700,
+                      fontWeight: sel ? FontWeight.w600 : FontWeight.w400))))));
             }).toList()),
-
             const SizedBox(height: 12),
-
-            // Symptoms
-            Text('Symptoms', style: AppText.bodySecondary),
+            const Text('Symptoms',
+              style: TextStyle(fontSize: 13, color: RColors.sand500)),
             const SizedBox(height: 6),
             Wrap(spacing: 6, runSpacing: 6,
-              children: ['Cramps', 'Bloating', 'Headache',
-                  'Spotting', 'Fatigue', 'Mood changes', 'Back pain',
+              children: ['Cramps', 'Bloating', 'Headache', 'Spotting',
+                  'Fatigue', 'Mood changes', 'Back pain',
                   'Breast tenderness'].map((s) {
                 final sel = symptoms.contains(s);
                 return GestureDetector(
                   onTap: () => setS(() {
-                    if (sel) symptoms.remove(s); else symptoms.add(s);
+                    if (sel) { symptoms.remove(s); } else { symptoms.add(s); }
                   }),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 100),
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 5),
+                        horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
                       color: sel
-                          ? AppColors.rose.withOpacity(0.08)
-                          : AppColors.background,
-                      borderRadius: AppRadius.fullBR,
+                          ? RColors.clay500.withValues(alpha: 0.08)
+                          : RColors.sand50,
+                      borderRadius: RRadius.pillBR,
                       border: Border.all(
                         color: sel
-                            ? AppColors.rose.withOpacity(0.3)
-                            : AppColors.border,
+                            ? RColors.clay500.withValues(alpha: 0.3)
+                            : RColors.sand200,
                         width: 0.5)),
-                    child: Text(s, style: AppText.caption.copyWith(
-                      color: sel ? AppColors.rose : AppColors.text2,
-                      fontSize: 11))),
-                );
+                    child: Text(s,
+                      style: TextStyle(fontSize: 11,
+                        color: sel ? RColors.clay500 : RColors.sand700))));
               }).toList()),
-
             const SizedBox(height: 16),
-
             Row(children: [
               if (isEdit) ...[
                 Expanded(child: GestureDetector(
@@ -1010,30 +1049,29 @@ class _CycleTrackerScreenState extends State<CycleTrackerScreen> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
-                      color: AppColors.roseLight,
-                      borderRadius: AppRadius.mdBR,
+                      color: RColors.clay100, borderRadius: RRadius.mdBR,
                       border: Border.all(
-                        color: AppColors.rose.withOpacity(0.2), width: 0.5)),
-                    child: Center(child: Text('Delete',
-                      style: AppText.caption.copyWith(
-                        color: AppColors.rose, fontWeight: FontWeight.w500,
-                        fontSize: 13)))))),
+                          color: RColors.clay500.withValues(alpha: 0.2),
+                          width: 0.5)),
+                    child: const Center(child: Text('Delete',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500,
+                          color: RColors.clay500)))))),
                 const SizedBox(width: 8),
               ],
               Expanded(flex: 2, child: GestureDetector(
                 onTap: () {
                   if (isEdit) {
-                    existing!.startDate = dates[0];
-                    existing.endDate = dates[1];
+                    existing.startDate = dates[0];
+                    existing.endDate   = dates[1];
                     existing.flowLevel = flowLevel;
-                    existing.symptoms = symptoms.toList();
+                    existing.symptoms   = symptoms.toList();
                   } else {
                     _periods.add(PeriodEntry(
                       id: DateTime.now().millisecondsSinceEpoch.toString(),
                       startDate: dates[0],
-                      endDate: dates[1],
+                      endDate:   dates[1],
                       flowLevel: flowLevel,
-                      symptoms: symptoms.toList(),
+                      symptoms:  symptoms.toList(),
                     ));
                     _session.lastPeriodDate = dates[0];
                   }
@@ -1043,15 +1081,15 @@ class _CycleTrackerScreenState extends State<CycleTrackerScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   decoration: BoxDecoration(
-                    color: AppColors.rose,
-                    borderRadius: AppRadius.mdBR,
+                    color: RColors.clay500, borderRadius: RRadius.mdBR,
                     boxShadow: [BoxShadow(
-                      color: AppColors.rose.withOpacity(0.28),
+                      color: RColors.clay500.withValues(alpha: 0.28),
                       blurRadius: 8, offset: const Offset(0, 3))]),
                   child: Center(child: Text(
                     isEdit ? 'Save changes' : 'Save period',
-                    style: const TextStyle(fontFamily: 'Inter', fontSize: 14,
-                      fontWeight: FontWeight.w500, color: Colors.white)))))),
+                    style: const TextStyle(fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white)))))),
             ]),
           ])),
         ),
@@ -1059,67 +1097,70 @@ class _CycleTrackerScreenState extends State<CycleTrackerScreen> {
     );
   }
 
-  Widget _dateRow(String label, DateTime date, VoidCallback onTap, Color color) {
+  Widget _dateRow(String label, DateTime date, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
         decoration: BoxDecoration(
-          color: AppColors.background,
-          borderRadius: AppRadius.mdBR,
-          border: Border.all(color: color.withOpacity(0.25), width: 0.5)),
+          color: RColors.sand50, borderRadius: RRadius.mdBR,
+          border: Border.all(color: RColors.clay500.withValues(alpha: 0.2),
+              width: 0.5)),
         child: Row(children: [
-          Text('$label:', style: AppText.bodySecondary.copyWith(fontSize: 13)),
+          Text('$label:',
+            style: const TextStyle(fontSize: 13, color: RColors.sand500)),
           const SizedBox(width: 10),
           Text(DateFormat('d MMMM yyyy').format(date),
-            style: AppText.bodySemibold.copyWith(color: color, fontSize: 13)),
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500,
+                color: RColors.clay500)),
           const Spacer(),
-          Icon(Icons.edit_rounded, size: 14, color: color.withOpacity(0.5)),
+          Icon(Icons.edit_rounded, size: 14,
+              color: RColors.clay500.withValues(alpha: 0.5)),
         ]),
       ),
     );
   }
 
-  Future<DateTime?> _pickDate(DateTime initial, {bool allowFuture = false}) => showDatePicker(
-    context: context,
-    initialDate: initial,
-    firstDate: DateTime.now().subtract(const Duration(days: 365)),
-    lastDate: allowFuture
-        ? DateTime.now().add(const Duration(days: 30))
-        : DateTime.now(),
-    builder: (context, child) => Theme(
-      data: Theme.of(context).copyWith(
-        colorScheme: ColorScheme.light(primary: AppColors.rose)),
-      child: child!),
-  );
+  Future<DateTime?> _pickDate(DateTime initial, {bool allowFuture = false}) =>
+      showDatePicker(
+        context: context,
+        initialDate: initial,
+        firstDate: DateTime.now().subtract(const Duration(days: 365)),
+        lastDate: allowFuture
+            ? DateTime.now().add(const Duration(days: 30))
+            : DateTime.now(),
+        builder: (context, child) => Theme(
+          data: Theme.of(context).copyWith(
+              colorScheme: const ColorScheme.light(primary: RColors.clay500)),
+          child: child!),
+      );
 
   void _showDayInfo(DateTime date, bool isPeriod, bool isFertile,
       bool isOvulation, bool isPredicted) {
     if (!isPeriod && !isFertile && !isOvulation && !isPredicted) return;
-    String title, body;
-    if (isPeriod) {
-      title = '🔴 Period day';
-      body = 'Logged period on ${DateFormat('d MMMM').format(date)}.';
-    } else if (isOvulation) {
-      title = '🟢 Estimated ovulation';
-      body = 'Based on your ${_session.cycleLength}-day cycle. Highest fertility day.';
-    } else if (isFertile) {
-      title = '🌿 Fertile window';
-      body = 'You may be in your fertile window. Pregnancy possible if unprotected sex occurs.';
-    } else {
-      title = '🔮 Predicted period';
-      body = 'Period predicted around ${DateFormat('d MMMM').format(date)} based on your cycle.';
-    }
+    final (title, body) = isPeriod
+        ? ('Period day', 'Logged period on ${DateFormat('d MMMM').format(date)}.')
+        : isOvulation
+            ? ('Estimated ovulation',
+               'Based on your ${_session.cycleLength}-day cycle. Highest fertility day.')
+            : isFertile
+                ? ('Fertile window',
+                   'You may be in your fertile window. Pregnancy possible if unprotected sex occurs.')
+                : ('Predicted period',
+                   'Period predicted around ${DateFormat('d MMMM').format(date)} based on your cycle.');
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        backgroundColor: AppColors.surface,
-        title: Text(title, style: AppText.sectionHeading.copyWith(fontSize: 15)),
-        content: Text(body, style: AppText.bodySecondary),
+        backgroundColor: RColors.surface,
+        title: Text(title,
+            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+        content: Text(body,
+            style: const TextStyle(fontSize: 13, color: RColors.sand700,
+                height: 1.5)),
         actions: [TextButton(
           onPressed: () => Navigator.pop(context),
-          child: Text('OK',
-            style: TextStyle(color: AppColors.primary)))],
+          child: const Text('OK',
+              style: TextStyle(color: RColors.teal700)))],
       ),
     );
   }

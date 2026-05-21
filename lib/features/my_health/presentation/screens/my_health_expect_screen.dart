@@ -1,379 +1,421 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/shared_widgets.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../theme/rehlah_theme.dart';
 import '../../../../core/utils/user_session.dart';
 import '../../../../core/utils/protocols.dart';
 
 class MyHealthExpectScreen extends StatelessWidget {
-  final bool embedded;
-  const MyHealthExpectScreen({super.key, this.embedded = false});
+  const MyHealthExpectScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final session = UserSession();
-
-    // Show monitoring-specific content for monitoring patients
-    if (session.isMonitoring) {
-      final content = _buildMonitoringExpect(session);
-      if (embedded) return content;
-      return Scaffold(
-        backgroundColor: AppColors.background,
-        body: SafeArea(child: content));
-    }
-
-    final phase = session.currentPhase;
-    final isNadir = session.isNadirWindow;
-    final isNadirApproaching = session.isNadirApproaching;
-    final maxDay = session.protocol == BreastProtocol.cmf ? 28 : 21;
-
-    final content = SingleChildScrollView(
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // Hero card
-        HeroCard(
-          gradientColors: const [
-            Color(0xFFCCC0EC), Color(0xFFD4E8F0), Color(0xFFCCC0EC)],
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            HeroPill('${session.protocol.name} · Cycle ${session.currentCycle} of ${session.totalCycles}'),
-            Text(
-              '${session.cancerType} · Day ${session.dayInCycle} of $maxDay',
-              style: const TextStyle(fontFamily: 'Inter',
-                fontSize: 13, fontWeight: FontWeight.w500,
-                color: AppColors.text1)),
-            const SizedBox(height: 10),
-            Text('Where you are in your cycle',
-              style: AppText.caption.copyWith(fontSize: 11)),
-            const SizedBox(height: 6),
-            _buildCycleDots(session, maxDay),
-            const SizedBox(height: 8),
-            // Status pill
-            if (isNadir)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.peachLight,
-                  borderRadius: AppRadius.fullBR,
-                  border: Border.all(color: AppColors.peach, width: 0.5)),
-                child: Text(
-                  '⚠ Nadir window · Days active · Immune system at lowest',
-                  style: AppText.caption.copyWith(
-                    color: AppColors.peach, fontWeight: FontWeight.w500,
-                    fontSize: 10)))
-            else if (isNadirApproaching)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.gold.withOpacity(0.10),
-                  borderRadius: AppRadius.fullBR,
-                  border: Border.all(
-                    color: AppColors.gold.withOpacity(0.3), width: 0.5)),
-                child: Text(
-                  '⚡ Nadir window approaching · Monitor temperature',
-                  style: AppText.caption.copyWith(
-                    color: AppColors.gold, fontWeight: FontWeight.w500,
-                    fontSize: 10)))
-            else
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.teal.withOpacity(0.10),
-                  borderRadius: AppRadius.fullBR,
-                  border: Border.all(
-                    color: AppColors.teal.withOpacity(0.25), width: 0.5)),
-                child: Text(
-                  '✓ ${phase.name}',
-                  style: AppText.caption.copyWith(
-                    color: AppColors.teal, fontWeight: FontWeight.w500,
-                    fontSize: 10))),
-          ]),
-        ),
-        const SectionLabel('Learn about your phase'),
-        _buildEduCards(session),
-        const SectionLabel('What to expect this phase'),
-        // Dynamic symptoms from protocol
-        ...phase.primarySymptoms.take(4).map((s) =>
-          _buildExpectCard(s.emoji, s.label, s.tip ?? phase.phaseNote)),
-        const SectionLabel('📞  When to contact your care team'),
-        // Dynamic urgent symptoms
-        ...phase.watchSymptoms.where((s) => s.isUrgent).map((s) =>
-          _buildWhenToCall(s.label, s.urgentMessage ?? 'Contact your care team.')),
-        // Always show fever if not already listed
-        if (!phase.watchSymptoms.any((s) => s.key == 'fever'))
-          _buildWhenToCall('Fever above 38°C',
-              'Do not wait — call immediately, day or night.'),
-        _buildWhenToCall('Sudden severe pain',
-            'Any pain that is new, sharp, or does not pass.'),
-        _buildWhenToCall('Difficulty breathing',
-            'Shortness of breath or chest tightness at rest.'),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
-          child: Text(
-            'General information only — not a substitute for medical advice. '
-            'Always contact your care team with any concern.',
-            style: AppText.caption.copyWith(
-              fontSize: 12, fontStyle: FontStyle.italic),
-            textAlign: TextAlign.center),
-        ),
-      ]),
-    );
-
-    if (embedded) return content;
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(child: content));
-  }
-
-  Widget _buildCycleDots(UserSession session, int maxDay) {
-    final day = session.dayInCycle;
-    final phase = session.currentPhase;
-
-    return SizedBox(
-      height: 14,
-      child: Row(children: List.generate(maxDay, (i) {
-        final d = i + 1;
-        final dayPhase = ProtocolResolver.resolve(
-          session.protocol, d, isTaxolPhase: session.isTaxolPhase);
-        final isCurrent = d == day;
-        final isNadirDay = dayPhase.isNadir;
-        final isDone = d < day;
-
-        Color color;
-        double size = 8;
-        if (isCurrent) {
-          color = AppColors.primary;
-          size = 12;
-        } else if (isNadirDay) {
-          color = AppColors.peach;
-        } else if (isDone) {
-          color = AppColors.teal;
-        } else {
-          color = AppColors.primary.withOpacity(0.13);
-        }
-
-        return Container(
-          margin: const EdgeInsets.only(right: 2),
-          width: size, height: size,
-          decoration: BoxDecoration(
-            color: color, shape: BoxShape.circle,
-            boxShadow: isCurrent ? [BoxShadow(
-              color: AppColors.primary.withOpacity(0.3),
-              blurRadius: 4, spreadRadius: 1)] : null),
-        );
-      })),
-    );
-  }
-
-  Widget _buildEduCards(UserSession session) {
-    final protocol = session.protocol;
-    final phase = session.currentPhase;
-
-    final cards = [
-      ('🧪', '${protocol.name} basics',
-          'What happens during ${phase.name.toLowerCase()}',
-          AppColors.primaryLight),
-      ('😴', 'Side effects',
-          'Managing ${phase.primarySymptoms.isNotEmpty ? phase.primarySymptoms.first.label.toLowerCase() : "symptoms"}',
-          AppColors.tealLight),
-      ('🍽️', 'Nutrition',
-          'Eating well during treatment',
-          AppColors.peachLight),
-    ];
-
-    return SizedBox(
-      height: 120,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(14, 0, 14, 0),
-        itemCount: cards.length,
-        itemBuilder: (context, i) {
-          final c = cards[i];
-          return Container(
-            width: 130, margin: const EdgeInsets.only(right: 8),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: AppRadius.mdBR,
-              border: Border.all(color: AppColors.border, width: 0.5)),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Container(height: 48,
-                decoration: BoxDecoration(
-                  color: c.$4,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: AppRadius.md, topRight: AppRadius.md)),
-                child: Center(child: Text(c.$1,
-                  style: const TextStyle(fontSize: 22)))),
-              Padding(padding: const EdgeInsets.all(9),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(c.$2, style: AppText.bodySemibold.copyWith(
-                    fontSize: 11, color: AppColors.primary)),
-                  const SizedBox(height: 2),
-                  Text(c.$3, style: AppText.caption.copyWith(
-                    fontSize: 10, height: 1.3)),
-                ])),
-            ]),
-          );
-        },
+      backgroundColor: RColors.sand50,
+      body: SafeArea(
+        bottom: false,
+        child: Column(children: [
+          _topbar(context),
+          Expanded(child: SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 120),
+            child: session.isMonitoring
+                ? _monitoringContent(session)
+                : _treatmentContent(session),
+          )),
+        ]),
       ),
     );
   }
 
-  Widget _buildExpectCard(String emoji, String title, String body) {
+  // ── Topbar ──────────────────────────────────────────────────────────────────
+
+  Widget _topbar(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: Row(children: [
+        _iconBtn(Icons.chevron_left_rounded,
+            onTap: () => context.canPop() ? context.pop() : context.go('/')),
+        const Expanded(child: Center(child: Text('What to expect',
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700,
+              letterSpacing: -0.2)))),
+        _iconBtn(Icons.more_horiz_rounded, onTap: () {}),
+      ]),
+    );
+  }
+
+  Widget _iconBtn(IconData icon, {required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36, height: 36,
+        decoration: BoxDecoration(
+          color: RColors.surface,
+          shape: BoxShape.circle,
+          border: Border.all(color: RColors.sand200),
+        ),
+        child: Icon(icon, color: RColors.sand700, size: 20),
+      ),
+    );
+  }
+
+  // ── Treatment content ───────────────────────────────────────────────────────
+
+  Widget _treatmentContent(UserSession session) {
+    final phase    = session.currentPhase;
+    final isNadir  = session.isNadirWindow;
+    final maxDay   = session.protocol == BreastProtocol.cmf ? 28 : 21;
+
+    // Build symptom list with severity levels
+    final symptoms = _buildSymptomRows(phase, isNadir);
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const SizedBox(height: 8),
+      _dayStripHeader(session),
+      _dayStrip(session, maxDay),
+      const SizedBox(height: 8),
+      _plumHero(session, phase, isNadir),
+      _sectionHead('Likely this cycle'),
+      const SizedBox(height: 8),
+      ...symptoms.map((s) => _seRow(s)),
+      const SizedBox(height: 8),
+      _askRehlahCard(),
+      const SizedBox(height: 24),
+    ]);
+  }
+
+  // ── Day strip ───────────────────────────────────────────────────────────────
+
+  Widget _dayStripHeader(UserSession session) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+      child: Row(children: [
+        Text(
+          'Cycle ${session.currentCycle} · these days'.toUpperCase(),
+          style: const TextStyle(
+            fontSize: 10.5, letterSpacing: 1.4,
+            fontWeight: FontWeight.w500, color: RColors.sand500)),
+        const Spacer(),
+        const Text('View cycle',
+          style: TextStyle(fontSize: 12, color: RColors.teal700,
+              fontWeight: FontWeight.w500)),
+      ]),
+    );
+  }
+
+  Widget _dayStrip(UserSession session, int maxDay) {
+    final today    = session.dayInCycle;
+    final start    = session.cycleStartDate;
+
+    // Show 7 days centred on today
+    final days = List.generate(7, (i) => today - 3 + i)
+        .where((d) => d >= 1 && d <= maxDay)
+        .toList();
+
+    String _weekLetter(int cycleDay) {
+      if (start == null) return 'D';
+      final date = start.add(Duration(days: cycleDay - 1));
+      const letters = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+      return letters[date.weekday - 1].substring(0, 1);
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      child: Row(children: days.map((d) {
+        final isToday = d == today;
+        final isNadir = ProtocolResolver.resolve(
+          session.protocol, d, isTaxolPhase: session.isTaxolPhase).isNadir;
+
+        Color bg = Colors.transparent;
+        Color dayColor  = RColors.sand700;
+        Color numColor  = RColors.sand900;
+        FontWeight numW = FontWeight.w400;
+
+        if (isToday) {
+          bg = RColors.teal700;
+          dayColor  = Colors.white.withValues(alpha: 0.8);
+          numColor  = Colors.white;
+          numW      = FontWeight.w700;
+        } else if (isNadir) {
+          bg = RColors.clay100;
+          dayColor  = RColors.clay700;
+          numColor  = RColors.clay700;
+          numW      = FontWeight.w500;
+        }
+
+        return Container(
+          width: 44, height: 64,
+          margin: const EdgeInsets.only(right: 6),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: RRadius.smBR,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(_weekLetter(d),
+                style: TextStyle(fontSize: 11, color: dayColor,
+                    fontWeight: FontWeight.w500)),
+              const SizedBox(height: 4),
+              Text('$d',
+                style: TextStyle(fontSize: 15, color: numColor,
+                    fontWeight: numW)),
+            ],
+          ),
+        );
+      }).toList()),
+    );
+  }
+
+  // ── Plum hero ────────────────────────────────────────────────────────────────
+
+  Widget _plumHero(UserSession session, ChemoPhase phase, bool isNadir) {
+    final title = isNadir
+        ? 'Expect more fatigue — and rest is key'
+        : 'You are in the ${phase.name.toLowerCase()} phase';
+    final body  = phase.phaseNote;
+
     return Container(
-      margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [RColors.plum700, RColors.plum500],
+        ),
+        borderRadius: RRadius.xlBR,
+      ),
+      child: Stack(children: [
+        Positioned(
+          top: -70, right: -70,
+          child: Container(
+            width: 200, height: 200,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.08),
+            ),
+          ),
+        ),
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('These days',
+            style: TextStyle(
+              fontSize: 10.5, letterSpacing: 1.4,
+              fontWeight: FontWeight.w500,
+              color: Colors.white.withValues(alpha: 0.75))),
+          const SizedBox(height: 4),
+          Text(title,
+            style: const TextStyle(
+              fontSize: 19, fontWeight: FontWeight.w700,
+              color: Colors.white, letterSpacing: -0.2, height: 1.25)),
+          const SizedBox(height: 8),
+          Text(body,
+            style: TextStyle(
+              fontSize: 12.5, color: Colors.white.withValues(alpha: 0.78),
+              height: 1.5)),
+        ]),
+      ]),
+    );
+  }
+
+  // ── Section head ─────────────────────────────────────────────────────────────
+
+  Widget _sectionHead(String label) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: Text(label.toUpperCase(),
+        style: const TextStyle(
+          fontSize: 10.5, letterSpacing: 1.4,
+          fontWeight: FontWeight.w500, color: RColors.sand500)),
+    );
+  }
+
+  // ── Side effect rows ─────────────────────────────────────────────────────────
+
+  List<_SeItem> _buildSymptomRows(ChemoPhase phase, bool isNadir) {
+    final levels = ['high', 'med', 'med', 'low', 'low'];
+    final symptoms = phase.primarySymptoms.take(5).toList();
+    return symptoms.asMap().entries.map((e) {
+      final level = e.key < levels.length ? levels[e.key] : 'low';
+      final sym   = e.value;
+      return _SeItem(
+        name:  sym.label,
+        level: level,
+        when:  sym.tip?.split('.').first ?? 'This cycle',
+      );
+    }).toList();
+  }
+
+  Widget _seRow(_SeItem item) {
+    final barFill = item.level == 'high' ? 0.82
+        : item.level == 'med' ? 0.54 : 0.22;
+    final Color barColor = item.level == 'high' ? RColors.clay500
+        : item.level == 'med' ? RColors.saffron500 : RColors.sand400;
+
+    final pillLabel = item.level == 'high' ? 'Likely'
+        : item.level == 'med' ? 'Possible' : 'Less likely';
+    final Color pillBg = item.level == 'high' ? RColors.clay100
+        : item.level == 'med' ? RColors.saffron100 : RColors.sand100;
+    final Color pillFg = item.level == 'high' ? RColors.clay700
+        : item.level == 'med' ? RColors.saffron700 : RColors.sand700;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: RColors.surface,
+        borderRadius: RRadius.mdBR,
+        border: Border.all(color: RColors.sand200),
+      ),
+      child: Row(children: [
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(item.name,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500,
+                  color: RColors.sand950)),
+            const SizedBox(height: 6),
+            LayoutBuilder(builder: (_, constraints) {
+              return Stack(children: [
+                Container(
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: RColors.sand200,
+                    borderRadius: RRadius.pillBR),
+                ),
+                Container(
+                  height: 6,
+                  width: constraints.maxWidth * barFill,
+                  decoration: BoxDecoration(
+                    color: barColor,
+                    borderRadius: RRadius.pillBR),
+                ),
+              ]);
+            }),
+            const SizedBox(height: 4),
+            Text(item.when,
+              style: const TextStyle(fontSize: 10, color: RColors.sand500),
+              maxLines: 1, overflow: TextOverflow.ellipsis),
+          ]),
+        ),
+        const SizedBox(width: 12),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+          height: 22,
+          decoration: BoxDecoration(color: pillBg, borderRadius: RRadius.pillBR),
+          child: Text(pillLabel,
+            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w500,
+                color: pillFg, height: 1)),
+        ),
+      ]),
+    );
+  }
+
+  // ── Ask Rehlah card ──────────────────────────────────────────────────────────
+
+  Widget _askRehlahCard() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+      padding: const EdgeInsets.fromLTRB(12, 12, 14, 12),
+      decoration: BoxDecoration(
+        color: RColors.sand100,
+        borderRadius: RRadius.mdBR,
+        border: Border.all(color: RColors.sand200),
+      ),
+      child: Row(children: [
+        Container(
+          width: 36, height: 36,
+          decoration: const BoxDecoration(
+            color: RColors.plum500, shape: BoxShape.circle),
+          child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 18),
+        ),
+        const SizedBox(width: 12),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('Ask Rehlah',
+            style: TextStyle(fontSize: 10.5, letterSpacing: 1.2,
+                fontWeight: FontWeight.w500, color: RColors.plum700)),
+          const SizedBox(height: 2),
+          const Text('When should I call my team?',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500,
+                color: RColors.sand900)),
+        ])),
+        const Icon(Icons.chevron_right_rounded, color: RColors.sand400, size: 22),
+      ]),
+    );
+  }
+
+  // ── Monitoring content ──────────────────────────────────────────────────────
+
+  Widget _monitoringContent(UserSession session) {
+    final symptoms = MonitoringSymptomLibrary.allSymptoms;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const SizedBox(height: 4),
+      Container(
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [RColors.sage700, RColors.sage500],
+          ),
+          borderRadius: RRadius.xlBR,
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Monitoring & surveillance',
+            style: TextStyle(
+              fontSize: 10.5, letterSpacing: 1.4, fontWeight: FontWeight.w500,
+              color: Colors.white.withValues(alpha: 0.75))),
+          const SizedBox(height: 4),
+          Text(session.cancerType,
+            style: const TextStyle(
+              fontSize: 20, fontWeight: FontWeight.w700, color: Colors.white)),
+          const SizedBox(height: 6),
+          Text('Long-term follow-up · What to expect',
+            style: TextStyle(
+              fontSize: 12.5, color: Colors.white.withValues(alpha: 0.78))),
+        ]),
+      ),
+      _sectionHead('What to expect post-treatment'),
+      const SizedBox(height: 8),
+      ...symptoms.take(5).map((s) => _monitoringCard(s.emoji, s.label,
+          s.tip ?? 'Common after treatment. Track and discuss with your team.')),
+      const SizedBox(height: 8),
+      _askRehlahCard(),
+      const SizedBox(height: 24),
+    ]);
+  }
+
+  Widget _monitoringCard(String emoji, String title, String body) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadius.mdBR,
-        border: Border.all(color: AppColors.border, width: 0.5)),
+        color: RColors.surface,
+        borderRadius: RRadius.mdBR,
+        border: Border.all(color: RColors.sand200),
+      ),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(emoji, style: const TextStyle(fontSize: 18)),
         const SizedBox(width: 10),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, style: AppText.bodySemibold),
+          Text(title,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                color: RColors.sand950)),
           const SizedBox(height: 3),
-          Text(body, style: AppText.bodySecondary),
+          Text(body,
+            style: const TextStyle(fontSize: 11, color: RColors.sand700, height: 1.4)),
         ])),
       ]),
     );
   }
+}
 
-  Widget _buildWhenToCall(String title, String body) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Container(width: 7, height: 7, margin: const EdgeInsets.only(top: 5),
-          decoration: const BoxDecoration(
-            color: AppColors.peach, shape: BoxShape.circle)),
-        const SizedBox(width: 10),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, style: AppText.bodySemibold),
-          const SizedBox(height: 2),
-          Text(body, style: AppText.bodySecondary),
-        ])),
-      ]),
-    );
-  }
+// ── Data model ────────────────────────────────────────────────────────────────
 
-  Widget _buildMonitoringExpect(UserSession session) {
-    final symptoms = MonitoringSymptomLibrary.allSymptoms;
+class _SeItem {
+  final String name;
+  final String level; // 'high' | 'med' | 'low'
+  final String when;
 
-    return SingleChildScrollView(
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-
-        // Hero card
-        HeroCard(
-          gradientColors: const [
-            Color(0xFFC8E8D8), Color(0xFFCCC0EC), Color(0xFFC8E8D8)],
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            HeroPill('🎗️ Monitoring & surveillance'),
-            Text(session.cancerType,
-              style: const TextStyle(fontFamily: 'Inter',
-                fontSize: 14, fontWeight: FontWeight.w500,
-                color: AppColors.text1)),
-            const SizedBox(height: 6),
-            Text(
-              session.menstrualStatus == 'regular'
-                  ? 'Menstrual cycles returned · Optimal scan timing available'
-                  : session.menstrualStatus == 'menopause'
-                      ? 'Post-menopausal · Any time is good for scans'
-                      : session.menstrualStatus == 'amenorrhea'
-                          ? 'Cycles not yet returned · Ask your team about scan timing'
-                          : 'Irregular cycles · Discuss scan timing with your oncologist',
-              style: AppText.bodySecondary.copyWith(fontSize: 12, height: 1.5)),
-          ]),
-        ),
-
-        // What to expect — hormone therapy side effects
-        const SectionLabel('What to expect — post-treatment'),
-        ...symptoms.take(5).map((s) => _buildExpectCard(
-            s.emoji, s.label, s.tip ?? 'Common after treatment. Track and discuss with your team.')),
-
-        // Scan timing guidance
-        const SectionLabel('Scan timing guidance'),
-        _buildScanTimingCard(session),
-
-        // Hormone therapy
-        const SectionLabel('Long-term hormone therapy'),
-        _buildExpectCard('💊', 'Tamoxifen / Aromatase inhibitors',
-          'Taken daily for 5–10 years. Joint pain, hot flashes, and mood changes are common. Never stop without telling your oncologist.'),
-        _buildExpectCard('🦴', 'Bone health',
-          'Aromatase inhibitors reduce bone density. DEXA scan every 1–2 years. Calcium and Vitamin D supplements often recommended.'),
-        _buildExpectCard('❤️', 'Cardiac monitoring',
-          'If you had Herceptin, regular echo or MUGA scans are needed to check heart function.'),
-
-        // When to contact
-        const SectionLabel('📞  When to contact your care team'),
-        _buildWhenToCall('New lump or breast change',
-          'Any new lump, skin change, nipple discharge, or asymmetry — contact your team same day.'),
-        _buildWhenToCall('Bone pain',
-          'Persistent bone pain, especially in back, hips, or ribs — needs investigation.'),
-        _buildWhenToCall('Unexplained weight loss',
-          'More than 5% of body weight without trying — report promptly.'),
-        _buildWhenToCall('Breathlessness or chest pain',
-          'Any new breathlessness or chest pain — contact your team or go to A&E.'),
-        _buildWhenToCall('Severe joint pain',
-          'If hormone therapy side effects are affecting your quality of life — dose adjustment may help.'),
-
-        Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 24),
-          child: Text(
-            'General information only — not a substitute for medical advice. '
-            'Always contact your care team with any concern.',
-            style: AppText.caption.copyWith(
-              fontSize: 12, fontStyle: FontStyle.italic),
-            textAlign: TextAlign.center),
-        ),
-      ]),
-    );
-  }
-
-  Widget _buildScanTimingCard(UserSession session) {
-    String guidance, detail;
-    Color color;
-
-    switch (session.menstrualStatus) {
-      case 'regular':
-        guidance = 'Best: Days 7–14 of your cycle';
-        detail = 'Breast tissue is least dense during the follicular phase, making abnormalities easier to detect on MRI and mammogram. Plan 6 months ahead.';
-        color = AppColors.teal;
-        break;
-      case 'irregular':
-        guidance = 'Discuss timing with your oncologist';
-        detail = 'With irregular cycles, your team will advise on the best approach — sometimes progesterone suppression is used before MRI.';
-        color = AppColors.peach;
-        break;
-      case 'amenorrhea':
-        guidance = 'Any time is acceptable';
-        detail = 'Without active cycles, there is no optimal window. Schedule whenever is convenient for you and your team.';
-        color = AppColors.primary;
-        break;
-      case 'menopause':
-        guidance = 'Any time — no restriction';
-        detail = 'Post-menopausal breast tissue is less dense. No cycle-based timing needed. Annual mammogram and MRI on schedule.';
-        color = AppColors.primary;
-        break;
-      default:
-        guidance = 'Ask your oncologist';
-        detail = 'Update your menstrual status in your profile to get personalised scan timing guidance.';
-        color = AppColors.text2;
-    }
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
-        borderRadius: AppRadius.mdBR,
-        border: Border.all(color: color.withOpacity(0.2), width: 0.5)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          const Text('📅', style: TextStyle(fontSize: 16)),
-          const SizedBox(width: 8),
-          Text(guidance, style: AppText.bodySemibold.copyWith(
-            color: color, fontSize: 13)),
-        ]),
-        const SizedBox(height: 6),
-        Text(detail, style: AppText.bodySecondary.copyWith(height: 1.5)),
-      ]),
-    );
-  }
+  const _SeItem({required this.name, required this.level, required this.when});
 }

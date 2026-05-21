@@ -1,961 +1,1247 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
-import '../../../../../core/theme/app_theme.dart';
-import '../../../../../core/widgets/shared_widgets.dart';
-import '../../../../../core/utils/models.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import '../../../../../theme/rehlah_theme.dart';
 import '../../../../../core/utils/user_session.dart';
+import '../../../../../data/demo_reports.dart';
 
-class PrepReportScreen extends StatelessWidget {
+class PrepReportScreen extends StatefulWidget {
   const PrepReportScreen({super.key});
-
   @override
-  Widget build(BuildContext context) {
-    final session = UserSession();
-    session.initDefaultAppointments();
-    final upcoming = session.upcomingAppointments;
-    final next = upcoming.isNotEmpty ? upcoming.first : null;
-    final history = session.history.toList();
-    final now = DateTime.now();
+  State<PrepReportScreen> createState() => _PrepReportScreenState();
+}
 
-    // ── Period: last 14 days ──────────────────────────────────────────────
-    final periodStart = now.subtract(const Duration(days: 13));
-    final periodRecords = history.where((r) =>
-        r.date.isAfter(periodStart)).toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
-    final totalPossible = 14;
-    final completed = periodRecords.length;
-    final adherencePct = totalPossible > 0
-        ? ((completed / totalPossible) * 100).round() : 0;
-    final dateRange =
-        '${DateFormat('d MMM').format(periodStart)} – ${DateFormat('d MMM').format(now)}';
+class _PrepReportScreenState extends State<PrepReportScreen> {
+  bool _generating = false;
 
-    // ── Mood trend ────────────────────────────────────────────────────────
-    final moodValues = <double>[];
-    for (final r in periodRecords) {
-      final v = _moodValue(r.moodEmoji);
-      if (v > 0) moodValues.add(v);
-    }
-    final avgMood = moodValues.isEmpty
-        ? 0.0
-        : moodValues.reduce((a, b) => a + b) / moodValues.length;
-    final moodTrend = _moodTrend(moodValues);
+  DemoReport _report() {
+    final name = UserSession().name;
+    return demoReports.firstWhere(
+      (r) => r.patientName == name,
+      orElse: () => demoReports.first,
+    );
+  }
 
-    // ── Symptom analysis across period ───────────────────────────────────
-    final symptomDays = <String, List<double>>{};
-    for (final r in periodRecords) {
-      r.symptomScores.forEach((k, v) {
-        if (v > 0) {
-          symptomDays.putIfAbsent(k, () => []).add(v);
-        }
-      });
-    }
-    // Build symptom flags — only those that crossed threshold
-    final flags = <_SymptomFlag>[];
-    symptomDays.forEach((key, scores) {
-      final avg = scores.reduce((a, b) => a + b) / scores.length;
-      if (avg >= 2) { // only flag if avg score ≥ 2
-        flags.add(_SymptomFlag(
-          key: key,
-          label: key.replaceAll('_', ' ').capitalize(),
-          avgScore: avg,
-          daysReported: scores.length,
-          maxScore: scores.reduce((a, b) => a > b ? a : b),
-        ));
-      }
-    });
-    flags.sort((a, b) => b.avgScore.compareTo(a.avgScore));
+  // ── Share / print sheet ───────────────────────────────────────────────────────
 
-    // ── Meds ──────────────────────────────────────────────────────────────
-    final totalMeds = UserSession().medications.length;
-    final medAdherence = session.adherencePct(totalMeds);
-    final medsTodayTaken = session.medsTakenTodayCount;
-
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: CustomScrollView(slivers: [
-
-          // ── Header ──────────────────────────────────────────────────────
-          SliverToBoxAdapter(child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              GestureDetector(
-                onTap: () => context.go('/care/appointments'),
-                child: Row(children: [
-                  Icon(Icons.arrow_back_ios_new_rounded, size: 15,
-                    color: AppColors.text2.withOpacity(0.4)),
-                  const SizedBox(width: 4),
-                  Text('Appointments', style: AppText.caption.copyWith(
-                    color: AppColors.text2)),
-                ]),
+  void _showShareSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: RColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 10),
+            Container(
+              width: 36, height: 4,
+              decoration: BoxDecoration(
+                color: RColors.sand200,
+                borderRadius: BorderRadius.circular(2),
               ),
-              const SizedBox(height: 12),
-              RichText(text: TextSpan(style: AppText.displayTitle, children: const [
-                TextSpan(text: 'Doctor-ready '),
-                TextSpan(text: 'report',
-                  style: TextStyle(fontWeight: FontWeight.w700)),
-              ])),
-              Text('For ${next?.doctorName ?? 'your doctor'} · ${next != null ? DateFormat('d MMM').format(next.dateTime) : 'upcoming'}',
-                style: AppText.bodySecondary),
-            ]),
-          )),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: Container(
+                width: 40, height: 40,
+                decoration: const BoxDecoration(
+                  color: RColors.teal50, shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.print_rounded,
+                    color: RColors.teal700, size: 20),
+              ),
+              title: const Text('Print / Save as PDF',
+                  style: TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w600,
+                      color: RColors.sand950)),
+              subtitle: const Text('Opens system print dialog',
+                  style: TextStyle(fontSize: 11, color: RColors.sand400)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _generateAndPrint();
+              },
+            ),
+            ListTile(
+              leading: Container(
+                width: 40, height: 40,
+                decoration: const BoxDecoration(
+                  color: RColors.plum100, shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.ios_share_rounded,
+                    color: RColors.plum700, size: 20),
+              ),
+              title: const Text('Share PDF file',
+                  style: TextStyle(
+                      fontSize: 14, fontWeight: FontWeight.w600,
+                      color: RColors.sand950)),
+              subtitle: const Text('Send via email, WhatsApp, etc.',
+                  style: TextStyle(fontSize: 11, color: RColors.sand400)),
+              onTap: () {
+                Navigator.pop(ctx);
+                _generateAndShare();
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
 
-          // ── Report meta card ─────────────────────────────────────────────
-          SliverToBoxAdapter(child: HeroCard(
-            gradientColors: const [
-              Color(0xFFC8D8F0), Color(0xFFCCC0EC), Color(0xFFC0D0E8)],
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                margin: const EdgeInsets.only(bottom: 9),
-                decoration: BoxDecoration(
-                  color: AppColors.blue.withOpacity(0.18),
-                  borderRadius: AppRadius.fullBR,
-                  border: Border.all(
-                    color: AppColors.blue.withOpacity(0.28), width: 0.5)),
-                child: Text(
-                  'Generated ${DateFormat('d MMM yyyy · HH:mm').format(now)}',
-                  style: AppText.caption.copyWith(
-                    color: const Color(0xFF245080),
-                    fontWeight: FontWeight.w500, fontSize: 11))),
-              Text(
-                '${session.protocol.name} · Cycle ${session.currentCycle} of '
-                '${session.totalCycles} · Day ${session.dayInCycle}',
-                style: AppText.bodySemibold),
-              Text(session.cancerType, style: AppText.bodySecondary),
-              const SizedBox(height: 12),
-              Row(children: [
-                Expanded(child: _heroBtn('Share with doctor',
-                    AppColors.blue.withOpacity(0.14),
-                    AppColors.blue.withOpacity(0.22), AppColors.blue)),
-                const SizedBox(width: 6),
-                Expanded(child: _heroBtn('Save PDF',
-                    Colors.white.withOpacity(0.55),
-                    Colors.white.withOpacity(0.7), AppColors.text1)),
+  Future<void> _generateAndPrint() async {
+    setState(() => _generating = true);
+    try {
+      final r = _report();
+      final pdf = await _buildPdf(r);
+      await Printing.layoutPdf(
+        onLayout: (_) async => pdf.save(),
+        name: 'rehlah_prep_${r.patientName.replaceAll(' ', '_')}.pdf',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not generate PDF: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _generating = false);
+    }
+  }
+
+  Future<void> _generateAndShare() async {
+    setState(() => _generating = true);
+    try {
+      final r = _report();
+      final pdf = await _buildPdf(r);
+      final bytes = await pdf.save();
+      await Printing.sharePdf(
+        bytes: bytes,
+        filename: 'rehlah_prep_${r.patientName.replaceAll(' ', '_')}.pdf',
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not share PDF: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _generating = false);
+    }
+  }
+
+  // ── PDF builder ───────────────────────────────────────────────────────────────
+
+  Future<pw.Document> _buildPdf(DemoReport r) async {
+    final doc = pw.Document(
+      title: 'Rehlah Prep Report — ${r.patientName}',
+      author: 'Rehlah',
+    );
+
+    final cTeal    = PdfColor.fromHex('#275350');
+    final cSand900 = PdfColor.fromHex('#231E16');
+    final cSand700 = PdfColor.fromHex('#4F473C');
+    final cSand500 = PdfColor.fromHex('#7E7468');
+    final cSand200 = PdfColor.fromHex('#E6E1D7');
+    final cClay    = PdfColor.fromHex('#C76F47');
+    final cClay100 = PdfColor.fromHex('#FAEAE0');
+    final cSaffron    = PdfColor.fromHex('#D4A258');
+    final cSaffron100 = PdfColor.fromHex('#FAF1DE');
+    final cSage    = PdfColor.fromHex('#7CA773');
+    final cSage100 = PdfColor.fromHex('#E8F1E5');
+    final cPlum    = PdfColor.fromHex('#5B4276');
+    final cPlum100 = PdfColor.fromHex('#EDE3EE');
+
+    doc.addPage(pw.MultiPage(
+      pageFormat: PdfPageFormat.a4,
+      margin: const pw.EdgeInsets.fromLTRB(40, 36, 40, 36),
+      header: (ctx) => pw.Column(children: [
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text('REHLAH',
+                style: pw.TextStyle(
+                    fontSize: 10,
+                    color: cTeal,
+                    fontWeight: pw.FontWeight.bold,
+                    letterSpacing: 1.5)),
+            pw.Text('Pre-Consultation Clinical Summary',
+                style: pw.TextStyle(fontSize: 9, color: cSand500)),
+          ],
+        ),
+        pw.SizedBox(height: 4),
+        pw.Divider(color: cSand200, thickness: 0.5),
+        pw.SizedBox(height: 2),
+      ]),
+      footer: (ctx) => pw.Column(children: [
+        pw.SizedBox(height: 4),
+        pw.Divider(color: cSand200, thickness: 0.5),
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          children: [
+            pw.Text('Confidential — For care team use only',
+                style: pw.TextStyle(fontSize: 7, color: cSand500)),
+            pw.Text('Page ${ctx.pageNumber} of ${ctx.pagesCount}',
+                style: pw.TextStyle(fontSize: 7, color: cSand500)),
+          ],
+        ),
+      ]),
+      build: (ctx) {
+        final w = <pw.Widget>[];
+
+        // Patient header block
+        w.add(pw.Container(
+          padding: const pw.EdgeInsets.all(14),
+          decoration: pw.BoxDecoration(
+            border: pw.Border.all(color: cSand200, width: 0.5),
+            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+          ),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(r.patientName,
+                      style: pw.TextStyle(
+                          fontSize: 18,
+                          fontWeight: pw.FontWeight.bold,
+                          color: cSand900)),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 3),
+                    decoration: pw.BoxDecoration(
+                        color: cPlum100,
+                        borderRadius: const pw.BorderRadius.all(
+                            pw.Radius.circular(4))),
+                    child: pw.Text(r.protocol,
+                        style: pw.TextStyle(
+                            fontSize: 9,
+                            color: cPlum,
+                            fontWeight: pw.FontWeight.bold)),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 3),
+              pw.Text(r.diagnosis,
+                  style: pw.TextStyle(fontSize: 10, color: cSand500)),
+              pw.SizedBox(height: 6),
+              pw.Text(
+                  '${r.cycleLabel} · Day ${r.daysSinceInfusion} since infusion',
+                  style: pw.TextStyle(fontSize: 11, color: cSand700)),
+              pw.Text(r.phaseEnglish,
+                  style: pw.TextStyle(
+                      fontSize: 11,
+                      fontWeight: pw.FontWeight.bold,
+                      color: cSand900)),
+              pw.SizedBox(height: 6),
+              pw.Row(children: [
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(
+                      horizontal: 7, vertical: 3),
+                  decoration: pw.BoxDecoration(
+                    color: r.nadirActive ? cClay100 : cSage100,
+                    borderRadius:
+                        const pw.BorderRadius.all(pw.Radius.circular(4)),
+                  ),
+                  child: pw.Text(
+                    r.nadirActive
+                        ? 'Nadir Active'
+                        : 'Nadir window: ${r.nadirWindow}',
+                    style: pw.TextStyle(
+                        fontSize: 9,
+                        color: r.nadirActive ? cClay : cSage),
+                  ),
+                ),
+                pw.Spacer(),
+                pw.Text(
+                  'Check-ins: ${r.checkinsCompleted}/${r.checkinsTotalDays} days '
+                  '(${(r.checkinsCompleted / r.checkinsTotalDays * 100).round()}%)',
+                  style: pw.TextStyle(fontSize: 9, color: cSand700),
+                ),
               ]),
-            ]),
-          )),
+              pw.SizedBox(height: 4),
+              pw.Text(r.appointmentLabel,
+                  style: pw.TextStyle(fontSize: 9, color: cSand500)),
+            ],
+          ),
+        ));
+        w.add(pw.SizedBox(height: 16));
 
-          // ── Section 1: Period Summary ─────────────────────────────────────
-          SliverToBoxAdapter(child: _sectionHeader('1', 'Period Summary')),
-          SliverToBoxAdapter(child: SurfaceCard(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: completed == 0
-                      ? AppColors.background2
-                      : adherencePct >= 70
-                          ? AppColors.teal.withOpacity(0.07)
-                          : AppColors.peach.withOpacity(0.07),
-                  borderRadius: AppRadius.smBR,
-                  border: Border.all(
-                    color: completed == 0
-                        ? AppColors.border
-                        : adherencePct >= 70
-                            ? AppColors.teal.withOpacity(0.2)
-                            : AppColors.peach.withOpacity(0.2),
-                    width: 0.5)),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+        // Section 1
+        w.add(_pdfSection('1 — PROTOCOL CONTEXT', cTeal, cSand200));
+        w.add(pw.Text(r.protocolContext,
+            style: pw.TextStyle(fontSize: 11, color: cSand700)));
+        w.add(pw.SizedBox(height: 14));
+
+        // Section 2
+        w.add(_pdfSection('2 — SYMPTOM SUMMARY', cTeal, cSand200));
+        w.add(pw.Text(r.symptomSummary,
+            style: pw.TextStyle(fontSize: 11, color: cSand700)));
+        w.add(pw.SizedBox(height: 14));
+
+        // Section 3
+        w.add(_pdfSection('3 — THRESHOLD ALERTS', cTeal, cSand200));
+        for (final a in r.alerts) {
+          final bg  = a.level == 'HIGH' ? cClay100 : a.level == 'MODERATE' ? cSaffron100 : cSage100;
+          final fg  = a.level == 'HIGH' ? cClay    : a.level == 'MODERATE' ? cSaffron    : cSage;
+          final lbl = a.level == 'HIGH' ? 'HIGH'   : a.level == 'MODERATE' ? 'MODERATE'  : 'STABLE';
+          w.add(pw.Container(
+            margin: const pw.EdgeInsets.only(bottom: 6),
+            padding: const pw.EdgeInsets.fromLTRB(10, 8, 10, 8),
+            decoration: pw.BoxDecoration(
+              color: bg,
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+              border: pw.Border(left: pw.BorderSide(color: fg, width: 3)),
+            ),
+            child: pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(
+                      horizontal: 6, vertical: 2),
+                  decoration: pw.BoxDecoration(
+                      color: fg,
+                      borderRadius: const pw.BorderRadius.all(
+                          pw.Radius.circular(3))),
+                  child: pw.Text(lbl,
+                      style: pw.TextStyle(
+                          fontSize: 8,
+                          color: PdfColors.white,
+                          fontWeight: pw.FontWeight.bold)),
+                ),
+                pw.SizedBox(width: 8),
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(a.symptom,
+                          style: pw.TextStyle(
+                              fontSize: 11,
+                              fontWeight: pw.FontWeight.bold,
+                              color: cSand900)),
+                      pw.SizedBox(height: 3),
+                      pw.Text(a.detail,
+                          style:
+                              pw.TextStyle(fontSize: 10, color: cSand700)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ));
+        }
+        w.add(pw.SizedBox(height: 8));
+
+        // Section 4
+        w.add(_pdfSection('4 — MEDICATION ADHERENCE', cTeal, cSand200));
+        for (final m in r.medications) {
+          final pct = m.totalDays > 0 ? m.takenDays / m.totalDays : 0.0;
+          final pctInt = (pct * 100).round();
+          final barColor =
+              pct >= 0.8 ? cSage : pct >= 0.6 ? cSaffron : cClay;
+          w.add(pw.Container(
+            margin: const pw.EdgeInsets.only(bottom: 6),
+            padding: const pw.EdgeInsets.all(10),
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: cSand200, width: 0.5),
+              borderRadius:
+                  const pw.BorderRadius.all(pw.Radius.circular(4)),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      'Covering $dateRange — $completed of $totalPossible '
-                      'check-ins completed ($adherencePct%)',
-                      style: AppText.bodySemibold.copyWith(fontSize: 13)),
-                    const SizedBox(height: 4),
-                    Text(
-                      completed == 0
-                          ? 'No check-ins recorded yet. Data reliability: none.'
-                          : adherencePct >= 70
-                              ? 'Data reliability: high. Results can be trusted.'
-                              : adherencePct >= 40
-                                  ? 'Data reliability: moderate. Some gaps present.'
-                                  : 'Data reliability: low. Interpret with caution.',
-                      style: AppText.bodySecondary.copyWith(fontSize: 12)),
+                    pw.Text(m.name,
+                        style: pw.TextStyle(
+                            fontSize: 11,
+                            fontWeight: pw.FontWeight.bold,
+                            color: cSand900)),
+                    pw.Text(
+                        '$pctInt%  (${m.takenDays}/${m.totalDays} days)',
+                        style: pw.TextStyle(
+                            fontSize: 10,
+                            color: barColor,
+                            fontWeight: pw.FontWeight.bold)),
                   ],
                 ),
-              ),
-              const SizedBox(height: 10),
-              Row(children: [
-                _statBox('$completed', 'Check-ins', AppColors.primary),
-                const SizedBox(width: 8),
-                _statBox('$adherencePct%', 'Completion', AppColors.teal),
-                const SizedBox(width: 8),
-                _statBox('${session.streak}d', 'Streak', AppColors.gold),
-              ]),
-            ]),
-          )),
+                if (m.missedDates.isNotEmpty ||
+                    m.missedReason.isNotEmpty) ...[
+                  pw.SizedBox(height: 4),
+                  pw.Text(
+                    [
+                      if (m.missedDates.isNotEmpty)
+                        'Missed: ${m.missedDates.join(', ')}',
+                      if (m.missedReason.isNotEmpty) m.missedReason,
+                    ].join(' · '),
+                    style: pw.TextStyle(fontSize: 9, color: cSand500),
+                  ),
+                ],
+                if (m.refillAlert != null) ...[
+                  pw.SizedBox(height: 4),
+                  pw.Text('! ${m.refillAlert}',
+                      style: pw.TextStyle(fontSize: 9, color: cClay)),
+                ],
+              ],
+            ),
+          ));
+        }
+        w.add(pw.SizedBox(height: 8));
 
-          // ── Section 2: In her own words ──────────────────────────────────
-          SliverToBoxAdapter(child: _sectionHeader('2', 'في كلماتها | In Her Own Words')),
-          SliverToBoxAdapter(child: _buildPatientVoiceSection(periodRecords)),
-
-          // ── Section 3: Mood & Functional Trend ───────────────────────────
-          SliverToBoxAdapter(child: _sectionHeader('3', 'Mood & Functional Trend')),
-          SliverToBoxAdapter(child: SurfaceCard(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              if (moodValues.isEmpty)
-                Text('No mood data yet. Complete check-ins to populate this section.',
-                  style: AppText.bodySecondary.copyWith(
-                    fontStyle: FontStyle.italic, fontSize: 12))
-              else ...[
-                // Trend line dots
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
+        // Section 5
+        w.add(_pdfSection('5 — LAB CORRELATION', cTeal, cSand200));
+        for (final l in r.labs) {
+          final sc =
+              l.status == 'LOW' ? cClay : l.status == 'HIGH' ? cSaffron : cSage;
+          final sl =
+              l.status == 'LOW' ? 'LOW' : l.status == 'HIGH' ? 'HIGH' : 'NORMAL';
+          w.add(pw.Container(
+            margin: const pw.EdgeInsets.only(bottom: 6),
+            padding: const pw.EdgeInsets.all(10),
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: cSand200, width: 0.5),
+              borderRadius:
+                  const pw.BorderRadius.all(pw.Radius.circular(4)),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(child: _buildTrendLine(periodRecords)),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                    pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        Text(avgMood.toStringAsFixed(1),
-                          style: AppText.statNumber.copyWith(
-                            color: AppColors.primary, fontSize: 22)),
-                        Text('avg / 5.0',
-                          style: AppText.caption.copyWith(fontSize: 10)),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: moodTrend == 'improving'
-                                ? AppColors.tealLight
-                                : moodTrend == 'declining'
-                                    ? AppColors.roseLight
-                                    : AppColors.background2,
-                            borderRadius: AppRadius.fullBR),
-                          child: Text(
-                            moodTrend == 'improving' ? '↑ Improving'
-                                : moodTrend == 'declining' ? '↓ Declining'
-                                : '→ Stable',
-                            style: AppText.caption.copyWith(
-                              fontSize: 10,
-                              color: moodTrend == 'improving'
-                                  ? AppColors.teal
-                                  : moodTrend == 'declining'
-                                      ? AppColors.rose
-                                      : AppColors.text2,
-                              fontWeight: FontWeight.w600))),
+                        pw.Text(l.testName,
+                            style: pw.TextStyle(
+                                fontSize: 11,
+                                fontWeight: pw.FontWeight.bold,
+                                color: cSand900)),
+                        pw.Text(l.uploadDate,
+                            style: pw.TextStyle(
+                                fontSize: 9, color: cSand500)),
                       ],
+                    ),
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: pw.BoxDecoration(
+                          color: sc,
+                          borderRadius: const pw.BorderRadius.all(
+                              pw.Radius.circular(3))),
+                      child: pw.Text(sl,
+                          style: pw.TextStyle(
+                              fontSize: 9,
+                              color: PdfColors.white,
+                              fontWeight: pw.FontWeight.bold)),
                     ),
                   ],
                 ),
-                const SizedBox(height: 10),
-                Divider(color: AppColors.border, height: 1, thickness: 0.5),
-                const SizedBox(height: 8),
-                // AI summary sentence
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.04),
-                    borderRadius: AppRadius.smBR,
-                    border: Border.all(
-                      color: AppColors.primary.withOpacity(0.12), width: 0.5)),
-                  child: Text(
-                    _moodSummary(avgMood, moodTrend, flags),
-                    style: AppText.bodySecondary.copyWith(
-                      fontSize: 12, fontStyle: FontStyle.italic,
-                      height: 1.6))),
+                pw.SizedBox(height: 4),
+                pw.Text('${l.value}   |   Normal: ${l.normalRange}',
+                    style: pw.TextStyle(fontSize: 10, color: cSand700)),
+                pw.SizedBox(height: 3),
+                pw.Text(l.clinicalNote,
+                    style: pw.TextStyle(
+                        fontSize: 9,
+                        color: cSand500,
+                        fontStyle: pw.FontStyle.italic)),
               ],
-            ]),
-          )),
+            ),
+          ));
+        }
+        w.add(pw.SizedBox(height: 8));
 
-          // ── Section 4: Symptom Flags ──────────────────────────────────────
-          SliverToBoxAdapter(child: _sectionHeader('4', 'Symptom Flags')),
-          SliverToBoxAdapter(child: SurfaceCard(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              if (flags.isEmpty)
-                Text(
-                  completed == 0
-                      ? 'No symptom data. Complete check-ins to populate this section.'
-                      : 'No symptoms crossed the reporting threshold.',
-                  style: AppText.bodySecondary.copyWith(
-                    fontStyle: FontStyle.italic, fontSize: 12))
-              else ...[
-                Text('Only symptoms crossing reporting threshold (avg ≥ 2/10)',
-                  style: AppText.caption.copyWith(
-                    fontSize: 10, color: AppColors.text3)),
-                const SizedBox(height: 10),
-                ...flags.take(6).map((f) => _buildSymptomFlag(f, completed)),
+        // Section 6
+        w.add(_pdfSection(
+            '6 — TALKING POINTS FOR THE ONCOLOGIST', cTeal, cSand200));
+        w.add(pw.Text(
+          'Generated from 14-day patient data · Protocol-aware · Phase-specific',
+          style: pw.TextStyle(
+              fontSize: 8,
+              color: cSand500,
+              fontStyle: pw.FontStyle.italic),
+        ));
+        w.add(pw.SizedBox(height: 8));
+        for (final t in r.talkingPoints) {
+          final fb = t.flagLevel == 'HIGH'
+              ? cClay
+              : t.flagLevel == 'MODERATE'
+                  ? cSaffron100
+                  : cSage;
+          final ff =
+              t.flagLevel == 'MODERATE' ? cSaffron : PdfColors.white;
+          final fl = t.flagLevel == 'HIGH'
+              ? 'HIGH — Clinically unexpected'
+              : t.flagLevel == 'MODERATE'
+                  ? 'MODERATE — Monitor closely'
+                  : 'STABLE — Within expected range';
+          w.add(pw.Container(
+            margin: const pw.EdgeInsets.only(bottom: 10),
+            padding: const pw.EdgeInsets.all(12),
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: cSand200, width: 0.5),
+              borderRadius:
+                  const pw.BorderRadius.all(pw.Radius.circular(4)),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(
+                      horizontal: 8, vertical: 4),
+                  decoration: pw.BoxDecoration(
+                      color: fb,
+                      borderRadius: const pw.BorderRadius.all(
+                          pw.Radius.circular(4))),
+                  child: pw.Text(fl,
+                      style: pw.TextStyle(
+                          fontSize: 9,
+                          color: ff,
+                          fontWeight: pw.FontWeight.bold)),
+                ),
+                pw.SizedBox(height: 8),
+                pw.Text(t.english,
+                    style:
+                        pw.TextStyle(fontSize: 11, color: cSand900)),
+                pw.SizedBox(height: 8),
+                pw.Container(
+                  padding: const pw.EdgeInsets.fromLTRB(10, 7, 10, 7),
+                  decoration: pw.BoxDecoration(
+                    color: cPlum100,
+                    borderRadius: const pw.BorderRadius.all(
+                        pw.Radius.circular(4)),
+                    border:
+                        pw.Border(left: pw.BorderSide(color: cPlum, width: 3)),
+                  ),
+                  child: pw.Row(children: [
+                    pw.Text('Action  ',
+                        style: pw.TextStyle(
+                            fontSize: 9,
+                            fontWeight: pw.FontWeight.bold,
+                            color: cPlum)),
+                    pw.Expanded(
+                      child: pw.Text(t.checklistItem,
+                          style: pw.TextStyle(
+                              fontSize: 10, color: cSand900)),
+                    ),
+                  ]),
+                ),
               ],
-            ]),
-          )),
+            ),
+          ));
+        }
 
-          // ── Section 5: Functional Status ─────────────────────────────────
-          SliverToBoxAdapter(child: _sectionHeader('5', 'الوضع الوظيفي | Functional Status')),
-          SliverToBoxAdapter(child: _buildFunctionalStatusSection(periodRecords)),
+        // Bilingual note
+        w.add(pw.SizedBox(height: 8));
+        w.add(pw.Container(
+          padding: const pw.EdgeInsets.all(10),
+          decoration: pw.BoxDecoration(
+            color: cPlum100,
+            borderRadius:
+                const pw.BorderRadius.all(pw.Radius.circular(4)),
+          ),
+          child: pw.Text(
+            'Arabic bilingual version available in the Rehlah app.',
+            style: pw.TextStyle(fontSize: 9, color: cPlum),
+          ),
+        ));
 
-          // ── Section 6: Medication Adherence ──────────────────────────────
-          SliverToBoxAdapter(child: _sectionHeader('6', 'Medication Adherence')),
-          SliverToBoxAdapter(child: SurfaceCard(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              // Adherence bar
-              Row(children: [
-                Expanded(child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('14-day adherence',
-                      style: AppText.bodySecondary),
-                    const SizedBox(height: 6),
-                    Stack(children: [
-                      Container(height: 8,
-                        decoration: BoxDecoration(
-                          color: AppColors.background2,
-                          borderRadius: AppRadius.fullBR)),
-                      FractionallySizedBox(
-                        widthFactor: (medAdherence / 100).clamp(0.0, 1.0),
-                        child: Container(height: 8,
-                          decoration: BoxDecoration(
-                            color: medAdherence >= 80
-                                ? AppColors.teal
-                                : medAdherence >= 50
-                                    ? AppColors.peach
-                                    : AppColors.rose,
-                            borderRadius: AppRadius.fullBR))),
-                    ]),
-                  ],
-                )),
-                const SizedBox(width: 16),
-                Text(
-                  medAdherence > 0 ? '$medAdherence%' : '—',
-                  style: AppText.statNumber.copyWith(
-                    color: medAdherence >= 80
-                        ? AppColors.teal
-                        : medAdherence >= 50
-                            ? AppColors.peach
-                            : AppColors.text2,
-                    fontSize: 22)),
-              ]),
-              const SizedBox(height: 12),
-              // Today's status
-              Row(children: [
-                Expanded(child: _statBox(
-                  '$medsTodayTaken/$totalMeds',
-                  'Today', AppColors.teal)),
-                const SizedBox(width: 8),
-                Expanded(child: _statBox(
-                  medAdherence >= 80 ? 'Good' : medAdherence >= 50 ? 'Fair' : 'Low',
-                  '14-day',
-                  medAdherence >= 80 ? AppColors.teal : AppColors.peach)),
-              ]),
-              const SizedBox(height: 10),
-              // Med list
-              ...UserSession().medications.map((m) => Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: Row(children: [
-                  Text(m.emoji, style: const TextStyle(fontSize: 14)),
-                  const SizedBox(width: 8),
-                  Expanded(child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('${m.name} · ${m.dose}',
-                        style: AppText.bodySemibold.copyWith(fontSize: 12)),
-                      Text(m.frequency,
-                        style: AppText.caption.copyWith(fontSize: 10)),
-                    ],
-                  )),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: session.isMedTaken(m.id)
-                          ? AppColors.tealLight : AppColors.background2,
-                      borderRadius: AppRadius.fullBR),
-                    child: Text(
-                      session.isMedTaken(m.id) ? 'Taken today ✓' : 'Not yet today',
-                      style: AppText.caption.copyWith(
-                        fontSize: 10,
-                        color: session.isMedTaken(m.id)
-                            ? AppColors.teal : AppColors.text3))),
-                ]),
-              )),
-            ]),
-          )),
+        return w;
+      },
+    ));
 
-          // ── Section 7: Lab Correlation ────────────────────────────────────
-          SliverToBoxAdapter(child: _sectionHeader('7', 'Lab Correlation')),
-          SliverToBoxAdapter(child: SurfaceCard(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              // AI correlation based on symptoms
-              if (flags.isEmpty)
-                Text('Add lab results and complete check-ins to see correlations.',
-                  style: AppText.bodySecondary.copyWith(
-                    fontStyle: FontStyle.italic, fontSize: 12))
-              else ...[
-                Text('Correlating reported symptoms with last lab results',
-                  style: AppText.caption.copyWith(
-                    fontSize: 10, color: AppColors.text3)),
-                const SizedBox(height: 10),
-                ..._buildLabCorrelations(flags, session),
-              ],
-              const SizedBox(height: 10),
-              // Last lab values from session
-              Divider(color: AppColors.border, height: 1, thickness: 0.5),
-              const SizedBox(height: 8),
-              Text('LAST LAB VALUES', style: AppText.label.copyWith(fontSize: 10)),
-              const SizedBox(height: 6),
-              Builder(builder: (_) {
-                final latestLab = session.labs.isNotEmpty ? session.labs.first : null;
-                if (latestLab == null) {
-                  return Text('No lab results logged yet.',
-                    style: AppText.bodySecondary.copyWith(
-                      fontSize: 12, fontStyle: FontStyle.italic));
-                }
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('${latestLab.panelName} · ${DateFormat('d MMM yyyy').format(latestLab.date)}',
-                      style: AppText.caption.copyWith(
-                        fontSize: 10, color: AppColors.text3)),
-                    const SizedBox(height: 6),
-                    ...latestLab.metrics.map((m) => Padding(
-                      padding: const EdgeInsets.only(bottom: 7),
-                      child: Row(children: [
-                        Container(width: 5, height: 5,
-                          decoration: BoxDecoration(
-                            color: m.isLow ? AppColors.peach
-                                : m.isHigh ? AppColors.rose
-                                : AppColors.teal,
-                            shape: BoxShape.circle)),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text(m.name,
-                          style: AppText.bodySemibold.copyWith(fontSize: 12))),
-                        Text('${m.value} ${m.unit}',
-                          style: AppText.bodySecondary.copyWith(fontSize: 12)),
-                        const SizedBox(width: 8),
-                        Text(m.isLow ? 'Low' : m.isHigh ? 'High' : 'Normal',
-                          style: AppText.caption.copyWith(
-                            color: m.isLow ? AppColors.peach
-                                : m.isHigh ? AppColors.rose
-                                : AppColors.teal,
-                            fontSize: 10)),
-                      ]),
-                    )),
-                  ],
-                );
-              }),
-            ]),
-          )),
+    return doc;
+  }
 
-          // ── Disclaimer ────────────────────────────────────────────────────
-          SliverToBoxAdapter(child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 4, 14, 32),
-            child: Text(
-              'This report is generated from patient self-reported data via Rehlah. '
-              'It is a summary of the patient\'s own records and should be used '
-              'alongside clinical assessment.',
-              style: AppText.caption.copyWith(
-                fontSize: 11, fontStyle: FontStyle.italic,
-                color: AppColors.text3),
-              textAlign: TextAlign.center),
-          )),
+  static pw.Widget _pdfSection(
+      String title, PdfColor color, PdfColor divColor) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.Text(title,
+            style: pw.TextStyle(
+                fontSize: 9,
+                letterSpacing: 1.2,
+                fontWeight: pw.FontWeight.bold,
+                color: color)),
+        pw.Divider(color: divColor, thickness: 0.5),
+        pw.SizedBox(height: 6),
+      ],
+    );
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    final r = _report();
+    return Scaffold(
+      backgroundColor: RColors.sand50,
+      body: SafeArea(
+        bottom: false,
+        child: Column(children: [
+          _topbar(context),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 120),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 8),
+                  _headerCard(r),
+                  _sectionHeader(
+                    'Section 1 — Protocol Context',
+                    'السياق السريري للبروتوكول',
+                  ),
+                  _textBlock(r.protocolContext, r.protocolContextArabic),
+                  _sectionHeader(
+                    'Section 2 — Symptom Summary',
+                    'ملخص الأعراض — ما هو غير متوقع فقط',
+                  ),
+                  _textBlock(r.symptomSummary, r.symptomSummaryArabic),
+                  _sectionHeader(
+                    'Section 3 — Threshold Alerts',
+                    'تنبيهات العتبة السريرية',
+                  ),
+                  ...r.alerts.map(_alertCard),
+                  _sectionHeader(
+                    'Section 4 — Medication Adherence',
+                    'الالتزام الدوائي',
+                  ),
+                  ...r.medications.map(_medRow),
+                  _sectionHeader(
+                    'Section 5 — Lab Correlation',
+                    'ربط نتائج التحاليل',
+                  ),
+                  ...r.labs.map(_labCard),
+                  _sectionHeader(
+                    'Section 6 — Talking Points for the Oncologist',
+                    'نقاط النقاش مع طبيبتكِ — ما قبل الاستشارة',
+                  ),
+                  _section6Note(),
+                  ...r.talkingPoints.map(_talkingPointCard),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+          _footer(context),
         ]),
       ),
     );
   }
 
-  // ── Widgets ───────────────────────────────────────────────────────────────
-  Widget _sectionHeader(String num, String title) {
+  // ── Topbar ────────────────────────────────────────────────────────────────────
+
+  Widget _topbar(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 0),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       child: Row(children: [
-        Container(
-          width: 22, height: 22,
-          decoration: BoxDecoration(
-            color: AppColors.primary, shape: BoxShape.circle),
-          child: Center(child: Text(num,
-            style: const TextStyle(fontFamily: 'Inter', fontSize: 11,
-              fontWeight: FontWeight.w600, color: Colors.white)))),
-        const SizedBox(width: 8),
-        Text(title, style: AppText.sectionHeading.copyWith(fontSize: 14)),
+        _iconBtn(Icons.chevron_left_rounded,
+            onTap: () => context.canPop()
+                ? context.pop()
+                : context.go('/care/appointments')),
+        const Expanded(
+            child: Center(
+                child: Text('Prep report',
+                    style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.2)))),
+        _iconBtn(Icons.ios_share_rounded, onTap: _showShareSheet),
       ]),
     );
   }
 
-  Widget _heroBtn(String label, Color bg, Color border, Color text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        color: bg, borderRadius: AppRadius.mdBR,
-        border: Border.all(color: border, width: 0.5)),
-      child: Center(child: Text(label,
-        style: AppText.caption.copyWith(
-          color: text, fontWeight: FontWeight.w500))));
-  }
-
-  Widget _statBox(String value, String label, Color color) {
-    return Expanded(child: Container(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.07),
-        borderRadius: AppRadius.smBR,
-        border: Border.all(color: color.withOpacity(0.15), width: 0.5)),
-      child: Column(children: [
-        Text(value, style: TextStyle(fontFamily: 'Inter', fontSize: 15,
-          fontWeight: FontWeight.w600, color: color)),
-        Text(label, style: AppText.caption.copyWith(fontSize: 9)),
-      ]),
-    ));
-  }
-
-  Widget _buildTrendLine(List<CheckInRecord> records) {
-    if (records.isEmpty) return const SizedBox(height: 48);
-    final values = records.map((r) => _moodValue(r.moodEmoji)).toList().cast<double>();
-    return SizedBox(
-      height: 48,
-      child: CustomPaint(
-        painter: _TrendPainter(values),
-        child: const SizedBox.expand()),
-    );
-  }
-
-  Widget _buildPatientVoiceSection(List<CheckInRecord> records) {
-    final notes = records
-        .where((r) => r.note.trim().isNotEmpty)
-        .toList()
-      ..sort((a, b) => b.date.compareTo(a.date));
-
-    return SurfaceCard(
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        if (notes.isEmpty)
-          Text(
-            'No notes recorded in the last 14 days. When the patient writes in their own words, those notes appear here — verbatim and unedited.',
-            style: AppText.bodySecondary.copyWith(
-              fontStyle: FontStyle.italic, fontSize: 12))
-        else ...[
-          Text(
-            'Verbatim notes from the last ${notes.length} check-in${notes.length > 1 ? 's' : ''} — unedited, as written by the patient.',
-            style: AppText.caption.copyWith(fontSize: 10, color: AppColors.text3)),
-          const SizedBox(height: 10),
-          ...notes.take(5).map((r) => Container(
-            margin: const EdgeInsets.only(bottom: 10),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.04),
-              borderRadius: AppRadius.smBR,
-              border: Border.all(
-                color: AppColors.primary.withOpacity(0.15), width: 0.5)),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(DateFormat('d MMM').format(r.date),
-                style: AppText.caption.copyWith(
-                  fontSize: 10, color: AppColors.text3)),
-              const SizedBox(height: 4),
-              Text('"${r.note.trim()}"',
-                style: AppText.body.copyWith(
-                  fontSize: 13, fontStyle: FontStyle.italic,
-                  color: AppColors.text1, height: 1.6)),
-            ]),
-          )),
-        ],
-      ]),
-    );
-  }
-
-  Widget _buildFunctionalStatusSection(List<CheckInRecord> records) {
-    final interferenceDays =
-        records.where((r) => r.hasInterferenceToday).length;
-
-    // Physical activity distribution from recovery phase records
-    final recoveryRecords =
-        records.where((r) => r.physicalActivity != null).toList();
-    final noneCount =
-        recoveryRecords.where((r) => r.physicalActivity == 'none').length;
-    final lightCount =
-        recoveryRecords.where((r) => r.physicalActivity == 'light').length;
-    final moderateCount =
-        recoveryRecords.where((r) => r.physicalActivity == 'moderate').length;
-
-    // HADS anxiety from recovery records
-    final hadsRecords =
-        records.where((r) => r.hadsAnxietyScore >= 0).toList();
-    final avgHads = hadsRecords.isEmpty
-        ? -1.0
-        : hadsRecords.map((r) => r.hadsAnxietyScore).reduce((a, b) => a + b) /
-            hadsRecords.length;
-
-    // Consecutive elevated HADS (≥8) recovery phases
-    final elevatedHads =
-        hadsRecords.where((r) => r.hadsAnxietyScore >= 8).length;
-
-    return SurfaceCard(
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // Interference count
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: interferenceDays > 7
-                ? AppColors.peach.withOpacity(0.07)
-                : AppColors.teal.withOpacity(0.07),
-            borderRadius: AppRadius.smBR,
-            border: Border.all(
-              color: interferenceDays > 7
-                  ? AppColors.peach.withOpacity(0.2)
-                  : AppColors.teal.withOpacity(0.2),
-              width: 0.5)),
-          child: Row(children: [
-            Text(interferenceDays > 7 ? '⚠' : '✓',
-              style: const TextStyle(fontSize: 14)),
-            const SizedBox(width: 8),
-            Expanded(child: Text(
-              'On $interferenceDays of ${records.length} days, symptoms interfered with normal daily activities.',
-              style: AppText.bodySemibold.copyWith(fontSize: 13))),
-          ]),
+  Widget _iconBtn(IconData icon, {required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: RColors.surface,
+          shape: BoxShape.circle,
+          border: Border.all(color: RColors.sand200),
         ),
+        child: Icon(icon, color: RColors.sand700, size: 20),
+      ),
+    );
+  }
 
-        // Physical activity (if recovery data available)
-        if (recoveryRecords.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Text('PHYSICAL ACTIVITY · أسبوع التعافي',
-            style: AppText.label.copyWith(fontSize: 10)),
-          const SizedBox(height: 6),
+  // ── Footer button ─────────────────────────────────────────────────────────────
+
+  Widget _footer(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: RColors.surface,
+        border: Border(top: BorderSide(color: RColors.sand200, width: 0.5)),
+      ),
+      padding: EdgeInsets.fromLTRB(
+          16, 10, 16, 16 + MediaQuery.of(context).padding.bottom),
+      child: _generating
+          ? const SizedBox(
+              height: 48,
+              child: Center(
+                child: SizedBox(
+                  width: 22, height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    color: RColors.teal700,
+                  ),
+                ),
+              ),
+            )
+          : GestureDetector(
+              onTap: _showShareSheet,
+              child: Container(
+                height: 48,
+                decoration: const BoxDecoration(
+                  color: RColors.teal700,
+                  borderRadius: RRadius.pillBR,
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.picture_as_pdf_rounded,
+                        color: Colors.white, size: 18),
+                    SizedBox(width: 8),
+                    Text('Share / Print Report',
+                        style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white)),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+
+  // ── Header card ───────────────────────────────────────────────────────────────
+
+  Widget _headerCard(DemoReport r) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: RColors.surface,
+        borderRadius: RRadius.lgBR,
+        border: Border.all(color: RColors.sand200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Row(children: [
-            _statBox('$noneCount', 'None 🛋️', AppColors.rose),
-            const SizedBox(width: 6),
-            _statBox('$lightCount', 'Light 🚶', AppColors.peach),
-            const SizedBox(width: 6),
-            _statBox('$moderateCount', 'Moderate 🏃', AppColors.teal),
+            Text(r.patientName,
+                style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: RColors.sand950)),
+            const SizedBox(width: 8),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: const BoxDecoration(
+                  color: RColors.plum100, borderRadius: RRadius.pillBR),
+              child: Text(r.protocol,
+                  style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: RColors.plum700)),
+            ),
           ]),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
+          Text(r.diagnosis,
+              style:
+                  const TextStyle(fontSize: 11, color: RColors.sand500)),
+          const SizedBox(height: 6),
           Text(
-            'Reported on ${recoveryRecords.length} recovery-phase check-in${recoveryRecords.length > 1 ? 's' : ''}. '
-            'Physical activity during treatment reduces fatigue and improves survival outcomes (ASCO/ESMO).',
-            style: AppText.caption.copyWith(
-              fontSize: 10, color: AppColors.text3, height: 1.5)),
-        ],
-
-        // HADS anxiety indicator
-        if (hadsRecords.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Divider(color: AppColors.border, height: 1, thickness: 0.5),
+              '${r.cycleLabel} · Day ${r.daysSinceInfusion} since infusion',
+              style: const TextStyle(
+                  fontSize: 12, color: RColors.sand700, height: 1.4)),
+          const SizedBox(height: 2),
+          Text(r.phaseEnglish,
+              style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: RColors.sand900)),
+          const SizedBox(height: 2),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(r.phaseArabic,
+                textDirection: TextDirection.rtl,
+                style: const TextStyle(
+                    fontSize: 11, color: RColors.plum500, height: 1.4)),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: r.nadirActive
+                  ? RColors.clay100
+                  : RColors.sand100,
+              borderRadius: RRadius.pillBR,
+            ),
+            child: Text(
+              r.nadirActive
+                  ? '⚠ Nadir Active'
+                  : 'Nadir window: ${r.nadirWindow}',
+              style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                  color: r.nadirActive
+                      ? RColors.clay700
+                      : RColors.sand500),
+            ),
+          ),
           const SizedBox(height: 10),
-          Text('HADS ANXIETY INDICATOR · مؤشر القلق',
-            style: AppText.label.copyWith(fontSize: 10)),
-          const SizedBox(height: 6),
+          Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                    '${r.checkinsCompleted} of ${r.checkinsTotalDays} days',
+                    style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: RColors.sand700)),
+                Text(
+                  '${(r.checkinsCompleted / r.checkinsTotalDays * 100).round()}%',
+                  style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: RColors.teal700),
+                ),
+              ]),
+          const SizedBox(height: 4),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: LinearProgressIndicator(
+              value: r.checkinsCompleted / r.checkinsTotalDays,
+              minHeight: 4,
+              backgroundColor: RColors.sand200,
+              valueColor:
+                  const AlwaysStoppedAnimation(RColors.teal500),
+            ),
+          ),
+          const SizedBox(height: 8),
           Row(children: [
-            Expanded(child: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: avgHads >= 8
-                    ? AppColors.peach.withOpacity(0.08)
-                    : avgHads >= 5
-                        ? AppColors.gold.withOpacity(0.08)
-                        : AppColors.teal.withOpacity(0.08),
-                borderRadius: AppRadius.smBR,
-                border: Border.all(
-                  color: avgHads >= 8
-                      ? AppColors.peach.withOpacity(0.25)
-                      : avgHads >= 5
-                          ? AppColors.gold.withOpacity(0.25)
-                          : AppColors.teal.withOpacity(0.25),
-                  width: 0.5)),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    avgHads >= 8 ? '🔴 High anxiety' : avgHads >= 5 ? '🟡 Moderate anxiety' : '🟢 Low anxiety',
-                    style: AppText.bodySemibold.copyWith(fontSize: 13)),
-                  Text(
-                    'Avg HADS score ${avgHads.toStringAsFixed(1)} / 12 · '
-                    'Based on ${hadsRecords.length} recovery-phase check-in${hadsRecords.length > 1 ? 's' : ''}',
-                    style: AppText.caption.copyWith(fontSize: 10, color: AppColors.text3)),
-                  if (elevatedHads >= 2)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        '⚠ Elevated anxiety on $elevatedHads consecutive recovery phases — consider psychosocial referral.',
-                        style: AppText.caption.copyWith(
-                          fontSize: 11, color: AppColors.peach, height: 1.4))),
-                ]),
-            )),
+            const Icon(Icons.calendar_today_outlined,
+                size: 12, color: RColors.sand400),
+            const SizedBox(width: 5),
+            Text(r.appointmentLabel,
+                style: const TextStyle(
+                    fontSize: 11, color: RColors.sand500)),
           ]),
         ],
-      ]),
+      ),
     );
   }
 
-  Widget _buildSymptomFlag(_SymptomFlag f, int totalDays) {
-    final sev = f.avgScore >= 7 ? 'high'
-        : f.avgScore >= 4 ? 'moderate' : 'low';
-    final sevColor = sev == 'high' ? AppColors.rose
-        : sev == 'moderate' ? AppColors.peach : AppColors.teal;
-    final sevIcon = sev == 'high' ? '🔴' : sev == 'moderate' ? '🟡' : '🟢';
-    final talkingPoint = _symptomTalkingPoint(f.key, f.avgScore, f.daysReported);
+  // ── Section header ────────────────────────────────────────────────────────────
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(11),
-      decoration: BoxDecoration(
-        color: sevColor.withOpacity(0.04),
-        borderRadius: AppRadius.smBR,
-        border: Border.all(color: sevColor.withOpacity(0.18), width: 0.5)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Text(sevIcon, style: const TextStyle(fontSize: 14)),
-          const SizedBox(width: 7),
-          Expanded(child: Text(f.label,
-            style: AppText.bodySemibold.copyWith(fontSize: 13))),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: sevColor.withOpacity(0.10),
-              borderRadius: AppRadius.fullBR),
-            child: Text('${f.avgScore.toStringAsFixed(1)}/10',
-              style: AppText.caption.copyWith(
-                color: sevColor, fontWeight: FontWeight.w600, fontSize: 11))),
-        ]),
-        const SizedBox(height: 5),
-        Row(children: [
-          _flagPill('${f.daysReported} of $totalDays days', AppColors.text3),
-          const SizedBox(width: 6),
-          _flagPill('Max ${f.maxScore.toInt()}/10', sevColor),
-          const SizedBox(width: 6),
-          _flagPill(sev.capitalize(), sevColor),
-        ]),
-        const SizedBox(height: 6),
-        Container(
-          padding: const EdgeInsets.all(9),
-          decoration: BoxDecoration(
-            color: AppColors.blue.withOpacity(0.04),
-            borderRadius: AppRadius.smBR,
-            border: Border.all(color: AppColors.blue.withOpacity(0.15), width: 0.5)),
-          child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('💬', style: TextStyle(fontSize: 11)),
-            const SizedBox(width: 6),
-            Expanded(child: Text(talkingPoint,
-              style: AppText.bodySecondary.copyWith(
-                fontSize: 11, fontStyle: FontStyle.italic, height: 1.5))),
-          ])),
-      ]),
-    );
-  }
-
-  Widget _flagPill(String text, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
-        borderRadius: AppRadius.fullBR,
-        border: Border.all(color: color.withOpacity(0.15), width: 0.5)),
-      child: Text(text, style: AppText.caption.copyWith(
-        fontSize: 10, color: color)));
-  }
-
-  List<Widget> _buildLabCorrelations(
-      List<_SymptomFlag> flags, UserSession session) {
-    final correlations = <String>[];
-    final latestLab = session.labs.isNotEmpty ? session.labs.first : null;
-
-    // Get real values from latest lab if available
-    double? hgb = latestLab?.metrics
-        .where((m) => m.name == 'Hemoglobin').firstOrNull?.value;
-    double? wbc = latestLab?.metrics
-        .where((m) => m.name == 'WBC').firstOrNull?.value;
-    double? neutrophils = latestLab?.metrics
-        .where((m) => m.name == 'Neutrophils').firstOrNull?.value;
-
-    // Fatigue → Hemoglobin
-    if (flags.any((f) => f.key == 'fatigue' || f.key == 'energy')) {
-      if (hgb != null && hgb < 12) {
-        correlations.add(
-            'Hemoglobin $hgb g/dL — below normal range, consistent with reported fatigue. '
-            'May explain reduced energy levels.');
-      } else {
-        correlations.add(
-            'Fatigue reported — not clearly linked to Hemoglobin levels. '
-            'May be treatment-related. Worth discussing with your team.');
-      }
-    }
-    // Infection/fever → WBC/Neutrophils
-    if (flags.any((f) => f.key == 'fever' || f.key == 'infection') ||
-        session.isNadirWindow) {
-      if (neutrophils != null && neutrophils < 1.8) {
-        correlations.add(
-            'Neutrophils $neutrophils K/µL — low, consistent with nadir phase. '
-            'Elevated infection risk. Temperature monitoring is essential.');
-      } else if (wbc != null) {
-        correlations.add(
-            'WBC $wbc K/µL — ${wbc < 4.5 ? 'below normal range' : 'within range'}. '
-            'Monitor for signs of infection given treatment phase.');
-      }
-    }
-    // Breathlessness → Hemoglobin
-    if (flags.any((f) => f.key == 'breathlessness')) {
-      if (hgb != null && hgb < 12) {
-        correlations.add(
-            'Hemoglobin $hgb g/dL — mild anaemia may contribute to breathlessness. '
-            'Consider whether iron supplementation discussion is warranted.');
-      }
-    }
-    // Mouth sores → WBC
-    if (flags.any((f) => f.key == 'mouth_sores')) {
-      if (wbc != null && wbc < 4.5) {
-        correlations.add(
-            'WBC $wbc — low white cell count may be contributing to mouth sores. '
-            '${neutrophils != null ? 'Neutrophils $neutrophils K/µL.' : ''}');
-      }
-    }
-
-    if (correlations.isEmpty) {
-      if (latestLab == null) {
-        correlations.add(
-            'No lab results logged yet. Add lab results to see correlations '
-            'with your reported symptoms.');
-      } else {
-        correlations.add(
-            'No direct correlations identified between current symptoms and lab values. '
-            'All reported symptoms appear within expected range for this treatment phase.');
-      }
-    }
-
-    return correlations.map((c) => Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: AppColors.blue.withOpacity(0.05),
-        borderRadius: AppRadius.smBR,
-        border: Border.all(color: AppColors.blue.withOpacity(0.15), width: 0.5)),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Text('🔗', style: TextStyle(fontSize: 12)),
-        const SizedBox(width: 7),
-        Expanded(child: Text(c,
-          style: AppText.bodySecondary.copyWith(
-            fontSize: 12, height: 1.5))),
-      ]),
-    )).toList();
-  }
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
-  double _moodValue(String emoji) {
-    const map = {'😣': 1, '😔': 2, '😐': 3, '🙂': 4, '😊': 5,
-                 '😄': 5, '😢': 1, '😕': 2, '🙁': 2};
-    return (map[emoji] ?? 0).toDouble();
-  }
-
-  String _moodTrend(List<double> values) {
-    if (values.length < 3) return 'stable';
-    final first = values.take(values.length ~/ 2).reduce((a, b) => a + b) /
-        (values.length ~/ 2);
-    final last = values.skip(values.length ~/ 2).reduce((a, b) => a + b) /
-        (values.length - values.length ~/ 2);
-    if (last > first + 0.3) return 'improving';
-    if (last < first - 0.3) return 'declining';
-    return 'stable';
-  }
-
-  String _moodSummary(double avg, String trend, List<_SymptomFlag> flags) {
-    final trendStr = trend == 'improving' ? 'improving week-on-week'
-        : trend == 'declining' ? 'declining over the period'
-        : 'stable across the period';
-    final dominant = flags.isNotEmpty ? flags.first.label.toLowerCase() : null;
-    final base = 'Mood $trendStr (avg ${avg.toStringAsFixed(1)}/5.0).';
-    if (dominant != null) {
-      return '$base ${'$dominant'.capitalize()} remains the dominant reported symptom.';
-    }
-    return '$base No dominant symptom pattern identified.';
-  }
-
-  String _symptomTalkingPoint(String key, double avg, int days) {
-    // Framed as shared decision prompts (co-construction), not one-way summaries
-    const prompts = {
-      'fatigue': 'Fatigue is limiting daily activity — discuss together what level of activity is realistic and manageable this cycle',
-      'nausea': 'Nausea has been present this period — explore together whether the current anti-emetic approach is working and what to adjust',
-      'fever': 'Temperature monitoring has flagged concerns — decide together the threshold and exact contact to call, day or night',
-      'pain': 'Pain is affecting daily life — explore together where it is, what type, and what management options are realistic right now',
-      'mouth_sores': 'Mouth sores are interfering with eating — discuss together the mouthwash protocol and whether a dose adjustment is the right call',
-      'neuropathy': 'Tingling and numbness are present — document together the affected areas and decide whether dose adjustment is warranted',
-      'breathlessness': 'Breathlessness has been reported — explore together what triggers it and whether an anaemia assessment is needed now',
-      'mood': 'Mood has been difficult this period — explore together what support would actually help: psychological referral, a peer group, or another option',
-      'sleep': 'Sleep has been disrupted — decide together what to try first: sleep hygiene, relaxation techniques, or pharmacological support',
-      'appetite': 'Appetite has been reduced — discuss together whether nutritional supplements or a dietitian referral would help most right now',
-      'infection': 'Signs of infection concern have been reported — agree together on the exact symptoms to watch and the specific number to call',
-      'vomiting': 'Vomiting has occurred — review together whether the anti-emetic medication needs to be changed or adjusted',
-      'joint_pain': 'Joint pain is affecting movement — discuss together its functional impact and whether physiotherapy referral is the right next step',
-      'anxiety': 'Anxiety has been elevated this period — explore together what form of support would be most helpful right now',
-      'hot_flashes': 'Hot flashes are frequent — discuss together management options and whether current hormone therapy plan needs reviewing',
-    };
-    return prompts[key] ??
-        'This symptom has been present for $days of 14 days (avg ${avg.toStringAsFixed(1)}/10) — discuss together what is manageable this cycle';
-  }
-}
-
-// ── Symptom flag model ────────────────────────────────────────────────────────
-class _SymptomFlag {
-  final String key, label;
-  final double avgScore, maxScore;
-  final int daysReported;
-
-  const _SymptomFlag({
-    required this.key, required this.label,
-    required this.avgScore, required this.daysReported,
-    required this.maxScore,
-  });
-}
-
-// ── Trend line painter ────────────────────────────────────────────────────────
-class _TrendPainter extends CustomPainter {
-  final List<double> values;
-  _TrendPainter(this.values);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (values.length < 2) return;
-    final paint = Paint()
-      ..color = AppColors.primary.withOpacity(0.5)
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    final fillPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          AppColors.primary.withOpacity(0.15),
-          AppColors.primary.withOpacity(0.0),
+  Widget _sectionHeader(String title, String arabicSubtitle) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title.toUpperCase(),
+              style: const TextStyle(
+                  fontSize: 10,
+                  letterSpacing: 1.2,
+                  fontWeight: FontWeight.w600,
+                  color: RColors.sand700)),
+          const SizedBox(height: 2),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(arabicSubtitle,
+                textDirection: TextDirection.rtl,
+                style: const TextStyle(
+                    fontSize: 10,
+                    color: RColors.plum500,
+                    height: 1.3)),
+          ),
         ],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height))
-      ..style = PaintingStyle.fill;
-
-    final path = Path();
-    final fillPath = Path();
-    final stepX = size.width / (values.length - 1);
-
-    for (int i = 0; i < values.length; i++) {
-      final x = i * stepX;
-      final y = size.height - (values[i] / 5.0) * size.height;
-      if (i == 0) {
-        path.moveTo(x, y);
-        fillPath.moveTo(x, size.height);
-        fillPath.lineTo(x, y);
-      } else {
-        path.lineTo(x, y);
-        fillPath.lineTo(x, y);
-      }
-    }
-
-    fillPath.lineTo(size.width, size.height);
-    fillPath.close();
-
-    canvas.drawPath(fillPath, fillPaint);
-    canvas.drawPath(path, paint);
-
-    // Draw dots
-    final dotPaint = Paint()
-      ..color = AppColors.primary
-      ..style = PaintingStyle.fill;
-
-    for (int i = 0; i < values.length; i++) {
-      final x = i * stepX;
-      final y = size.height - (values[i] / 5.0) * size.height;
-      canvas.drawCircle(Offset(x, y), 3, dotPaint);
-    }
+      ),
+    );
   }
 
-  @override
-  bool shouldRepaint(_TrendPainter old) => old.values != values;
-}
+  // ── Text block (Sections 1 & 2) ───────────────────────────────────────────────
 
-extension _StringExt on String {
-  String capitalize() => isEmpty ? this : '${this[0].toUpperCase()}${substring(1)}';
+  Widget _textBlock(String english, String arabic) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: RColors.surface,
+        borderRadius: RRadius.mdBR,
+        border: Border.all(color: RColors.sand200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(english,
+              style: const TextStyle(
+                  fontSize: 13,
+                  color: RColors.sand900,
+                  height: 1.6)),
+          const Divider(height: 20, color: RColors.sand200),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(arabic,
+                textDirection: TextDirection.rtl,
+                style: const TextStyle(
+                    fontSize: 13,
+                    color: RColors.sand900,
+                    height: 1.7)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Alert card (Section 3) ────────────────────────────────────────────────────
+
+  Widget _alertCard(DemoAlert alert) {
+    final (bg, leftColor, badgeBg, badgeFg, badgeLabel) =
+        switch (alert.level) {
+      'HIGH' => (
+          RColors.clay100,
+          RColors.clay500,
+          RColors.clay500,
+          Colors.white,
+          '🔴 HIGH'
+        ),
+      'MODERATE' => (
+          RColors.saffron100,
+          RColors.saffron500,
+          RColors.saffron300,
+          RColors.saffron700,
+          '🟡 MODERATE'
+        ),
+      _ => (
+          RColors.sage100,
+          RColors.sage500,
+          RColors.sage500,
+          Colors.white,
+          '✅ STABLE'
+        ),
+    };
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: RRadius.mdBR,
+        border: Border(left: BorderSide(color: leftColor, width: 3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 7, vertical: 3),
+              decoration: BoxDecoration(
+                  color: badgeBg, borderRadius: RRadius.pillBR),
+              child: Text(badgeLabel,
+                  style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: badgeFg)),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+                child: Text(alert.symptom,
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: RColors.sand950))),
+          ]),
+          const SizedBox(height: 6),
+          Text(alert.detail,
+              style: const TextStyle(
+                  fontSize: 12, color: RColors.sand700, height: 1.5)),
+        ],
+      ),
+    );
+  }
+
+  // ── Medication row (Section 4) ────────────────────────────────────────────────
+
+  Widget _medRow(DemoMedication med) {
+    final pct = med.totalDays > 0 ? med.takenDays / med.totalDays : 0.0;
+    final pctInt = (pct * 100).round();
+    final barColor = pct >= 0.8
+        ? RColors.sage500
+        : pct >= 0.6
+            ? RColors.saffron500
+            : RColors.clay500;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: RColors.surface,
+        borderRadius: RRadius.mdBR,
+        border: Border.all(color: RColors.sand200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Expanded(
+                child: Text(med.name,
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: RColors.sand950))),
+            Text('$pctInt%',
+                style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: barColor)),
+          ]),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(2),
+            child: LinearProgressIndicator(
+              value: pct,
+              minHeight: 5,
+              backgroundColor: RColors.sand200,
+              valueColor: AlwaysStoppedAnimation(barColor),
+            ),
+          ),
+          if (med.missedDates.isNotEmpty ||
+              med.missedReason.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              [
+                if (med.missedDates.isNotEmpty)
+                  'Missed: ${med.missedDates.join(', ')}',
+                if (med.missedReason.isNotEmpty) med.missedReason,
+              ].join(' · '),
+              style: const TextStyle(
+                  fontSize: 11,
+                  color: RColors.sand400,
+                  height: 1.4),
+            ),
+          ],
+          if (med.refillAlert != null) ...[
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 7, vertical: 3),
+              decoration: const BoxDecoration(
+                  color: RColors.clay100,
+                  borderRadius: RRadius.pillBR),
+              child: Text(med.refillAlert!,
+                  style: const TextStyle(
+                      fontSize: 10,
+                      color: RColors.clay700,
+                      fontWeight: FontWeight.w500)),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // ── Lab card (Section 5) ──────────────────────────────────────────────────────
+
+  Widget _labCard(DemoLab lab) {
+    final (statusBg, statusFg, statusLabel) = switch (lab.status) {
+      'LOW' => (RColors.clay100, RColors.clay700, 'LOW'),
+      'HIGH' => (RColors.saffron100, RColors.saffron700, 'HIGH'),
+      _ => (RColors.sage100, RColors.sage700, 'NORMAL'),
+    };
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: RColors.surface,
+        borderRadius: RRadius.mdBR,
+        border: Border.all(color: RColors.sand200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Expanded(
+                child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(lab.testName,
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: RColors.sand950)),
+                Text(lab.uploadDate,
+                    style: const TextStyle(
+                        fontSize: 10, color: RColors.sand400)),
+              ],
+            )),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 7, vertical: 3),
+              decoration: BoxDecoration(
+                  color: statusBg, borderRadius: RRadius.pillBR),
+              child: Text(statusLabel,
+                  style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: statusFg)),
+            ),
+          ]),
+          const SizedBox(height: 6),
+          Row(children: [
+            Text(lab.value,
+                style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: RColors.sand900)),
+            const SizedBox(width: 8),
+            Text('Normal: ${lab.normalRange}',
+                style: const TextStyle(
+                    fontSize: 11, color: RColors.sand400)),
+          ]),
+          const SizedBox(height: 6),
+          Text(lab.clinicalNote,
+              style: const TextStyle(
+                  fontSize: 12,
+                  color: RColors.sand500,
+                  height: 1.5,
+                  fontStyle: FontStyle.italic)),
+        ],
+      ),
+    );
+  }
+
+  // ── Section 6 note ────────────────────────────────────────────────────────────
+
+  Widget _section6Note() {
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Text(
+        'Generated from 14-day patient data · Protocol-aware · Phase-specific',
+        style: TextStyle(
+            fontSize: 10.5,
+            color: RColors.sand400,
+            fontStyle: FontStyle.italic),
+      ),
+    );
+  }
+
+  // ── Talking point card (Section 6) ───────────────────────────────────────────
+
+  Widget _talkingPointCard(DemoTalkingPoint point) {
+    final flag = point.flagLevel;
+    final (badgeBg, badgeFg, badgeLabel) = switch (flag) {
+      'HIGH' => (
+          RColors.clay500,
+          Colors.white,
+          '🔴 HIGH — Clinically unexpected'
+        ),
+      'MODERATE' => (
+          RColors.saffron300,
+          RColors.saffron700,
+          '🟡 MODERATE — Monitor closely'
+        ),
+      _ => (
+          RColors.sage500,
+          Colors.white,
+          '✅ STABLE — Within expected range'
+        ),
+    };
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: RColors.surface,
+        borderRadius: RRadius.mdBR,
+        border: Border.all(color: RColors.sand200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(
+                horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+                color: badgeBg, borderRadius: RRadius.pillBR),
+            child: Text(badgeLabel,
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: badgeFg)),
+          ),
+          const SizedBox(height: 10),
+          Text(point.english,
+              style: const TextStyle(
+                  fontSize: 13, color: RColors.sand900, height: 1.6)),
+          const Divider(height: 20, color: RColors.sand200),
+          Align(
+            alignment: Alignment.centerRight,
+            child: Text(point.arabic,
+                textDirection: TextDirection.rtl,
+                style: const TextStyle(
+                    fontSize: 13,
+                    color: RColors.sand900,
+                    height: 1.7)),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+            decoration: const BoxDecoration(
+              color: RColors.plum100,
+              borderRadius: RRadius.smBR,
+              border: Border(
+                  left: BorderSide(color: RColors.plum500, width: 3)),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('→ Action',
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: RColors.plum700)),
+                const SizedBox(width: 8),
+                Expanded(
+                    child: Text(point.checklistItem,
+                        style: const TextStyle(
+                            fontSize: 12,
+                            color: RColors.sand900,
+                            height: 1.4))),
+              ],
+            ),
+          ),
+          if (point.patientWordsUsed) ...[
+            const SizedBox(height: 6),
+            const Align(
+              alignment: Alignment.centerRight,
+              child: Text('بكلمات المريضة',
+                  textDirection: TextDirection.rtl,
+                  style: TextStyle(
+                      fontSize: 10,
+                      color: RColors.plum500,
+                      fontStyle: FontStyle.italic)),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 }

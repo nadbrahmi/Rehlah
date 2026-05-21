@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/theme/app_theme.dart';
+import '../../../../theme/rehlah_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/utils/invite_codes.dart';
 import '../../../../core/services/supabase_service.dart';
+import '../../../../core/utils/user_session.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -15,17 +16,28 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   final _codeController = TextEditingController();
   bool _showCodeInput = false;
   String? _errorMessage;
-  InviteProfile? _validatedProfile;   // demo / hardcoded codes
-  Map<String, dynamic>? _supabaseData; // real patient from Supabase
+  InviteProfile? _validatedProfile;
+  Map<String, dynamic>? _supabaseData;
   bool _isValidating = false;
   bool _isApplying = false;
+  late String _language;
+
+  @override
+  void initState() {
+    super.initState();
+    _language = UserSession().language;
+  }
+
+  void _setLanguage(String lang) {
+    setState(() => _language = lang);
+    UserSession().language = lang;
+  }
 
   @override
   void dispose() { _codeController.dispose(); super.dispose(); }
 
   bool get _hasValidCode => _validatedProfile != null || _supabaseData != null;
 
-  // ── Validation: Supabase first, demo codes as fallback ───────────────────
   Future<void> _validateCode(String code) async {
     final trimmed = code.trim().toUpperCase();
     if (trimmed.isEmpty) return;
@@ -36,18 +48,15 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       _validatedProfile = null;
     });
 
-    // 1. Try Supabase (real patient)
     if (SupabaseService.isAvailable) {
       final data = await SupabaseService.validateInviteCode(trimmed);
       if (!mounted) return;
-      // Guard against stale result if user kept typing
       if (_codeController.text.trim().toUpperCase() == trimmed && data != null) {
         setState(() { _isValidating = false; _supabaseData = data; });
         return;
       }
     }
 
-    // 2. Fallback: demo invite codes (always work offline)
     if (!mounted) return;
     final profile = InviteCodes.validate(trimmed);
     setState(() {
@@ -59,7 +68,6 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     });
   }
 
-  // ── Continue button ───────────────────────────────────────────────────────
   Future<void> _continueWithCode() async {
     if (_isApplying) return;
     if (_supabaseData != null) {
@@ -74,14 +82,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     setState(() => _isApplying = true);
     try {
       await SupabaseService.applyPatientToSession(data);
-
       final patientId = data['id'] as String;
-      // Persist for session recovery on next launch
       SharedPreferences.getInstance()
           .then((p) => p.setString('rehlah_patient_id', patientId));
-      // Mark code as used — fire-and-forget
       SupabaseService.activatePatient(patientId); // ignore: unawaited_futures
-
       if (mounted) context.go('/');
     } catch (_) {
       if (mounted) setState(() => _isApplying = false);
@@ -104,9 +108,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
+      backgroundColor: RColors.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => StatefulBuilder(
         builder: (ctx, setS) => Padding(
           padding: EdgeInsets.fromLTRB(20, 16, 20,
@@ -114,41 +118,34 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           child: Column(mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start, children: [
             Center(child: Container(width: 36, height: 4,
-              decoration: BoxDecoration(color: AppColors.border,
+              decoration: BoxDecoration(color: RColors.sand200,
                 borderRadius: BorderRadius.circular(2)))),
             const SizedBox(height: 16),
-            Text('I\'M A CAREGIVER',
-              style: AppText.label.copyWith(fontSize: 10)),
+            Text('I\'M A CAREGIVER', style: RText.eyebrow),
             const SizedBox(height: 8),
-            Text('Enter the code shared by your patient.',
-              style: AppText.bodySecondary),
+            Text('Enter the code shared by your patient.', style: RText.bodyMuted),
             const SizedBox(height: 12),
             TextField(
               controller: ctrl,
               autofocus: true,
               textCapitalization: TextCapitalization.characters,
-              style: const TextStyle(
-                fontFamily: 'Inter', fontSize: 16,
-                letterSpacing: 1.5, color: AppColors.text1),
+              style: RText.body.copyWith(fontSize: 16, letterSpacing: 1.5),
               decoration: InputDecoration(
                 hintText: 'CARE-XXXXX',
-                hintStyle: TextStyle(
-                  color: AppColors.text3, letterSpacing: 1),
-                filled: true, fillColor: AppColors.background,
+                hintStyle: RText.small.copyWith(
+                  color: RColors.sand400, letterSpacing: 1),
+                filled: true, fillColor: RColors.sand50,
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 14, vertical: 12),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(
-                    color: AppColors.border, width: 0.5)),
+                  borderSide: BorderSide(color: RColors.sand200, width: 0.5)),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(
-                    color: AppColors.border, width: 0.5)),
+                  borderSide: BorderSide(color: RColors.sand200, width: 0.5)),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(
-                    color: AppColors.primaryMid, width: 1.5)),
+                  borderSide: const BorderSide(color: RColors.teal200, width: 1.5)),
                 errorText: error),
             ),
             const SizedBox(height: 16),
@@ -169,13 +166,11 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 13),
                 decoration: BoxDecoration(
-                  color: AppColors.teal,
-                  borderRadius: AppRadius.fullBR,
-                  boxShadow: [BoxShadow(
-                    color: AppColors.teal.withOpacity(0.25),
-                    blurRadius: 10, offset: const Offset(0, 3))]),
+                  color: RColors.teal700,
+                  borderRadius: RRadius.pillBR,
+                  boxShadow: RShadow.shadow2),
                 child: const Center(child: Text('Connect',
-                  style: TextStyle(fontFamily: 'Inter', fontSize: 14,
+                  style: TextStyle(fontSize: 14,
                     fontWeight: FontWeight.w500, color: Colors.white))))),
           ]),
         ),
@@ -186,18 +181,18 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: RColors.sand50,
       body: Stack(children: [
         Positioned(top: -80, right: -60,
           child: Container(width: 240, height: 240,
             decoration: BoxDecoration(shape: BoxShape.circle,
               gradient: RadialGradient(colors: [
-                AppColors.primary.withOpacity(0.13), Colors.transparent])))),
+                RColors.teal200.withValues(alpha: 0.18), Colors.transparent])))),
         Positioned(bottom: 80, left: -40,
           child: Container(width: 180, height: 180,
             decoration: BoxDecoration(shape: BoxShape.circle,
               gradient: RadialGradient(colors: [
-                AppColors.teal.withOpacity(0.09), Colors.transparent])))),
+                RColors.saffron300.withValues(alpha: 0.12), Colors.transparent])))),
 
         SafeArea(
           child: SingleChildScrollView(
@@ -205,7 +200,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const SizedBox(height: 20),
+                const SizedBox(height: 8),
+                _languagePicker(),
+                const SizedBox(height: 28),
 
                 Container(
                   width: 80, height: 80,
@@ -213,34 +210,29 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     shape: BoxShape.circle,
                     gradient: const LinearGradient(
                       begin: Alignment(-0.6, -0.8), end: Alignment(1, 1),
-                      colors: [Color(0xFFDDD4F5), Color(0xFFCCC0EC),
-                               Color(0xFFD8CCEE), Color(0xFFE8D4E0)]),
+                      colors: [RColors.teal200, RColors.teal500,
+                               RColors.teal600, RColors.teal700]),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.8), width: 0.5),
-                    boxShadow: [BoxShadow(
-                      color: AppColors.primary.withOpacity(0.22),
-                      blurRadius: 32, offset: const Offset(0, 12))],
+                      color: Colors.white.withValues(alpha: 0.8), width: 0.5),
+                    boxShadow: RShadow.shadow3,
                   ),
                   child: const Icon(Icons.auto_awesome_rounded,
-                    size: 30, color: AppColors.primary),
+                    size: 30, color: Colors.white),
                 ),
                 const SizedBox(height: 18),
 
-                const Text('Rehlah',
-                  style: TextStyle(fontFamily: 'Inter', fontSize: 30,
-                    fontWeight: FontWeight.w300, color: AppColors.text1,
-                    letterSpacing: 0.02)),
+                Text('Rehlah',
+                  style: RText.h1.copyWith(fontWeight: FontWeight.w300)),
                 const SizedBox(height: 4),
-                const Text('رحلة · Your journey',
-                  style: TextStyle(fontFamily: 'Inter', fontSize: 15,
-                    color: AppColors.text2, fontWeight: FontWeight.w300)),
+                Text('رحلة · Your journey',
+                  style: RText.body.copyWith(
+                    color: RColors.sand700, fontWeight: FontWeight.w300)),
                 const SizedBox(height: 8),
-                const Text(
+                Text(
                   'A companion for every step\nof your cancer journey',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontFamily: 'Inter', fontSize: 13,
-                    color: AppColors.text3, fontWeight: FontWeight.w300,
-                    height: 1.6)),
+                  style: RText.bodyMuted.copyWith(
+                    fontWeight: FontWeight.w300, height: 1.6)),
 
                 const SizedBox(height: 40),
 
@@ -257,14 +249,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
                 Row(children: [
                   Expanded(child: Divider(
-                    color: AppColors.border, thickness: 0.5)),
+                    color: RColors.sand200, thickness: 0.5)),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     child: Text('or',
-                      style: TextStyle(fontFamily: 'Inter', fontSize: 12,
-                        color: AppColors.text3))),
+                      style: RText.small.copyWith(color: RColors.sand400, fontSize: 12))),
                   Expanded(child: Divider(
-                    color: AppColors.border, thickness: 0.5)),
+                    color: RColors.sand200, thickness: 0.5)),
                 ]),
 
                 const SizedBox(height: 20),
@@ -275,19 +266,17 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(13),
-                      border: Border.all(color: AppColors.border, width: 0.5)),
+                      color: RColors.surface,
+                      borderRadius: RRadius.mdBR,
+                      boxShadow: RShadow.shadow1,
+                      border: Border.all(color: RColors.sand200, width: 0.5)),
                     child: Column(children: [
-                      const Text('Set up manually',
-                        style: TextStyle(fontFamily: 'Inter', fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.text1)),
+                      Text('Set up manually',
+                        style: RText.body.copyWith(fontWeight: FontWeight.w500)),
                       const SizedBox(height: 2),
                       Text('Fill in your own information',
-                        style: TextStyle(fontFamily: 'Inter', fontSize: 11,
-                          color: AppColors.text3,
-                          fontWeight: FontWeight.w300)),
+                        style: RText.small.copyWith(
+                          color: RColors.sand400, fontWeight: FontWeight.w300)),
                     ]),
                   ),
                 ),
@@ -300,19 +289,18 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     decoration: BoxDecoration(
-                      color: AppColors.tealLight,
-                      borderRadius: BorderRadius.circular(13),
+                      color: RColors.teal50,
+                      borderRadius: RRadius.mdBR,
                       border: Border.all(
-                        color: AppColors.teal.withOpacity(0.2), width: 0.5)),
+                        color: RColors.teal200.withValues(alpha: 0.5), width: 0.5)),
                     child: Column(children: [
                       Text('I\'m a caregiver',
-                        style: TextStyle(fontFamily: 'Inter', fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.teal)),
+                        style: RText.body.copyWith(
+                          fontWeight: FontWeight.w500, color: RColors.teal700)),
                       const SizedBox(height: 2),
                       Text('Enter the code shared by your patient',
-                        style: TextStyle(fontFamily: 'Inter', fontSize: 11,
-                          color: AppColors.teal.withOpacity(0.6),
+                        style: RText.small.copyWith(
+                          color: RColors.teal600.withValues(alpha: 0.7),
                           fontWeight: FontWeight.w300)),
                     ]),
                   ),
@@ -326,9 +314,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     child: Center(child: Text('Explore with sample data →',
-                      style: TextStyle(fontFamily: 'Inter', fontSize: 13,
-                        color: AppColors.text3,
-                        fontWeight: FontWeight.w300))),
+                      style: RText.bodyMuted.copyWith(fontWeight: FontWeight.w300))),
                   ),
                 ),
 
@@ -337,8 +323,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 Text(
                   '🔒 Your data stays yours. Rehlah never sells your health information.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(fontFamily: 'Inter', fontSize: 11,
-                    color: AppColors.text3, fontWeight: FontWeight.w300,
+                  style: RText.small.copyWith(
+                    color: RColors.sand400, fontWeight: FontWeight.w300,
                     height: 1.6)),
               ],
             ),
@@ -348,6 +334,56 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     );
   }
 
+  Widget _languagePicker() {
+    return Row(children: [
+      Expanded(
+        child: GestureDetector(
+          onTap: () => _setLanguage('en'),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.symmetric(vertical: 11),
+            decoration: BoxDecoration(
+              color: _language == 'en' ? RColors.teal700 : RColors.surface,
+              borderRadius: RRadius.mdBR,
+              border: Border.all(
+                color: _language == 'en' ? RColors.teal700 : RColors.sand200),
+            ),
+            child: Center(
+              child: Text('English',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: _language == 'en' ? Colors.white : RColors.sand700)),
+            ),
+          ),
+        ),
+      ),
+      const SizedBox(width: 10),
+      Expanded(
+        child: GestureDetector(
+          onTap: () => _setLanguage('ar'),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.symmetric(vertical: 11),
+            decoration: BoxDecoration(
+              color: _language == 'ar' ? RColors.teal700 : RColors.surface,
+              borderRadius: RRadius.mdBR,
+              border: Border.all(
+                color: _language == 'ar' ? RColors.teal700 : RColors.sand200),
+            ),
+            child: Center(
+              child: Text('العربية',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: _language == 'ar' ? Colors.white : RColors.sand700)),
+            ),
+          ),
+        ),
+      ),
+    ]);
+  }
+
   Widget _buildCodePrompt() {
     return GestureDetector(
       onTap: () => setState(() => _showCodeInput = true),
@@ -355,22 +391,20 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppColors.primary, AppColors.primaryDark],
+          gradient: const LinearGradient(
+            colors: [RColors.teal600, RColors.teal700],
             begin: Alignment.topLeft, end: Alignment.bottomRight),
-          borderRadius: BorderRadius.circular(13),
-          boxShadow: [BoxShadow(
-            color: AppColors.primary.withOpacity(0.30),
-            blurRadius: 14, offset: const Offset(0, 4))],
+          borderRadius: RRadius.mdBR,
+          boxShadow: RShadow.shadow2,
         ),
         child: Column(children: [
           const Text('I have an invite code',
-            style: TextStyle(fontFamily: 'Inter', fontSize: 15,
+            style: TextStyle(fontSize: 15,
               fontWeight: FontWeight.w500, color: Colors.white)),
           const SizedBox(height: 2),
           Text('From my care team or hospital',
-            style: TextStyle(fontFamily: 'Inter', fontSize: 11,
-              color: Colors.white.withOpacity(0.65),
+            style: RText.small.copyWith(
+              color: Colors.white.withValues(alpha: 0.65),
               fontWeight: FontWeight.w300)),
         ]),
       ),
@@ -392,28 +426,23 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             }),
             child: Row(children: [
               Icon(Icons.arrow_back_ios_new_rounded, size: 13,
-                color: AppColors.text2.withOpacity(0.4)),
+                color: RColors.sand400),
               const SizedBox(width: 4),
-              Text('Back', style: TextStyle(fontFamily: 'Inter',
-                fontSize: 12, color: AppColors.text2)),
+              Text('Back', style: RText.small.copyWith(color: RColors.sand700)),
             ]),
           ),
           const Spacer(),
         ]),
         const SizedBox(height: 12),
 
-        Text('ENTER YOUR INVITE CODE',
-          style: TextStyle(fontFamily: 'Inter', fontSize: 10,
-            fontWeight: FontWeight.w600, letterSpacing: 0.07,
-            color: AppColors.text3)),
+        Text('ENTER YOUR INVITE CODE', style: RText.eyebrow),
         const SizedBox(height: 8),
 
         TextField(
           controller: _codeController,
           autofocus: true,
           textCapitalization: TextCapitalization.characters,
-          style: const TextStyle(fontFamily: 'Inter', fontSize: 15,
-            letterSpacing: 0.05, color: AppColors.text1,
+          style: RText.body.copyWith(fontSize: 15, letterSpacing: 0.05,
             fontWeight: FontWeight.w500),
           onChanged: (v) {
             setState(() {
@@ -426,58 +455,55 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
           onSubmitted: _validateCode,
           decoration: InputDecoration(
             hintText: 'e.g. REHLAH-ACT-001 or ABC-1234',
-            hintStyle: const TextStyle(color: AppColors.text3,
-              fontWeight: FontWeight.w300, letterSpacing: 0),
+            hintStyle: RText.small.copyWith(
+              color: RColors.sand400, fontWeight: FontWeight.w300, letterSpacing: 0),
             filled: true,
-            fillColor: AppColors.surface,
+            fillColor: RColors.surface,
             suffixIcon: _isValidating
                 ? const Padding(
                     padding: EdgeInsets.all(12),
                     child: SizedBox(width: 18, height: 18,
                       child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppColors.primary)))
+                        strokeWidth: 2, color: RColors.teal700)))
                 : _hasValidCode
                     ? const Icon(Icons.check_circle_rounded,
-                        color: AppColors.teal, size: 20)
+                        color: RColors.teal600, size: 20)
                     : null,
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(13),
-              borderSide: const BorderSide(color: AppColors.border, width: 0.5)),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: RColors.sand200, width: 0.5)),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(13),
-              borderSide: const BorderSide(color: AppColors.border, width: 0.5)),
+              borderRadius: BorderRadius.circular(14),
+              borderSide: BorderSide(color: RColors.sand200, width: 0.5)),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(13),
+              borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(
-                color: _hasValidCode
-                    ? AppColors.teal
-                    : AppColors.primaryMid,
+                color: _hasValidCode ? RColors.teal600 : RColors.teal200,
                 width: 1.5)),
             errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(13),
+              borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(
-                color: AppColors.rose.withOpacity(0.5), width: 1)),
+                color: RColors.clay500.withValues(alpha: 0.5), width: 1)),
           ),
         ),
 
         if (_errorMessage != null) ...[
           const SizedBox(height: 8),
           Text(_errorMessage!,
-            style: TextStyle(fontFamily: 'Inter', fontSize: 12,
-              color: AppColors.rose, fontWeight: FontWeight.w300,
+            style: RText.small.copyWith(
+              color: RColors.clay500, fontWeight: FontWeight.w300,
               height: 1.5)),
         ],
 
-        // ── Validated profile preview ──────────────────────────────────────
         if (_hasValidCode) ...[
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(13),
             decoration: BoxDecoration(
-              color: AppColors.teal.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(13),
+              color: RColors.teal50,
+              borderRadius: RRadius.mdBR,
               border: Border.all(
-                color: AppColors.teal.withOpacity(0.25), width: 0.5)),
+                color: RColors.teal200.withValues(alpha: 0.5), width: 0.5)),
             child: Row(children: [
               Text(
                 _supabaseData != null ? '🏥' : _validatedProfile!.scenarioEmoji,
@@ -488,8 +514,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 children: [
                   Text(
                     'Welcome, ${_supabaseData?['name'] ?? _validatedProfile!.name}',
-                    style: const TextStyle(fontFamily: 'Inter', fontSize: 14,
-                      fontWeight: FontWeight.w600, color: AppColors.text1)),
+                    style: RText.body.copyWith(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 2),
                   Text(
                     _supabaseData != null
@@ -497,20 +522,18 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                         'Cycle ${_supabaseData!['cycle_number']} of '
                         '${_supabaseData!['total_cycles']}'
                       : _validatedProfile!.scenarioLabel,
-                    style: const TextStyle(fontFamily: 'Inter', fontSize: 12,
-                      color: AppColors.teal, fontWeight: FontWeight.w400,
-                      height: 1.4)),
+                    style: RText.small.copyWith(
+                      color: RColors.teal700, height: 1.4)),
                 ],
               )),
               const Icon(Icons.check_circle_rounded,
-                color: AppColors.teal, size: 22),
+                color: RColors.teal600, size: 22),
             ]),
           ),
         ],
 
         const SizedBox(height: 16),
 
-        // ── Continue button ────────────────────────────────────────────────
         GestureDetector(
           onTap: _hasValidCode && !_isApplying
               ? () => _continueWithCode()
@@ -521,18 +544,16 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             padding: const EdgeInsets.symmetric(vertical: 14),
             decoration: BoxDecoration(
               color: _hasValidCode && !_isApplying
-                  ? AppColors.primary
-                  : AppColors.primary.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(13),
-              boxShadow: _hasValidCode && !_isApplying ? [BoxShadow(
-                color: AppColors.primary.withOpacity(0.30),
-                blurRadius: 14, offset: const Offset(0, 4))] : null),
+                  ? RColors.teal700
+                  : RColors.teal200,
+              borderRadius: RRadius.mdBR,
+              boxShadow: _hasValidCode && !_isApplying ? RShadow.shadow2 : null),
             child: _isApplying
               ? const Center(child: SizedBox(width: 20, height: 20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2, color: Colors.white)))
               : const Center(child: Text('Continue with code →',
-                  style: TextStyle(fontFamily: 'Inter', fontSize: 15,
+                  style: TextStyle(fontSize: 15,
                     fontWeight: FontWeight.w500, color: Colors.white))),
           ),
         ),
@@ -542,10 +563,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         GestureDetector(
           onTap: () => _showTestCodes(context),
           child: Center(child: Text('View test codes ↗',
-            style: TextStyle(fontFamily: 'Inter', fontSize: 11,
-              color: AppColors.text3.withOpacity(0.6),
+            style: RText.small.copyWith(
+              color: RColors.sand400.withValues(alpha: 0.7),
               decoration: TextDecoration.underline,
-              decorationColor: AppColors.text3.withOpacity(0.4)))),
+              decorationColor: RColors.sand400.withValues(alpha: 0.4)))),
         ),
       ],
     );
@@ -554,9 +575,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   void _showTestCodes(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.surface,
+      backgroundColor: RColors.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       builder: (_) => Padding(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
         child: Column(
@@ -566,12 +587,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             Center(child: Container(
               width: 36, height: 4,
               decoration: BoxDecoration(
-                color: AppColors.border,
+                color: RColors.sand200,
                 borderRadius: BorderRadius.circular(2)))),
             const SizedBox(height: 16),
-            Text('TEST CODES', style: TextStyle(fontFamily: 'Inter',
-              fontSize: 10, fontWeight: FontWeight.w700,
-              letterSpacing: 0.08, color: AppColors.text3)),
+            Text('TEST CODES', style: RText.eyebrow),
             const SizedBox(height: 12),
             ...InviteCodes.all.map((p) => GestureDetector(
               onTap: () {
@@ -585,9 +604,9 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppColors.border, width: 0.5)),
+                  color: RColors.sand50,
+                  borderRadius: RRadius.smBR,
+                  border: Border.all(color: RColors.sand200, width: 0.5)),
                 child: Row(children: [
                   Text(p.scenarioEmoji,
                     style: const TextStyle(fontSize: 16)),
@@ -596,17 +615,16 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(p.code,
-                        style: const TextStyle(fontFamily: 'Inter',
+                        style: RText.body.copyWith(
                           fontSize: 12, fontWeight: FontWeight.w600,
-                          color: AppColors.primary)),
+                          color: RColors.teal700)),
                       Text(p.scenarioLabel,
-                        style: const TextStyle(fontFamily: 'Inter',
-                          fontSize: 11, color: AppColors.text2,
-                          fontWeight: FontWeight.w300)),
+                        style: RText.small.copyWith(
+                          color: RColors.sand700, fontWeight: FontWeight.w300)),
                     ],
                   )),
                   const Icon(Icons.arrow_forward_ios_rounded,
-                    size: 12, color: AppColors.text3),
+                    size: 12, color: RColors.sand400),
                 ]),
               ),
             )),

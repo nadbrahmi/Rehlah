@@ -5,10 +5,11 @@ import '../utils/user_session.dart';
 import '../utils/protocols.dart';
 
 class SupabaseService {
-  static const _kPatientCache = 'rehlah_patient_data';
-  static const _kMedsCache    = 'rehlah_meds_data';
-  static const _kAptsCache    = 'rehlah_apts_data';
-  static const _kLabsCache    = 'rehlah_labs_data';
+  static const _kPatientCache   = 'rehlah_patient_data';
+  static const _kMedsCache      = 'rehlah_meds_data';
+  static const _kAptsCache      = 'rehlah_apts_data';
+  static const _kLabsCache      = 'rehlah_labs_data';
+  static const _kCheckinsCache  = 'rehlah_checkins';
 
   static bool get isAvailable {
     try {
@@ -114,6 +115,22 @@ class SupabaseService {
     }
   }
 
+  static Future<List<Map<String, dynamic>>> getCheckinHistory(
+      String patientId) async {
+    if (!isAvailable) return [];
+    try {
+      final response = await _client
+          .from('checkins')
+          .select()
+          .eq('patient_id', patientId)
+          .order('created_at', ascending: false)
+          .limit(14);
+      return List<Map<String, dynamic>>.from(response as List);
+    } catch (_) {
+      return [];
+    }
+  }
+
   static Future<void> saveCheckin(
       String patientId, Map<String, dynamic> data) async {
     if (!isAvailable) return;
@@ -132,19 +149,22 @@ class SupabaseService {
   static Future<void> applyPatientToSession(
       Map<String, dynamic> data) async {
     final patientId = data['id'] as String;
-    final meds = await getMedications(patientId);
-    final apts = await getAppointments(patientId);
-    final labs = await getLabs(patientId);
+    final meds     = await getMedications(patientId);
+    final apts     = await getAppointments(patientId);
+    final labs     = await getLabs(patientId);
+    final checkins = await getCheckinHistory(patientId);
 
     _populateSession(data, meds, apts, labs);
+    UserSession().initCheckinHistoryFromData(checkins);
 
     // Cache for offline recovery — fire-and-forget, never blocks
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_kPatientCache, jsonEncode(data));
-      await prefs.setString(_kMedsCache,    jsonEncode(meds));
-      await prefs.setString(_kAptsCache,    jsonEncode(apts));
-      await prefs.setString(_kLabsCache,    jsonEncode(labs));
+      await prefs.setString(_kPatientCache,  jsonEncode(data));
+      await prefs.setString(_kMedsCache,     jsonEncode(meds));
+      await prefs.setString(_kAptsCache,     jsonEncode(apts));
+      await prefs.setString(_kLabsCache,     jsonEncode(labs));
+      await prefs.setString(_kCheckinsCache, jsonEncode(checkins));
     } catch (_) {}
   }
 
@@ -156,12 +176,14 @@ class SupabaseService {
       final patientJson = prefs.getString(_kPatientCache);
       if (patientJson == null) return false;
 
-      final data = jsonDecode(patientJson) as Map<String, dynamic>;
-      final meds = _decodeList(prefs.getString(_kMedsCache));
-      final apts = _decodeList(prefs.getString(_kAptsCache));
-      final labs = _decodeList(prefs.getString(_kLabsCache));
+      final data     = jsonDecode(patientJson) as Map<String, dynamic>;
+      final meds     = _decodeList(prefs.getString(_kMedsCache));
+      final apts     = _decodeList(prefs.getString(_kAptsCache));
+      final labs     = _decodeList(prefs.getString(_kLabsCache));
+      final checkins = _decodeList(prefs.getString(_kCheckinsCache));
 
       _populateSession(data, meds, apts, labs);
+      UserSession().initCheckinHistoryFromData(checkins);
       return true;
     } catch (_) {
       return false;

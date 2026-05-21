@@ -70,22 +70,23 @@ class UserSession extends ChangeNotifier {
   UserSession._();
 
   // ── Onboarding ────────────────────────────────────────────────────────────
-  String _name = 'there';
+  String _name = 'Nadia';
   String get name => _name;
   set name(String value) {
     _name = value;
     notifyListeners();
   }
-  String cancerType = 'Breast cancer';
+  String language = 'en'; // 'en' | 'ar'
+  String cancerType = 'Breast cancer · Grade II · ER+/PR+';
   String treatmentPhase = 'In chemotherapy';
   int whoIndex = 0;
 
   // ── Protocol ─────────────────────────────────────────────────────────────
   BreastProtocol protocol = BreastProtocol.act;
-  bool isTaxolPhase = false;
-  int currentCycle = 2;
+  bool isTaxolPhase = true;
+  int currentCycle = 5;
   int totalCycles = 8;
-  int dayInCycle = 7;
+  int dayInCycle = 4;
 
   // ── Supabase patient link ─────────────────────────────────────────────────
   String? supabasePatientId;
@@ -210,6 +211,21 @@ class UserSession extends ChangeNotifier {
 
   bool get hasCheckedInToday => checkedInToday;
 
+  // ── Check-in history (Supabase-fetched, last 14 rows) ─────────────────────
+  List<Map<String, dynamic>> _checkinHistory = [];
+
+  List<Map<String, dynamic>> get checkinHistory =>
+      List.unmodifiable(_checkinHistory);
+
+  void initCheckinHistoryFromData(List<Map<String, dynamic>> rows) {
+    _checkinHistory = [...rows];
+  }
+
+  void initDefaultCheckinHistory() {
+    if (_checkinHistory.isNotEmpty) return;
+    initCheckinHistoryFromData(MockData.checkinHistory);
+  }
+
   // ── Medications ───────────────────────────────────────────────────────────
   // Key: med id, Value: time taken today (null = not taken)
   final Map<String, String?> _medsTakenToday = {};
@@ -282,6 +298,10 @@ class UserSession extends ChangeNotifier {
     final totalTaken = _medsAdherenceCount.values
         .fold(0, (sum, v) => sum + v);
     return ((totalTaken / totalPossible) * 100).round().clamp(0, 100);
+  }
+
+  int medAdherencePct(String medId) {
+    return ((_medsAdherenceCount[medId] ?? 0) / 14 * 100).round().clamp(0, 100);
   }
   String get symptomSummary {
     if (symptomScores.isEmpty) return 'no symptoms reported';
@@ -423,19 +443,19 @@ class UserSession extends ChangeNotifier {
     } else {
       _appointments.addAll([
         Appointment(
-          id: 'apt1', title: 'Oncology follow-up',
-          doctorName: 'Dr. Sarah Chen', location: 'Oncology Clinic',
-          dateTime: now.add(const Duration(days: 4))
-              .copyWith(hour: 10, minute: 30, second: 0)),
+          id: 'apt1', title: 'Consultation oncologie · Dr. Ben Abid',
+          doctorName: 'Dr. Ben Abid', location: 'Oncologie ambulatoire',
+          dateTime: now.add(const Duration(days: 2))
+              .copyWith(hour: 10, minute: 0, second: 0)),
         Appointment(
-          id: 'apt2', title: 'Chemo session',
+          id: 'apt2', title: 'Chemo session #6',
           doctorName: '', location: 'Infusion Suite B',
-          dateTime: now.add(const Duration(days: 11))
+          dateTime: now.add(const Duration(days: 17))
               .copyWith(hour: 9, minute: 0, second: 0)),
         Appointment(
-          id: 'apt3', title: 'Chemo session',
+          id: 'apt3', title: 'Chemo session #5',
           doctorName: '', location: 'Infusion Suite B',
-          dateTime: now.subtract(const Duration(days: 10))
+          dateTime: now.subtract(const Duration(days: 4))
               .copyWith(hour: 9, minute: 0, second: 0),
           isPast: true),
       ]);
@@ -624,17 +644,19 @@ class UserSession extends ChangeNotifier {
       ]);
     } else {
       _medications.addAll([
-        Medication(id: 'med1', name: 'Tamoxifen 20mg',
-          dose: '1 tablet', frequency: 'Daily',
-          emoji: '💊', category: 'hormone_therapy',
-          startDate: DateTime.now().subtract(const Duration(days: 30))),
-        Medication(id: 'med2', name: 'Vitamin D 1000 IU',
-          dose: '1 capsule', frequency: 'Daily',
-          emoji: '🌤️', category: 'supplement'),
-        Medication(id: 'med3', name: 'Pain Relief 500mg',
-          dose: 'As needed', frequency: 'As needed',
-          emoji: '🩹', category: 'symptomatic'),
+        const Medication(id: 'med1', name: 'Ondansétron 8mg',
+          dose: '1 tablet', frequency: 'Before each infusion',
+          emoji: '💊', category: 'antiemetic'),
+        const Medication(id: 'med2', name: 'Paclitaxel premedication',
+          dose: 'IV protocol', frequency: 'Infusion day',
+          emoji: '💉', category: 'chemo'),
+        const Medication(id: 'med3', name: 'Ibuprofen 400mg',
+          dose: '1 tablet', frequency: 'As needed · Joint pain',
+          emoji: '🩹', category: 'analgesic'),
       ]);
+      for (var i = 0; i < 13; i++) { medsAdherenceSimulate('med1'); } // 93%
+      for (var i = 0; i < 14; i++) { medsAdherenceSimulate('med2'); } // 100%
+      for (var i = 0; i < 9;  i++) { medsAdherenceSimulate('med3'); } // 64%
     }
   }
 
@@ -744,6 +766,27 @@ class UserSession extends ChangeNotifier {
 
   String get displayName => name.isEmpty ? 'there' : name;
 
+  // ── Vitals ────────────────────────────────────────────────────────────────
+  final List<VitalRecord> _vitals = [];
+
+  List<VitalRecord> get vitals => List.unmodifiable(_vitals);
+
+  VitalRecord? get latestVital =>
+      _vitals.isEmpty ? null : _vitals.last;
+
+  double? get latestTemperature => latestVital?.temperatureCelsius;
+
+  bool get hasFeverToday {
+    final temp = latestTemperature;
+    return temp != null && temp >= 38.0;
+  }
+
+  void recordVital(VitalRecord record) {
+    _vitals.add(record);
+    _saveCount++;
+    notifyListeners();
+  }
+
   void reset() {
     name = '';
     cancerType = '';
@@ -758,9 +801,11 @@ class UserSession extends ChangeNotifier {
     _labsInitialized = false;
     _history.clear();
     _controls.clear();
+    _vitals.clear();
     treatmentEndDate = null;
     menstrualStatus = 'unknown';
     lastPeriodDate = null;
+    _checkinHistory.clear();
     notifyListeners();
   }
 }
@@ -837,4 +882,23 @@ class ControlRecord {
       default: return const Color(0xFF6858A0);
     }
   }
+}
+
+// ── Vital record ──────────────────────────────────────────────────────────────
+class VitalRecord {
+  final DateTime recordedAt;
+  final double temperatureCelsius;
+  final int? pulse;
+  final int? oxygenSaturation;
+
+  const VitalRecord({
+    required this.recordedAt,
+    required this.temperatureCelsius,
+    this.pulse,
+    this.oxygenSaturation,
+  });
+
+  bool get isFever    => temperatureCelsius >= 38.0;
+  bool get isHighFever => temperatureCelsius >= 38.5;
+  bool get isLowTemp  => temperatureCelsius < 36.0;
 }

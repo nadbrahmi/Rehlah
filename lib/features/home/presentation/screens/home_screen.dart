@@ -2,8 +2,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/shared_widgets.dart';
+import '../../../../theme/rehlah_theme.dart';
+import '../../../../core/widgets/rehlah_widgets.dart';
 import '../../../../core/utils/user_session.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -36,7 +36,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) setState(() {});
   }
 
-  // Called every time this route is pushed onto the stack
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -46,188 +45,452 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     final session = UserSession();
-    final today = DateTime.now();
-    final dateStr = DateFormat('EEEE · d MMMM').format(today);
     final isInChemo = session.treatmentPhase == 'In chemotherapy';
     final isMonitoring = session.isMonitoring;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Stack(children: [
-        Positioned(top: -60, right: -40,
-          child: Container(width: 220, height: 220,
-            decoration: BoxDecoration(shape: BoxShape.circle,
-              gradient: RadialGradient(colors: [
-                AppColors.primary.withOpacity(0.11), Colors.transparent])))),
-        SafeArea(
-          child: CustomScrollView(slivers: [
-            SliverToBoxAdapter(child: _buildHeader(context, session, dateStr)),
-            SliverToBoxAdapter(child: _buildHeroCard(context, session)),
-            // Micro-education — hide when a more specific card already shows
-            if (!session.isNadirWindow &&
-                !session.isNadirApproaching &&
-                !session.isScanxietyPeriod)
-              SliverToBoxAdapter(child: _buildMicroEducationCard(session)),
-            if (isMonitoring) ...[
-              // Combined wellness hero — cancer-free + hormone streak in one card
-              SliverToBoxAdapter(child: _buildMonitoringWellnessCard(session)),
-              // Scanxiety only when scan is within 14 days
-              if (session.isScanxietyPeriod)
-                SliverToBoxAdapter(child: _buildScanxietyCard(session)),
-              // Cycle + scan window combined
-              SliverToBoxAdapter(
-                  child: _buildCycleAndScanCard(context, session)),
-            ],
-            // Chemo-specific cards
-            if (isInChemo && session.isNadirWindow)
-              SliverToBoxAdapter(child: _buildNadirCard(session)),
-            if (isInChemo && session.isNadirApproaching && !session.isNadirWindow)
-              SliverToBoxAdapter(child: _buildNadirApproachingCard()),
-            // Phase card
-            SliverToBoxAdapter(child: isInChemo
-                ? _buildPhaseCard(session)
-                : isMonitoring
-                    ? const SizedBox.shrink()
-                    : _buildJourneyCard(session)),
-            SliverToBoxAdapter(child: _buildMoodRecap(session)),
-            SliverToBoxAdapter(child: const SectionLabel('Quick access')),
-            SliverToBoxAdapter(child: _buildQuickTiles(context, session)),
-            SliverToBoxAdapter(child: _buildNextAppointment(context)),
-            const SliverToBoxAdapter(child: SizedBox(height: 24)),
-          ]),
-        ),
-      ]),
+      backgroundColor: RColors.sand50,
+      body: SafeArea(
+        child: CustomScrollView(slivers: [
+          SliverToBoxAdapter(child: _buildHeader(context, session)),
+          SliverToBoxAdapter(child: _buildPhaseBanner(session, isInChemo, isMonitoring)),
+          SliverToBoxAdapter(child: _buildHeroCard(context, session)),
+          SliverToBoxAdapter(child: _buildMedsVitalsRow(context, session)),
+          // Micro-education — hide when more specific card already shows
+          if (!session.isNadirWindow &&
+              !session.isNadirApproaching &&
+              !session.isScanxietyPeriod)
+            SliverToBoxAdapter(child: _buildMicroEducationCard(session)),
+          if (isMonitoring) ...[
+            SliverToBoxAdapter(child: _buildMonitoringWellnessCard(session)),
+            if (session.isScanxietyPeriod)
+              SliverToBoxAdapter(child: _buildScanxietyCard(session)),
+            SliverToBoxAdapter(child: _buildCycleAndScanCard(context, session)),
+          ],
+          if (isInChemo && session.isNadirWindow)
+            SliverToBoxAdapter(child: _buildNadirCard(session)),
+          if (isInChemo && session.isNadirApproaching && !session.isNadirWindow)
+            SliverToBoxAdapter(child: _buildNadirApproachingCard()),
+          SliverToBoxAdapter(child: _buildMoodRecap(session)),
+          SliverToBoxAdapter(child: _buildQuickAccess(context, session)),
+          SliverToBoxAdapter(child: _buildNextAppointment(context)),
+          SliverToBoxAdapter(child: _buildAskRehlah(context, session)),
+          SliverToBoxAdapter(child: _buildCareTeamSection(context, session)),
+          const SliverToBoxAdapter(child: SizedBox(height: 120)),
+        ]),
+      ),
     );
   }
 
-  // ── Header ────────────────────────────────────────────────────────────────
-  Widget _buildHeader(BuildContext context, UserSession session, String dateStr) {
+  // ── Header ─────────────────────────────────────────────────────────────────
+  Widget _buildHeader(BuildContext context, UserSession session) {
     final name = session.displayName;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(dateStr.toUpperCase(), style: AppText.label),
-          const SizedBox(height: 3),
-          RichText(text: TextSpan(
-            style: AppText.displayTitle,
-            children: [
-              TextSpan(text: '${session.greeting},\n'),
-              TextSpan(text: name,
-                style: AppText.displayTitle.copyWith(fontWeight: FontWeight.w700)),
-            ],
-          )),
-          const SizedBox(height: 4),
-          Text(
-            session.isMonitoring && session.daysCancerFree > 0
-                ? '${session.daysCancerFree} days cancer-free and counting. 🎗️'
-                : session.isNadirWindow
-                    ? 'You\'re in nadir — rest is treatment today.'
-                    : 'Take it one moment at a time.',
-            style: AppText.bodySecondary),
-        ])),
-        GestureDetector(
-          onTap: () => context.push('/profile'),
-          child: Container(
-            width: 38, height: 38,
-            decoration: BoxDecoration(
-              color: AppColors.primaryLight,
-              shape: BoxShape.circle,
-              border: Border.all(color: AppColors.primaryMid, width: 0.5)),
-            child: Center(child: Text(
-              name.isNotEmpty ? name[0].toUpperCase() : '?',
-              style: const TextStyle(fontFamily: 'Inter', fontSize: 15,
-                fontWeight: FontWeight.w600, color: AppColors.primary))),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(session.greeting,
+              style: RText.small.copyWith(color: RColors.sand500, fontWeight: FontWeight.w500)),
+            const SizedBox(height: 2),
+            Text(name,
+              style: RText.h1.copyWith(fontSize: 22, fontWeight: FontWeight.w700, height: 1)),
+          ])),
+          const SizedBox(width: 12),
+          GestureDetector(
+            onTap: () => context.go('/profile'),
+            child: Container(
+              width: 40, height: 40,
+              decoration: const BoxDecoration(
+                color: RColors.teal700,
+                shape: BoxShape.circle,
+              ),
+              child: Center(child: Text(
+                name.isNotEmpty ? name[0].toUpperCase() : '?',
+                style: const TextStyle(
+                  fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white),
+              )),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Phase Banner ───────────────────────────────────────────────────────────
+  Widget _buildPhaseBanner(UserSession session, bool isInChemo, bool isMonitoring) {
+    final Widget banner;
+    if (isInChemo) {
+      final isNadir = session.isNadirWindow;
+      final isApproaching = session.isNadirApproaching;
+      final isAr = session.language == 'ar';
+      final variant = isNadir ? PhaseBannerVariant.alert : PhaseBannerVariant.current;
+      final title = isAr
+          ? _phaseNameAr(session.currentPhase.name)
+          : session.currentPhase.name;
+      final eyebrow = isAr
+          ? 'الدورة ${session.currentCycle} من ${session.totalCycles}'
+          : 'Cycle ${session.currentCycle} of ${session.totalCycles}';
+      final subtitle = isNadir
+          ? (isAr ? 'نافذة الناضير نشطة — راقبي درجة الحرارة مرتين يومياً' : 'Nadir window active — monitor temperature twice daily')
+          : isApproaching
+              ? (isAr ? 'نافذة الناضير متوقعة خلال يوم إلى يومين' : 'Nadir window expected in 1–2 days')
+              : (isAr ? 'اليوم ${session.dayInCycle} من الدورة' : 'Day ${session.dayInCycle} of cycle');
+      final pillLabel = isNadir
+          ? (isAr ? 'الناضير الآن' : 'Nadir now')
+          : isApproaching
+              ? (isAr ? 'الناضير قريب' : 'Nadir soon')
+              : (isAr ? 'اليوم ${session.dayInCycle}' : 'Day ${session.dayInCycle}');
+      final pillVariant = isNadir ? StatusPillVariant.alert : StatusPillVariant.warn;
+      banner = PhaseBanner(
+        eyebrow: eyebrow,
+        title: title,
+        subtitle: subtitle,
+        badge: '${session.currentCycle}',
+        variant: variant,
+        trailingPill: StatusPill(pillLabel, variant: pillVariant),
+      );
+    } else if (isMonitoring) {
+      final days = session.daysCancerFree;
+      final years = days ~/ 365;
+      final months = (days % 365) ~/ 30;
+      final label = years > 0
+          ? '$years yr${years > 1 ? 's' : ''} ${months > 0 ? '$months mo ' : ''}cancer-free'
+          : months > 0
+              ? '$months month${months > 1 ? 's' : ''} cancer-free'
+              : '$days days cancer-free';
+      banner = PhaseBanner(
+        eyebrow: 'Monitoring & Surveillance',
+        title: label,
+        subtitle: session.isScanxietyPeriod
+            ? 'Scan coming up — scanxiety is normal'
+            : 'Regular monitoring keeps you protected',
+        badge: '🎗️',
+        variant: PhaseBannerVariant.complete,
+        trailingPill: StatusPill(
+          session.isScanxietyPeriod ? 'Scan soon' : 'Active',
+          variant: session.isScanxietyPeriod ? StatusPillVariant.warn : StatusPillVariant.pos,
+        ),
+      );
+    } else {
+      banner = PhaseBanner(
+        eyebrow: session.treatmentPhase,
+        title: _phaseTitle(session.treatmentPhase),
+        subtitle: _phaseSubtitle(session.treatmentPhase),
+        badge: '✦',
+        variant: PhaseBannerVariant.current,
+      );
+    }
+    return banner;
+  }
+
+  String _phaseTitle(String phase) {
+    const titles = {
+      'Just diagnosed': 'Diagnosis phase',
+      'Awaiting treatment plan': 'Treatment planning',
+      'In radiotherapy': 'Radiation therapy',
+      'Post-surgery recovery': 'Recovery phase',
+    };
+    return titles[phase] ?? phase;
+  }
+
+  String _phaseNameAr(String name) {
+    const map = {
+      'Joint pain peak':    'ذروة آلام المفاصل',
+      'Taxol infusion':     'يوم حقن تاكسول',
+      'Nadir window':       'نافذة الناضير',
+      'Recovery week':      'أسبوع التعافي',
+      'Infusion day':       'يوم الحقن',
+      'Peak nausea window': 'ذروة الغثيان',
+    };
+    return map[name] ?? name;
+  }
+
+  String _phaseSubtitle(String phase) {
+    const subs = {
+      'Just diagnosed': 'Your care team is building your plan',
+      'Awaiting treatment plan': 'Use this time to prepare your questions',
+      'In radiotherapy': 'Rest well between sessions',
+      'Post-surgery recovery': 'Rest and gentle movement support healing',
+    };
+    return subs[phase] ?? 'You\'re on your journey — we\'re here for you';
+  }
+
+  // ── Check-in hero card ─────────────────────────────────────────────────────
+  Widget _buildHeroCard(BuildContext context, UserSession session) {
+    final hasCheckedIn = session.checkedInToday;
+    final streak = session.streak;
+    final isInChemo = session.treatmentPhase == 'In chemotherapy';
+
+    return GestureDetector(
+      onTap: () => context.push('/checkin'),
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [RColors.teal700, RColors.teal600],
+          ),
+          borderRadius: RRadius.xlBR,
+        ),
+        child: Stack(children: [
+          Positioned(
+            top: -70, right: -70,
+            child: Container(
+              width: 200, height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.08),
+              ),
+            ),
+          ),
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(
+              hasCheckedIn ? 'TODAY\'S CHECK-IN ✓' : 'TODAY\'S CHECK-IN',
+              style: RText.eyebrowOnDark,
+            ),
+            const SizedBox(height: 6),
+            Text('How are you\nfeeling today?', style: RText.h2OnDark),
+            const SizedBox(height: 6),
+            Text(
+              [
+                if (streak > 1) '🔥 $streak day streak · ',
+                if (isInChemo)
+                  '${session.protocol.name} · C${session.currentCycle} · D${session.dayInCycle}'
+                else
+                  session.treatmentPhase,
+              ].join(),
+              style: RText.smallOnDark,
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              decoration: const BoxDecoration(
+                color: RColors.saffron500,
+                borderRadius: RRadius.pillBR,
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Text(
+                  hasCheckedIn ? 'View today\'s check-in' : 'Start check-in',
+                  style: RText.body.copyWith(
+                    color: RColors.surface, fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+                const SizedBox(width: 6),
+                const Icon(Icons.arrow_forward_rounded, size: 14, color: RColors.surface),
+              ]),
+            ),
+          ]),
+        ]),
+      ),
+    );
+  }
+
+  // ── Meds + Vitals 2-column row ─────────────────────────────────────────────
+  Widget _buildMedsVitalsRow(BuildContext context, UserSession session) {
+    session.initDefaultLabs();
+    final taken = session.medsTakenTodayCount;
+    final total = session.medications.isEmpty ? 0 : session.medications.length;
+    final adherence = total > 0 ? taken / total : 0.0;
+    final ringColor = adherence >= 0.8
+        ? RColors.sage500
+        : adherence >= 0.5
+            ? RColors.saffron500
+            : RColors.clay500;
+
+    final temp = session.latestTemperature;
+    final hasFever = session.hasFeverToday;
+    final tempStr = temp != null ? '${temp.toStringAsFixed(1)}°' : '—';
+    final tempColor = hasFever ? RColors.clay500 : RColors.sand900;
+    final tempCaption = hasFever
+        ? 'Fever — contact your care team'
+        : temp != null
+            ? 'Latest reading'
+            : 'Tap to record vitals';
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      child: Row(children: [
+        Expanded(
+          child: GestureDetector(
+            onTap: () => context.push('/care/medications'),
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: RColors.surface,
+                borderRadius: RRadius.lgBR,
+                boxShadow: RShadow.shadow2,
+              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Container(
+                    width: 30, height: 30,
+                    decoration: BoxDecoration(
+                      color: RColors.sage100,
+                      borderRadius: RRadius.smBR,
+                    ),
+                    child: const Icon(Icons.medication_rounded,
+                      size: 16, color: RColors.sage500),
+                  ),
+                  const SizedBox(width: 8),
+                  Text('MEDICATION', style: RText.eyebrow),
+                ]),
+                const SizedBox(height: 10),
+                Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                  SizedBox(
+                    width: 52, height: 52,
+                    child: CustomPaint(
+                      painter: _MiniRingPainter(value: adherence, color: ringColor),
+                      child: Center(
+                        child: Text(
+                          total > 0 ? '$taken/$total' : '—',
+                          style: RText.small.copyWith(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 11,
+                            color: RColors.sand900,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${(adherence * 100).round()}%',
+                        style: RText.h2.copyWith(fontSize: 22),
+                      ),
+                      Text(
+                        total > 0 ? '$taken of $total doses today' : 'Add medications',
+                        style: RText.small,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  )),
+                ]),
+              ]),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: GestureDetector(
+            onTap: () => context.push('/vitals'),
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: RColors.surface,
+                borderRadius: RRadius.lgBR,
+                boxShadow: RShadow.shadow2,
+              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Container(
+                    width: 30, height: 30,
+                    decoration: BoxDecoration(
+                      color: hasFever ? RColors.clay100 : RColors.saffron100,
+                      borderRadius: RRadius.smBR,
+                    ),
+                    child: Icon(Icons.thermostat_rounded,
+                      size: 16,
+                      color: hasFever ? RColors.clay500 : RColors.saffron500),
+                  ),
+                  const SizedBox(width: 8),
+                  Text('VITALS', style: RText.eyebrow),
+                ]),
+                const SizedBox(height: 10),
+                Text(
+                  tempStr,
+                  style: RText.h1.copyWith(
+                    fontSize: 32, color: tempColor,
+                    fontFeatures: const [FontFeature('tnum')],
+                  ),
+                ),
+                const SizedBox(height: 2),
+                _TempSparkline(hasFever: hasFever),
+                const SizedBox(height: 4),
+                Text(tempCaption,
+                  style: RText.small.copyWith(
+                    color: hasFever ? RColors.clay500 : RColors.sand500,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ]),
+            ),
           ),
         ),
       ]),
     );
   }
 
-  // ── Check-in hero card ────────────────────────────────────────────────────
-  Widget _buildHeroCard(BuildContext context, UserSession session) {
-    final hasCheckedIn = session.checkedInToday;
-    final streak = session.streak;
-    final isInChemo = session.treatmentPhase == 'In chemotherapy';
-
-    return HeroCard(
-      onTap: () => context.push('/checkin'),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        HeroPill(hasCheckedIn ? 'Check-in done today ✓' : 'Daily check-in'),
-        Text('How are you\nfeeling today?',
-          style: AppText.sectionHeading.copyWith(
-            fontSize: 17, letterSpacing: -0.3)),
-        const SizedBox(height: 4),
-        RichText(text: TextSpan(
-          style: AppText.bodySecondary,
-          children: [
-            if (streak > 1)
-              TextSpan(text: '🔥 $streak day streak · ',
-                style: AppText.bodySecondary.copyWith(
-                  color: AppColors.primary, fontWeight: FontWeight.w500)),
-            if (isInChemo)
-              TextSpan(text:
-                '${session.protocol.name} · Cycle ${session.currentCycle} · Day ${session.dayInCycle}')
-            else
-              TextSpan(text: session.treatmentPhase),
-          ],
-        )),
-        const SizedBox(height: 14),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.65),
-            borderRadius: AppRadius.fullBR,
-            border: Border.all(color: Colors.white.withOpacity(0.8), width: 0.5),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withOpacity(0.10),
-                blurRadius: 8, offset: const Offset(0, 2)),
-            ]),
-          child: Text(
-            hasCheckedIn ? 'View today\'s check-in →' : 'Begin check-in →',
-            style: AppText.bodySemibold.copyWith(
-              color: AppColors.primaryDark, fontSize: 12)),
-        ),
-      ]),
-    );
-  }
-
-  // ── Nadir cards ───────────────────────────────────────────────────────────
+  // ── Nadir cards ────────────────────────────────────────────────────────────
   Widget _buildNadirCard(UserSession session) {
+    final isAr = session.language == 'ar';
     return Column(children: [
-      NadirCard(
-        title: '⚠ الناضير | Nadir window — Day ${session.dayInCycle}',
-        body: 'Your immune system is at its lowest. Avoid crowds, monitor temperature twice daily.',
-      ),
-      // "When to call" routing card — mirrors Gustave Roussy triage flow
       Container(
-        margin: const EdgeInsets.fromLTRB(14, 6, 14, 0),
+        margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: RColors.clay100,
+          borderRadius: RRadius.lgBR,
+          border: const Border(left: BorderSide(color: RColors.clay500, width: 3)),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(
+            isAr
+                ? '⚠ الناضير · اليوم ${session.dayInCycle}'
+                : '⚠ Nadir window — Day ${session.dayInCycle}',
+            style: RText.body.copyWith(
+              fontWeight: FontWeight.w600, color: RColors.clay700),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            isAr
+                ? 'أنتِ في فترة انخفاض المناعة. هذا هو الوقت الأهم لمتابعتكِ اليومية.'
+                : 'Your immune system is at its lowest. Avoid crowds, monitor temperature twice daily.',
+            style: RText.bodyMuted,
+          ),
+        ]),
+      ),
+      Container(
+        margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
         padding: const EdgeInsets.all(13),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFF3E8),
-          borderRadius: AppRadius.mdBR,
-          border: Border.all(color: AppColors.peach.withOpacity(0.35), width: 0.5)),
+          color: RColors.saffron100,
+          borderRadius: RRadius.mdBR,
+          border: Border.all(
+            color: RColors.saffron300.withValues(alpha: 0.5), width: 0.5),
+        ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('متى تتصلين؟ | WHEN TO CALL',
-            style: AppText.label.copyWith(
-              fontSize: 10, color: AppColors.peach)),
+          Text(
+            isAr ? 'متى تتصلين؟' : 'WHEN TO CALL',
+            style: RText.eyebrow.copyWith(color: RColors.clay500)),
           const SizedBox(height: 8),
-          _whenToCallRow('🌡️', 'Fever ≥ 38°C',
-            'اتصلي بممرضة الكيمياء | Call chemo nurse now',
-            AppColors.peach),
+          _whenToCallRow('🌡️',
+            isAr ? 'حمّى ≥ 38°C' : 'Fever ≥ 38°C',
+            isAr ? 'اتصلي بممرضة الكيمياء الآن' : 'Call chemo nurse now',
+            RColors.clay500),
           const SizedBox(height: 6),
-          _whenToCallRow('🫁', 'Breathlessness at rest',
-            'اتصلي بمنسق الرعاية | Call care coordinator',
-            AppColors.peach),
+          _whenToCallRow('🫁',
+            isAr ? 'ضيق في التنفس أثناء الراحة' : 'Breathlessness at rest',
+            isAr ? 'اتصلي بمنسق الرعاية' : 'Call care coordinator',
+            RColors.clay500),
           const SizedBox(height: 6),
-          _whenToCallRow('🔴', 'Chest pain / severe bleeding',
-            'اتصلي بالطوارئ | Emergency line — do not wait',
-            AppColors.rose),
+          _whenToCallRow('🔴',
+            isAr ? 'ألم في الصدر / نزيف شديد' : 'Chest pain / severe bleeding',
+            isAr ? 'اتصلي بالطوارئ — لا تنتظري' : 'Emergency line — do not wait',
+            RColors.clay700),
           const SizedBox(height: 6),
-          _whenToCallRow('💊', 'Medication questions',
-            'اتصلي بممرضة الكيمياء | Chemo nurse',
-            AppColors.primary),
+          _whenToCallRow('💊',
+            isAr ? 'أسئلة عن الأدوية' : 'Medication questions',
+            isAr ? 'ممرضة الكيمياء' : 'Chemo nurse',
+            RColors.teal700),
         ]),
       ),
     ]);
@@ -238,188 +501,45 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       Text(icon, style: const TextStyle(fontSize: 13)),
       const SizedBox(width: 8),
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(symptom, style: AppText.bodySemibold.copyWith(fontSize: 12)),
-        Text(action, style: AppText.caption.copyWith(
-          fontSize: 11, color: color, fontWeight: FontWeight.w500)),
+        Text(symptom,
+          style: RText.body.copyWith(fontWeight: FontWeight.w600, fontSize: 13)),
+        Text(action,
+          style: RText.small.copyWith(color: color, fontWeight: FontWeight.w500)),
       ])),
     ]);
   }
 
   Widget _buildNadirApproachingCard() {
     return Container(
-      margin: const EdgeInsets.fromLTRB(14, 9, 14, 0),
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
-        color: AppColors.gold.withOpacity(0.07),
-        borderRadius: AppRadius.mdBR,
-        border: Border.all(color: AppColors.gold.withOpacity(0.25), width: 0.5)),
+        color: RColors.saffron100,
+        borderRadius: RRadius.mdBR,
+        border: Border.all(
+          color: RColors.saffron300.withValues(alpha: 0.5), width: 0.5),
+      ),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('⚡', style: TextStyle(fontSize: 16)),
         const SizedBox(width: 10),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('Nadir window approaching',
-            style: AppText.bodySemibold.copyWith(color: AppColors.gold)),
+            style: RText.body.copyWith(
+              fontWeight: FontWeight.w600, color: RColors.saffron700)),
           const SizedBox(height: 3),
-          Text('Your WBC count will reach its lowest in 1–2 days. Start monitoring your temperature twice daily.',
-            style: AppText.bodySecondary),
+          Text(
+            'Your WBC count will reach its lowest in 1–2 days. Start monitoring your temperature twice daily.',
+            style: RText.bodyMuted,
+          ),
         ])),
       ]),
     );
   }
 
-  // ── Hormone therapy streak card ───────────────────────────────────────────
-  Widget _buildHormoneStreakCard(UserSession session) {
-    final days = session.hormoneTherapyDays;
-    final med = session.hormoneTherapyMed;
-    final progress = session.hormoneTherapyProgress;
-    final milestone = session.hormoneTherapyMilestone;
-    final remaining = (1825 - days).clamp(0, 1825);
-    final pct = (progress * 100).round();
-
-    // Days label
-    String daysLabel;
-    final years = days ~/ 365;
-    final months = (days % 365) ~/ 30;
-    if (years > 0 && months > 0) {
-      daysLabel = '$years yr $months mo';
-    } else if (years > 0) {
-      daysLabel = '$years year${years > 1 ? 's' : ''}';
-    } else if (months > 0) {
-      daysLabel = '$months month${months > 1 ? 's' : ''}';
-    } else {
-      daysLabel = '$days days';
-    }
-
-    // Clinical message based on progress
-    String clinicalNote;
-    if (days >= 1825) {
-      clinicalNote = 'You\'ve completed the full 5-year course. Outstanding.';
-    } else if (days >= 1460) {
-      clinicalNote = 'One year left. Completing the full course matters most now.';
-    } else if (days >= 730) {
-      clinicalNote = 'Studies show completing 5 years reduces recurrence risk by up to 40%.';
-    } else if (days >= 365) {
-      clinicalNote = 'After 1 year, many patients stop early. You\'re still going. That matters.';
-    } else if (days >= 180) {
-      clinicalNote = 'Consistent daily use is the key to effectiveness.';
-    } else {
-      clinicalNote = 'Starting strong. Daily consistency is what makes this medication work.';
-    }
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadius.mdBR,
-        border: Border.all(
-          color: AppColors.primary.withOpacity(0.15), width: 0.5)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Container(
-            width: 36, height: 36,
-            decoration: BoxDecoration(
-              color: AppColors.primaryLight,
-              borderRadius: AppRadius.smBR),
-            child: const Center(child: Text('💊',
-              style: TextStyle(fontSize: 17)))),
-          const SizedBox(width: 10),
-          Expanded(child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
-                Text(med?.name ?? 'Hormone therapy',
-                  style: AppText.bodySemibold.copyWith(fontSize: 13)),
-                if (milestone != null) ...[
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 7, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: AppColors.teal.withOpacity(0.12),
-                      borderRadius: AppRadius.fullBR),
-                    child: Text('🎉 $milestone',
-                      style: AppText.caption.copyWith(
-                        color: AppColors.teal,
-                        fontSize: 9, fontWeight: FontWeight.w600))),
-                ],
-              ]),
-              Text('$daysLabel · $pct% of 5-year course',
-                style: AppText.bodySecondary.copyWith(fontSize: 11)),
-            ],
-          )),
-          // Day counter
-          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text('$days', style: AppText.statNumber.copyWith(
-              color: AppColors.primary.withOpacity(0.5), fontSize: 18)),
-            Text('days', style: AppText.caption.copyWith(
-              color: AppColors.text3, fontSize: 9)),
-          ]),
-        ]),
-
-        const SizedBox(height: 10),
-
-        // Progress bar toward 5 years
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text('Progress to 5-year course',
-              style: AppText.caption.copyWith(
-                fontSize: 10, color: AppColors.text3)),
-            Text(days >= 1825
-                ? 'Complete ✓'
-                : '$remaining days remaining',
-              style: AppText.caption.copyWith(
-                fontSize: 10,
-                color: days >= 1825 ? AppColors.teal : AppColors.text3)),
-          ]),
-          const SizedBox(height: 5),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progress,
-              minHeight: 5,
-              backgroundColor: AppColors.primaryLight,
-              valueColor: AlwaysStoppedAnimation(
-                days >= 1825 ? AppColors.teal : AppColors.primary),
-            ),
-          ),
-          // Year markers
-          Padding(
-            padding: const EdgeInsets.only(top: 3),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: ['Yr 1', 'Yr 2', 'Yr 3', 'Yr 4', 'Yr 5'].map((y) =>
-                Text(y, style: AppText.caption.copyWith(
-                  fontSize: 8, color: AppColors.text3))).toList(),
-            ),
-          ),
-        ]),
-
-        const SizedBox(height: 8),
-
-        // Clinical note
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-          decoration: BoxDecoration(
-            color: AppColors.primaryLight.withOpacity(0.5),
-            borderRadius: AppRadius.smBR),
-          child: Row(children: [
-            const Text('💡', style: TextStyle(fontSize: 11)),
-            const SizedBox(width: 6),
-            Expanded(child: Text(clinicalNote,
-              style: AppText.caption.copyWith(
-                fontSize: 11, color: AppColors.text2,
-                fontStyle: FontStyle.italic))),
-          ]),
-        ),
-      ]),
-    );
-  }
-
-  // ── Micro-education card ─────────────────────────────────────────────────
+  // ── Micro-education card ───────────────────────────────────────────────────
   Widget _buildMicroEducationCard(UserSession session) {
-    final String? title;
-    final String? body;
+    final String title;
+    final String body;
     final String emoji;
     final Color color;
 
@@ -430,7 +550,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             'studies show up to 70% of survivors experience it. '
             'Tracking your mood this week helps your care team support you.';
         emoji = '⚡';
-        color = AppColors.gold;
+        color = RColors.saffron500;
       } else if (session.hormoneTherapyDays > 0 &&
           session.hormoneTherapyDays < 365) {
         title = 'Why Tamoxifen for 5 years?';
@@ -438,21 +558,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             'cancer regrowth. Completing the full 5-year course reduces '
             'recurrence risk by up to 40% — even when you feel well.';
         emoji = '💊';
-        color = AppColors.primary;
+        color = RColors.teal700;
       } else if (session.hormoneTherapyDays >= 1460) {
         title = 'The final stretch matters most';
         body = 'Research shows the protective effect of Tamoxifen continues '
             'to build in years 4 and 5. Stopping early — even at this stage — '
             'reduces the long-term benefit significantly.';
         emoji = '🏁';
-        color = AppColors.teal;
+        color = RColors.sage500;
       } else {
         title = 'Monitoring is active protection';
         body = 'Regular surveillance catches changes early — '
             'when they\'re most treatable. '
             'Each check-in helps your care team spot patterns before symptoms appear.';
         emoji = '🎗️';
-        color = AppColors.teal;
+        color = RColors.sage500;
       }
     } else if (session.isNadirWindow) {
       title = 'Why nadir monitoring matters';
@@ -460,50 +580,53 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           'meaning bacteria your body normally clears can cause serious infection. '
           'A temperature above 38°C is a medical emergency during this window.';
       emoji = '🌡️';
-      color = AppColors.peach;
+      color = RColors.clay500;
     } else if (session.isNadirApproaching) {
       title = 'Nadir window in 1–2 days';
       body = 'Your WBC count will reach its lowest point soon. '
           'Start monitoring your temperature now, twice daily. '
           'Avoid crowded spaces and wash hands frequently.';
       emoji = '⚡';
-      color = AppColors.gold;
+      color = RColors.saffron500;
     } else {
-      // Phase-specific education
       final phase = session.currentPhase;
       final note = phase.phaseNote;
       if (note.isEmpty) return const SizedBox.shrink();
       title = phase.description;
       body = note;
       emoji = '💡';
-      color = AppColors.primary;
+      color = RColors.teal700;
     }
 
-    if (title == null || body == null) return const SizedBox.shrink();
-
     return Container(
-      margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
-        borderRadius: AppRadius.mdBR,
-        border: Border.all(color: color.withOpacity(0.18), width: 0.5)),
+        color: color.withValues(alpha: 0.05),
+        borderRadius: RRadius.mdBR,
+        border: Border.all(
+          color: color.withValues(alpha: 0.18), width: 0.5),
+      ),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(emoji, style: const TextStyle(fontSize: 16)),
         const SizedBox(width: 10),
         Expanded(child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title, style: AppText.bodySemibold.copyWith(
-            fontSize: 12, color: color)),
-          const SizedBox(height: 4),
-          Text(body, style: AppText.bodySecondary.copyWith(
-            fontSize: 12, height: 1.55)),
-        ])),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title,
+              style: RText.body.copyWith(
+                fontWeight: FontWeight.w600, fontSize: 13, color: color)),
+            const SizedBox(height: 4),
+            Text(body,
+              style: RText.small.copyWith(
+                color: RColors.sand700, height: 1.55)),
+          ],
+        )),
       ]),
     );
   }
 
-  // ── Combined monitoring wellness card ────────────────────────────────────
+  // ── Monitoring wellness card ───────────────────────────────────────────────
   Widget _buildMonitoringWellnessCard(UserSession session) {
     final days = session.daysCancerFree;
     final years = days ~/ 365;
@@ -513,50 +636,44 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final milestone = session.hormoneTherapyMilestone;
     final med = session.hormoneTherapyMed;
 
-    String cancerFreeLabel;
+    String label;
     if (years > 0 && months > 0) {
-      cancerFreeLabel = '$years yr $months mo cancer-free';
+      label = '$years yr $months mo cancer-free';
     } else if (years > 0) {
-      cancerFreeLabel = '$years year${years > 1 ? 's' : ''} cancer-free';
+      label = '$years year${years > 1 ? 's' : ''} cancer-free';
     } else if (months > 0) {
-      cancerFreeLabel = '$months month${months > 1 ? 's' : ''} cancer-free';
+      label = '$months month${months > 1 ? 's' : ''} cancer-free';
     } else {
-      cancerFreeLabel = '$days days cancer-free';
+      label = '$days days cancer-free';
     }
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            AppColors.teal.withOpacity(0.08),
-            AppColors.primary.withOpacity(0.06),
-          ]),
-        borderRadius: AppRadius.mdBR,
-        border: Border.all(
-          color: AppColors.teal.withOpacity(0.18), width: 0.5)),
+          colors: [RColors.teal50, RColors.sage100],
+        ),
+        borderRadius: RRadius.lgBR,
+        border: Border.all(color: RColors.teal200.withValues(alpha: 0.5), width: 0.5),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // Cancer-free row
           Row(children: [
             const Text('🎗️', style: TextStyle(fontSize: 18)),
             const SizedBox(width: 10),
-            Expanded(child: Text(cancerFreeLabel,
-              style: AppText.bodySemibold.copyWith(
-                color: AppColors.teal, fontSize: 14))),
+            Expanded(child: Text(label,
+              style: RText.body.copyWith(
+                fontWeight: FontWeight.w600, color: RColors.teal700, fontSize: 14))),
             Text('$days',
-              style: AppText.statNumber.copyWith(
-                color: AppColors.teal.withOpacity(0.5),
-                fontSize: 20)),
+              style: RText.numericHero.copyWith(
+                color: RColors.teal500.withValues(alpha: 0.5), fontSize: 20)),
           ]),
-
-          // Hormone therapy streak (if applicable)
           if (hormDays > 0) ...[
             const SizedBox(height: 10),
-            Divider(color: AppColors.teal.withOpacity(0.12), height: 1),
+            Divider(color: RColors.teal200.withValues(alpha: 0.4), height: 1),
             const SizedBox(height: 10),
             Row(children: [
               const Text('💊', style: TextStyle(fontSize: 14)),
@@ -566,18 +683,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 children: [
                   Row(children: [
                     Text(med?.name ?? 'Hormone therapy',
-                      style: AppText.bodySemibold.copyWith(fontSize: 12)),
+                      style: RText.body.copyWith(
+                        fontWeight: FontWeight.w600, fontSize: 13)),
                     if (milestone != null) ...[
                       const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 1),
                         decoration: BoxDecoration(
-                          color: AppColors.teal.withOpacity(0.12),
-                          borderRadius: AppRadius.fullBR),
+                          color: RColors.sage100,
+                          borderRadius: RRadius.pillBR),
                         child: Text('🎉 $milestone',
-                          style: AppText.caption.copyWith(
-                            color: AppColors.teal, fontSize: 9,
+                          style: RText.small.copyWith(
+                            color: RColors.sage700, fontSize: 9,
                             fontWeight: FontWeight.w600))),
                     ],
                   ]),
@@ -587,12 +705,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     child: LinearProgressIndicator(
                       value: hormProgress,
                       minHeight: 4,
-                      backgroundColor: AppColors.teal.withOpacity(0.1),
-                      valueColor: AlwaysStoppedAnimation(AppColors.teal))),
+                      backgroundColor: RColors.teal100,
+                      valueColor: const AlwaysStoppedAnimation(RColors.sage500)),
+                  ),
                   const SizedBox(height: 2),
                   Text('${(hormProgress * 100).round()}% of 5-year course',
-                    style: AppText.caption.copyWith(
-                      fontSize: 10, color: AppColors.text3)),
+                    style: RText.small.copyWith(fontSize: 10)),
                 ],
               )),
             ]),
@@ -602,7 +720,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  // ── Combined cycle + scan window card ─────────────────────────────────────
+  // ── Cycle + scan card ──────────────────────────────────────────────────────
   Widget _buildCycleAndScanCard(BuildContext context, UserSession session) {
     final hasOptimalWindow = session.menstrualStatus == 'regular' &&
         session.nextOptimalWindowStart != null;
@@ -612,100 +730,46 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return GestureDetector(
       onTap: () => context.push('/monitoring/cycle-tracker'),
       child: Container(
-        margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+        margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: AppRadius.mdBR,
-          border: Border.all(color: AppColors.border, width: 0.5)),
+          color: RColors.surface,
+          borderRadius: RRadius.lgBR,
+          boxShadow: RShadow.shadow1,
+        ),
         child: Row(children: [
           Container(
             width: 40, height: 40,
             decoration: BoxDecoration(
-              color: AppColors.roseLight,
-              borderRadius: AppRadius.smBR),
-            child: const Center(child: Text('🌸',
-              style: TextStyle(fontSize: 18)))),
+              color: RColors.plum100,
+              borderRadius: RRadius.smBR),
+            child: const Center(
+              child: Text('🌸', style: TextStyle(fontSize: 18)))),
           const SizedBox(width: 12),
           Expanded(child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Cycle & scan tracker',
-                style: AppText.bodySemibold.copyWith(fontSize: 13)),
+                style: RText.body.copyWith(fontWeight: FontWeight.w600, fontSize: 14)),
               const SizedBox(height: 2),
               if (hasOptimalWindow && windowStart != null)
                 Text(
                   'Best scan window: ${DateFormat('d MMM').format(windowStart)}'
                   '${windowEnd != null ? ' – ${DateFormat('d MMM').format(windowEnd)}' : ''}',
-                  style: AppText.bodySecondary.copyWith(
-                    fontSize: 11, color: AppColors.teal))
+                  style: RText.small.copyWith(color: RColors.sage500))
               else
-                Text('Tap to view calendar',
-                  style: AppText.bodySecondary.copyWith(fontSize: 11)),
+                Text('Tap to view calendar', style: RText.small),
             ],
           )),
-          Icon(Icons.arrow_forward_ios_rounded,
-            size: 12, color: AppColors.text3),
+          const Icon(Icons.arrow_forward_ios_rounded,
+            size: 12, color: RColors.sand400),
         ]),
       ),
     );
   }
 
-  // ── Cancer-free counter card ───────────────────────────────────────────────
-  Widget _buildCancerFreeCard(UserSession session) {
-    final days = session.daysCancerFree;
-    final years = days ~/ 365;
-    final months = (days % 365) ~/ 30;
-    String label;
-    if (years > 0) {
-      label = months > 0
-          ? '$years year${years > 1 ? 's' : ''}, $months month${months > 1 ? 's' : ''} cancer-free'
-          : '$years year${years > 1 ? 's' : ''} cancer-free';
-    } else if (months > 0) {
-      label = '$months month${months > 1 ? 's' : ''} cancer-free';
-    } else {
-      label = '$days days cancer-free';
-    }
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.teal.withOpacity(0.12),
-            AppColors.primary.withOpacity(0.08)],
-          begin: Alignment.topLeft, end: Alignment.bottomRight),
-        borderRadius: AppRadius.mdBR,
-        border: Border.all(
-          color: AppColors.teal.withOpacity(0.25), width: 0.5)),
-      child: Row(children: [
-        Container(
-          width: 44, height: 44,
-          decoration: BoxDecoration(
-            color: AppColors.teal.withOpacity(0.15),
-            shape: BoxShape.circle),
-          child: const Center(child: Text('🎗️',
-            style: TextStyle(fontSize: 22)))),
-        const SizedBox(width: 12),
-        Expanded(child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: AppText.bodySemibold.copyWith(
-              color: AppColors.teal, fontSize: 14)),
-            Text('Every day is a milestone. Keep going.',
-              style: AppText.bodySecondary.copyWith(fontSize: 12)),
-          ],
-        )),
-        Text('$days', style: AppText.statNumber.copyWith(
-          color: AppColors.teal.withOpacity(0.4), fontSize: 20)),
-      ]),
-    );
-  }
-
-  // ── Scanxiety card ────────────────────────────────────────────────────────
+  // ── Scanxiety card ─────────────────────────────────────────────────────────
   Widget _buildScanxietyCard(UserSession session) {
-    // Find the next scan-type appointment
     const scanKeywords = [
       'mammogram', 'mri', 'ultrasound', 'scan', 'ct ',
       'pet ', 'imaging', 'radiology', 'biopsy', 'echo',
@@ -721,13 +785,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final title = nextScan?.title ?? 'Scan';
 
     return Container(
-      margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       padding: const EdgeInsets.all(13),
       decoration: BoxDecoration(
-        color: AppColors.gold.withOpacity(0.07),
-        borderRadius: AppRadius.mdBR,
+        color: RColors.saffron100,
+        borderRadius: RRadius.mdBR,
         border: Border.all(
-          color: AppColors.gold.withOpacity(0.25), width: 0.5)),
+          color: RColors.saffron300.withValues(alpha: 0.5), width: 0.5),
+      ),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Text('⚡', style: TextStyle(fontSize: 18)),
         const SizedBox(width: 10),
@@ -736,486 +801,164 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           children: [
             Text(
               '$title in $days day${days != 1 ? 's' : ''}',
-              style: AppText.bodySemibold.copyWith(color: AppColors.gold)),
+              style: RText.body.copyWith(
+                fontWeight: FontWeight.w600, color: RColors.saffron700)),
             const SizedBox(height: 3),
             Text(
               'Scanxiety is normal. Talking to someone who\'s been through it helps.',
-              style: AppText.bodySecondary.copyWith(fontSize: 12, height: 1.5)),
+              style: RText.small.copyWith(height: 1.5)),
           ],
         )),
       ]),
     );
   }
 
-  // ── Last controls card ────────────────────────────────────────────────────
-  Widget _buildLastControlsCard(UserSession session) {
-    final types = ['mammogram', 'mri', 'oncology', 'gynecology'];
-    final hasAny = types.any((t) => session.lastControlOfType(t) != null);
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadius.mdBR,
-        border: Border.all(color: AppColors.border, width: 0.5)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text('LAST CONTROLS', style: AppText.label.copyWith(fontSize: 10)),
-          Text('→ Add control',
-            style: AppText.caption.copyWith(
-              color: AppColors.primary, fontWeight: FontWeight.w500,
-              fontSize: 11)),
-        ]),
-        const SizedBox(height: 10),
-        if (!hasAny)
-          Text('No controls logged yet. Add your first one.',
-            style: AppText.bodySecondary.copyWith(
-              fontStyle: FontStyle.italic, fontSize: 12))
-        else
-          ...types.map((type) {
-            final last = session.lastControlOfType(type);
-            if (last == null) return const SizedBox.shrink();
-            final overdue = last.nextScheduled != null &&
-                last.nextScheduled!.isBefore(DateTime.now());
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 7),
-              child: Row(children: [
-                Text(last.typeEmoji,
-                  style: const TextStyle(fontSize: 14)),
-                const SizedBox(width: 8),
-                Expanded(child: Text(last.typeLabel,
-                  style: AppText.bodySemibold.copyWith(fontSize: 12))),
-                Text(DateFormat('MMM yyyy').format(last.date),
-                  style: AppText.caption.copyWith(fontSize: 11)),
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 7, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: overdue
-                        ? AppColors.roseLight
-                        : AppColors.tealLight,
-                    borderRadius: AppRadius.fullBR),
-                  child: Text(
-                    overdue ? 'Overdue' : last.resultLabel,
-                    style: AppText.caption.copyWith(
-                      fontSize: 9,
-                      color: overdue ? AppColors.rose : AppColors.teal))),
-              ]),
-            );
-          }),
-      ]),
-    );
-  }
-
-  // ── Cycle tracker card ────────────────────────────────────────────────────
-  Widget _buildCycleTrackerCard(BuildContext context, UserSession session) {
-    final hasData = session.lastPeriodDate != null;
-    DateTime? nextPeriod;
-    if (hasData) {
-      nextPeriod = session.lastPeriodDate!.add(
-        Duration(days: session.cycleLength));
-      while (nextPeriod!.isBefore(DateTime.now())) {
-        nextPeriod = nextPeriod.add(Duration(days: session.cycleLength));
-      }
-    }
-    final daysUntil = nextPeriod != null
-        ? nextPeriod.difference(DateTime.now()).inDays : null;
-
-    return GestureDetector(
-      onTap: () => context.push('/monitoring/cycle-tracker'),
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-        padding: const EdgeInsets.all(13),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: AppRadius.mdBR,
-          border: Border.all(color: AppColors.border, width: 0.5)),
-        child: Row(children: [
-          Container(
-            width: 36, height: 36,
-            decoration: BoxDecoration(
-              color: AppColors.rose.withOpacity(0.10),
-              borderRadius: AppRadius.smBR),
-            child: const Center(child: Text('🌸',
-              style: TextStyle(fontSize: 18)))),
-          const SizedBox(width: 11),
-          Expanded(child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Cycle & scan tracker',
-                style: AppText.bodySemibold),
-              Text(
-                hasData && daysUntil != null
-                    ? 'Next period in $daysUntil days · Tap to view scan calendar'
-                    : 'Track your cycle · Plan your scans',
-                style: AppText.bodySecondary.copyWith(fontSize: 12)),
-            ],
-          )),
-          Icon(Icons.chevron_right_rounded, size: 18,
-            color: AppColors.text3),
-        ]),
-      ),
-    );
-  }
-
-  // ── Scan window card ──────────────────────────────────────────────────────
-  Widget _buildScanWindowCard(UserSession session) {
-    final start = session.nextOptimalWindowStart!;
-    final end = session.nextOptimalWindowEnd!;
-    final now = DateTime.now();
-    final isNow = start.isBefore(now) && end.isAfter(now);
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: isNow
-            ? AppColors.teal.withOpacity(0.07)
-            : AppColors.primary.withOpacity(0.05),
-        borderRadius: AppRadius.mdBR,
-        border: Border.all(
-          color: isNow
-              ? AppColors.teal.withOpacity(0.25)
-              : AppColors.primaryMid,
-          width: 0.5)),
-      child: Row(children: [
-        Text(isNow ? '✅' : '📅',
-          style: const TextStyle(fontSize: 18)),
-        const SizedBox(width: 10),
-        Expanded(child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              isNow
-                  ? 'Optimal scan window — NOW'
-                  : 'Next optimal scan window',
-              style: AppText.bodySemibold.copyWith(
-                color: isNow ? AppColors.teal : AppColors.primary,
-                fontSize: 13)),
-            const SizedBox(height: 2),
-            Text(
-              '${DateFormat('d MMM').format(start)} – ${DateFormat('d MMM').format(end)} · Days 7–14 of cycle',
-              style: AppText.bodySecondary.copyWith(fontSize: 12)),
-            const SizedBox(height: 2),
-            Text('Plan your MRI / Mammogram appointment during this window',
-              style: AppText.caption.copyWith(
-                color: AppColors.text3, fontSize: 10)),
-          ],
-        )),
-      ]),
-    );
-  }
-
-  // ── Journey card (non-chemo patients) ────────────────────────────────────
-  Widget _buildJourneyCard(UserSession session) {
-    final phaseEmojis = {
-      'Just diagnosed': '🌱',
-      'Awaiting treatment plan': '📋',
-      'In radiotherapy': '⚡',
-      'Post-surgery recovery': '🌿',
-      'Monitoring / surveillance': '🔭',
-    };
-    final phaseMessages = {
-      'Just diagnosed':
-          'You\'ve taken the first and hardest step. Your care team is building your plan.',
-      'Awaiting treatment plan':
-          'Your oncologist is reviewing your case. Use this time to ask questions and prepare.',
-      'In radiotherapy':
-          'Radiotherapy is a daily commitment. Rest well between sessions.',
-      'Post-surgery recovery':
-          'Your body is healing. Rest, nutrition, and gentle movement all support recovery.',
-      'Monitoring / surveillance':
-          'Regular monitoring keeps you and your team informed. Each clear scan is a win.',
-    };
-    final emoji = phaseEmojis[session.treatmentPhase] ?? '💜';
-    final message = phaseMessages[session.treatmentPhase] ??
-        'You\'re on your journey. We\'re here every step of the way.';
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadius.mdBR,
-        border: Border.all(color: AppColors.border, width: 0.5)),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Container(
-          width: 36, height: 36,
-          decoration: BoxDecoration(
-            color: AppColors.primaryLight,
-            borderRadius: AppRadius.smBR),
-          child: Center(child: Text(emoji,
-            style: const TextStyle(fontSize: 18)))),
-        const SizedBox(width: 11),
-        Expanded(child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(session.treatmentPhase,
-              style: AppText.bodySemibold),
-            const SizedBox(height: 3),
-            Text(message,
-              style: AppText.bodySecondary.copyWith(height: 1.5)),
-          ],
-        )),
-      ]),
-    );
-  }
-
-  // ── Phase card (chemo patients only) ─────────────────────────────────────
-  Widget _buildPhaseCard(UserSession session) {
-    final phase = session.currentPhase;
-    final progress = session.currentCycle / session.totalCycles;
-    final progressPct = (progress * 100).round();
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadius.mdBR,
-        border: Border.all(color: AppColors.border, width: 0.5)),
-      child: Row(children: [
-        Container(
-          width: 36, height: 36,
-          decoration: BoxDecoration(
-            borderRadius: AppRadius.smBR,
-            gradient: LinearGradient(colors: [
-              AppColors.peach.withOpacity(0.12),
-              AppColors.gold.withOpacity(0.08)]),
-            border: Border.all(
-              color: AppColors.peach.withOpacity(0.18), width: 0.5)),
-          child: const Center(child: Text('🌱',
-            style: TextStyle(fontSize: 18)))),
-        const SizedBox(width: 11),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Expanded(child: Text(phase.name, style: AppText.bodySemibold)),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-              decoration: BoxDecoration(
-                color: AppColors.peach.withOpacity(0.12),
-                borderRadius: AppRadius.fullBR),
-              child: Text('$progressPct%',
-                style: AppText.caption.copyWith(
-                  color: AppColors.peach,
-                  fontWeight: FontWeight.w600, fontSize: 10))),
-          ]),
-          const SizedBox(height: 1),
-          Text('${session.protocol.name} · Cycle ${session.currentCycle} of ${session.totalCycles}',
-            style: AppText.bodySecondary),
-          const SizedBox(height: 7),
-          AppProgressBar(value: progress, foreground: AppColors.peach, height: 4),
-        ])),
-      ]),
-    );
-  }
-
-  // ── Mood recap ────────────────────────────────────────────────────────────
+  // ── Mood recap ─────────────────────────────────────────────────────────────
   Widget _buildMoodRecap(UserSession session) {
     final days = session.last7Days;
     final hasAnyData = days.any((d) => d.hasData);
     final streak = session.streak;
 
-    return SurfaceCard(
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: RColors.surface,
+        borderRadius: RRadius.lgBR,
+        border: Border.all(color: RColors.sand200),
+      ),
       child: Column(children: [
         Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text('LAST 7 DAYS', style: AppText.label),
+          Text('LAST 7 DAYS', style: RText.eyebrow),
           if (streak > 1)
             Text('🔥 $streak day streak',
-              style: AppText.body.copyWith(
-                color: AppColors.teal, fontWeight: FontWeight.w500,
-                fontSize: 12))
+              style: RText.small.copyWith(
+                color: RColors.sage500, fontWeight: FontWeight.w600))
           else if (session.checkedInToday)
             Text('✓ Checked in today',
-              style: AppText.body.copyWith(
-                color: AppColors.teal, fontWeight: FontWeight.w500,
-                fontSize: 12))
+              style: RText.small.copyWith(
+                color: RColors.sage500, fontWeight: FontWeight.w600))
           else
             Text('Not yet today',
-              style: AppText.body.copyWith(
-                color: AppColors.text3, fontSize: 12)),
+              style: RText.small),
         ]),
-        const SizedBox(height: 10),
+        const SizedBox(height: 12),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: days.map((d) {
             final isToday = d.label == 'Today';
             return Expanded(child: Column(children: [
               d.hasData
-                  ? Text(d.emoji,
-                      style: const TextStyle(fontSize: 15))
+                  ? Text(d.emoji, style: const TextStyle(fontSize: 15))
                   : isToday
                       ? _DashedCircle(
-                          size: 20,
-                          color: AppColors.primary,
+                          size: 22,
+                          color: RColors.teal700,
                           child: Text('+',
                             style: TextStyle(
                               fontSize: 9,
                               fontWeight: FontWeight.w700,
-                              color: AppColors.primary)))
+                              color: RColors.teal700)))
                       : Container(
-                          width: 20, height: 20,
+                          width: 22, height: 22,
                           decoration: BoxDecoration(
-                            color: AppColors.background2,
+                            color: RColors.sand100,
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: AppColors.border,
-                              width: 0.5)),
+                              color: RColors.sand200, width: 0.5)),
                           child: Center(child: Text('·',
                             style: TextStyle(
                               fontSize: 14,
-                              color: AppColors.text3)))),
+                              color: RColors.sand400)))),
               const SizedBox(height: 3),
-              Text(d.label, style: AppText.caption.copyWith(
-                fontSize: 9,
-                color: isToday ? AppColors.primary : AppColors.text3,
-                fontWeight: isToday ? FontWeight.w600 : FontWeight.w400)),
+              Text(d.label,
+                style: RText.small.copyWith(
+                  fontSize: 9,
+                  color: isToday ? RColors.teal700 : RColors.sand400,
+                  fontWeight: isToday ? FontWeight.w600 : FontWeight.w400)),
             ]));
           }).toList(),
         ),
         if (!hasAnyData) ...[
           const SizedBox(height: 8),
-          Text('Complete your first check-in to see your mood history',
-            style: AppText.caption.copyWith(
-              fontSize: 11, color: AppColors.text3,
-              fontStyle: FontStyle.italic),
+          Text(
+            'Complete your first check-in to see your mood history',
+            style: RText.small.copyWith(
+              fontSize: 11, fontStyle: FontStyle.italic),
             textAlign: TextAlign.center),
         ],
       ]),
     );
   }
 
-  // ── Quick tiles (2×2 grid) ────────────────────────────────────────────────
-  Widget _buildQuickTiles(BuildContext context, UserSession session) {
-    final hasRefill = session.hasRefillAlert;
-    final medsSubLabel = hasRefill
-        ? '⚠ Refill needed'
-        : session.medications.isEmpty
-            ? 'Add medications'
-            : '${session.medsTakenTodayCount} of ${session.medications.length} done';
-    final medsTaken = !hasRefill &&
-        session.medications.isNotEmpty &&
-        session.medsTakenTodayCount == session.medications.length;
-
+  // ── Quick access rows ──────────────────────────────────────────────────────
+  Widget _buildQuickAccess(BuildContext context, UserSession session) {
     session.initDefaultLabs();
     final labs = session.labs;
-    final abnormalCount = labs.isEmpty
-        ? 0
-        : labs.first.metrics
-            .where((m) => m.value < m.normalMin || m.value > m.normalMax)
-            .length;
     final labSub = labs.isEmpty
         ? 'No results yet'
-        : abnormalCount > 0 ? '$abnormalCount abnormal' : 'All normal';
-    final labAlert = abnormalCount > 0;
+        : 'Last updated ${DateFormat('MMM d').format(labs.first.date)}';
 
-    Widget tile({
-      required String label,
-      required String sub,
-      required IconData icon,
-      required Color iconBg,
-      required Color iconColor,
-      required String route,
-      bool alert = false,
-      bool done = false,
-    }) =>
-        Expanded(
-          child: GestureDetector(
-            onTap: () => context.push(route),
-            child: Container(
-              padding: const EdgeInsets.all(13),
-              decoration: BoxDecoration(
-                color: alert
-                    ? AppColors.peach.withOpacity(0.07)
-                    : done
-                        ? AppColors.teal.withOpacity(0.05)
-                        : AppColors.surface,
-                borderRadius: AppRadius.mdBR,
-                border: Border.all(
-                  color: alert
-                      ? AppColors.peach.withOpacity(0.30)
-                      : done
-                          ? AppColors.teal.withOpacity(0.25)
-                          : AppColors.border,
-                  width: alert ? 1.0 : 0.5),
-                boxShadow: alert
-                    ? [BoxShadow(
-                        color: AppColors.peach.withOpacity(0.08),
-                        blurRadius: 8, offset: const Offset(0, 2))]
-                    : null),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 34, height: 34,
-                    decoration: BoxDecoration(
-                      color: iconBg,
-                      borderRadius: AppRadius.smBR),
-                    child: Icon(icon, color: iconColor, size: 16)),
-                  const SizedBox(height: 9),
-                  Text(label,
-                    style: AppText.bodySemibold.copyWith(
-                      fontSize: 12,
-                      color: alert ? AppColors.peach : AppColors.text1)),
-                  const SizedBox(height: 2),
-                  Text(sub,
-                    style: AppText.caption.copyWith(
-                      fontSize: 10,
-                      color: alert
-                          ? AppColors.peach.withOpacity(0.8)
-                          : done ? AppColors.teal : AppColors.text3),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-                ]),
-            ),
+    return Column(children: [
+      _quickRow(
+        icon: Icons.auto_awesome_rounded,
+        iconBg: RColors.teal50,
+        iconFg: RColors.teal700,
+        title: 'Ask Rehlah AI',
+        subtitle: 'Any question, any time',
+        onTap: () => context.push('/ai-chat'),
+      ),
+      _quickRow(
+        icon: Icons.biotech_rounded,
+        iconBg: RColors.sage100,
+        iconFg: RColors.sage500,
+        title: 'Lab results',
+        subtitle: labSub,
+        onTap: () => context.push('/care/labs'),
+      ),
+    ]);
+  }
+
+  Widget _quickRow({
+    required IconData icon,
+    required Color iconBg,
+    required Color iconFg,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: RColors.surface,
+          borderRadius: RRadius.mdBR,
+          border: Border.all(color: RColors.sand200),
+        ),
+        child: Row(children: [
+          Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(color: iconBg, borderRadius: RRadius.smBR),
+            child: Icon(icon, color: iconFg, size: 18),
           ),
-        );
-
-    final apptSub = session.upcomingAppointments.isNotEmpty
-        ? 'In ${session.upcomingAppointments.first.daysUntil} days'
-        : 'No upcoming';
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 14),
-      child: Column(children: [
-        Row(children: [
-          tile(
-            label: 'Ask AI', sub: 'Any question',
-            icon: Icons.auto_awesome_rounded,
-            iconBg: AppColors.primaryLight, iconColor: AppColors.primary,
-            route: '/ai-chat'),
-          const SizedBox(width: 7),
-          tile(
-            label: 'Appointments', sub: apptSub,
-            icon: Icons.calendar_month_rounded,
-            iconBg: AppColors.peachLight, iconColor: AppColors.peach,
-            route: '/care/appointments'),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                  color: RColors.sand950)),
+            const SizedBox(height: 2),
+            Text(subtitle,
+              style: const TextStyle(fontSize: 11, color: RColors.sand500, height: 1.3)),
+          ])),
+          const Icon(Icons.chevron_right_rounded, color: RColors.sand300, size: 20),
         ]),
-        const SizedBox(height: 7),
-        Row(children: [
-          tile(
-            label: 'Medications', sub: medsSubLabel,
-            icon: Icons.medication_rounded,
-            iconBg: hasRefill ? AppColors.peachLight : AppColors.tealLight,
-            iconColor: hasRefill ? AppColors.peach : AppColors.teal,
-            route: '/care/medications',
-            alert: hasRefill, done: medsTaken),
-          const SizedBox(width: 7),
-          tile(
-            label: 'Lab results', sub: labSub,
-            icon: Icons.biotech_rounded,
-            iconBg: labAlert ? AppColors.peachLight : AppColors.blueLight,
-            iconColor: labAlert ? AppColors.peach : AppColors.blue,
-            route: '/care/labs',
-            alert: labAlert),
-        ]),
-      ]),
+      ),
     );
   }
 
-  // ── Next appointment ──────────────────────────────────────────────────────
+  // ── Next appointment ───────────────────────────────────────────────────────
   Widget _buildNextAppointment(BuildContext context) {
     final session = UserSession();
     session.initDefaultAppointments();
@@ -1226,45 +969,213 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return GestureDetector(
       onTap: () => context.push('/care/appointments'),
       child: Container(
-        margin: const EdgeInsets.fromLTRB(14, 8, 14, 0),
-        padding: const EdgeInsets.all(12),
+        margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: AppRadius.mdBR,
-          border: Border.all(color: AppColors.border, width: 0.5)),
+          color: RColors.surface,
+          borderRadius: RRadius.lgBR,
+          boxShadow: RShadow.shadow2,
+        ),
         child: Row(children: [
           Container(
-            width: 38,
-            padding: const EdgeInsets.symmetric(vertical: 6),
+            width: 48,
+            padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
-              color: AppColors.primaryLight,
-              borderRadius: AppRadius.smBR),
+              color: RColors.teal50,
+              borderRadius: RRadius.mdBR,
+              border: Border.all(color: RColors.teal100, width: 1),
+            ),
             child: Column(children: [
               Text('${apt.dateTime.day}',
-                style: AppText.sectionHeading.copyWith(
-                  color: AppColors.primary, fontSize: 16)),
-              Text(DateFormat('MMM').format(apt.dateTime).toUpperCase(),
-                style: AppText.caption.copyWith(
-                  color: AppColors.primary.withOpacity(0.5), fontSize: 8,
-                  fontWeight: FontWeight.w600, letterSpacing: 0.05)),
+                style: RText.h2.copyWith(
+                  color: RColors.teal700, fontSize: 20,
+                  fontFeatures: const [FontFeature('tnum')],
+                ),
+              ),
+              Text(
+                DateFormat('MMM').format(apt.dateTime).toUpperCase(),
+                style: RText.eyebrow.copyWith(
+                  color: RColors.teal500, fontSize: 9, letterSpacing: 0.5),
+              ),
             ]),
           ),
-          const SizedBox(width: 11),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(apt.title, style: AppText.bodySemibold),
-            Text('${apt.doctorName} · ${DateFormat('HH:mm').format(apt.dateTime)}',
-              style: AppText.caption),
-          ])),
-          PillBadge(
-            text: '${apt.daysUntil} days',
-            bg: AppColors.peachLight,
-            textColor: AppColors.peach,
-            borderColor: AppColors.peach.withOpacity(0.2)),
+          const SizedBox(width: 12),
+          Expanded(child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('NEXT APPOINTMENT', style: RText.eyebrow),
+              const SizedBox(height: 2),
+              Text(apt.title,
+                style: RText.body.copyWith(fontWeight: FontWeight.w600, fontSize: 15)),
+              Text(
+                '${apt.doctorName} · ${DateFormat('HH:mm').format(apt.dateTime)}',
+                style: RText.small),
+            ],
+          )),
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: RColors.saffron100,
+              borderRadius: RRadius.pillBR,
+            ),
+            child: Text(
+              '${apt.daysUntil}d',
+              style: RText.small.copyWith(
+                color: RColors.saffron700, fontWeight: FontWeight.w600),
+            ),
+          ),
         ]),
       ),
     );
   }
+
+  // ── Ask Rehlah prompt ──────────────────────────────────────────────────────
+  Widget _buildAskRehlah(BuildContext context, UserSession session) {
+    final question = session.isNadirWindow
+        ? 'What should I watch for during nadir?'
+        : session.isMonitoring
+            ? 'What does my latest lab result mean?'
+            : 'What side effects should I report today?';
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      child: AskRehlahPrompt(
+        question: question,
+        onTap: () => context.push('/ai-chat'),
+      ),
+    );
+  }
+
+  // ── Care team strip ────────────────────────────────────────────────────────
+  Widget _buildCareTeamSection(BuildContext context, UserSession session) {
+    final doctorName = session.upcomingAppointments
+        .map((a) => a.doctorName)
+        .where((n) => n.isNotEmpty)
+        .firstOrNull ?? '';
+    final members = [
+      if (doctorName.isNotEmpty)
+        CareTeamMember(name: doctorName, role: 'Oncologist'),
+      const CareTeamMember(name: 'Nour M.', role: 'Chemo nurse'),
+      const CareTeamMember(name: 'Fatima T.', role: 'Coordinator'),
+      const CareTeamMember(name: 'Reem H.', role: 'Dietitian'),
+    ];
+
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('YOUR CARE TEAM', style: RText.eyebrow),
+            GestureDetector(
+              onTap: () => context.push('/care'),
+              child: Text('Manage',
+                style: RText.small.copyWith(
+                  color: RColors.teal700, fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      ),
+      CareTeamStrip(members: members),
+    ]);
+  }
 }
+
+// ── Mini ring painter (52 × 52 for the Meds tile) ──────────────────────────
+
+class _MiniRingPainter extends CustomPainter {
+  final double value;
+  final Color color;
+  const _MiniRingPainter({required this.value, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+    final r = (size.width - 5) / 2;
+
+    canvas.drawCircle(Offset(cx, cy), r, Paint()
+      ..color = RColors.sand200
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 5.0);
+
+    if (value <= 0) return;
+
+    canvas.drawArc(
+      Rect.fromCircle(center: Offset(cx, cy), radius: r),
+      -math.pi / 2,
+      2 * math.pi * value.clamp(0, 1),
+      false,
+      Paint()
+        ..color = color
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 5.0
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_MiniRingPainter old) =>
+      old.value != value || old.color != color;
+}
+
+// ── Temperature sparkline (simple rising line for fever context) ────────────
+
+class _TempSparkline extends StatelessWidget {
+  final bool hasFever;
+  const _TempSparkline({required this.hasFever});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 24,
+      child: CustomPaint(
+        painter: _SparklinePainter(
+          color: hasFever ? RColors.clay500 : RColors.sand300),
+        size: const Size(double.infinity, 24),
+      ),
+    );
+  }
+}
+
+class _SparklinePainter extends CustomPainter {
+  final Color color;
+  const _SparklinePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final points = [
+      Offset(0, h * 0.75),
+      Offset(w * 0.15, h * 0.72),
+      Offset(w * 0.3, h * 0.68),
+      Offset(w * 0.45, h * 0.6),
+      Offset(w * 0.6, h * 0.45),
+      Offset(w * 0.75, h * 0.32),
+      Offset(w * 0.9, h * 0.18),
+      Offset(w, h * 0.1),
+    ];
+    final path = Path()..moveTo(points[0].dx, points[0].dy);
+    for (int i = 1; i < points.length; i++) {
+      path.lineTo(points[i].dx, points[i].dy);
+    }
+    canvas.drawPath(path, Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.8
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round);
+    // Dot at last point
+    canvas.drawCircle(points.last, 2.4, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(_SparklinePainter old) => old.color != color;
+}
+
+// ── Dashed circle (mood recap "today" empty state) ──────────────────────────
 
 class _DashedCircle extends StatelessWidget {
   final double size;

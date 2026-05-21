@@ -1,223 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import '../../../../core/theme/app_theme.dart';
-import '../../../../core/widgets/shared_widgets.dart';
+import '../../../../theme/rehlah_theme.dart';
 import '../../../../core/utils/user_session.dart';
-import '../../../../core/utils/protocols.dart';
 
-// ── Data models ───────────────────────────────────────────────────────────────
-class _Mentor {
-  final String initials, name, status, protocol, quote;
-  final Color avBg, avColor;
-  final List<String> matchPhaseKeys;
-  final bool arabicSpeaker;
-
-  const _Mentor({
-    required this.initials, required this.name, required this.status,
-    required this.protocol, required this.quote,
-    required this.avBg, required this.avColor,
-    required this.matchPhaseKeys, this.arabicSpeaker = false,
-  });
-}
-
-class _Coach {
-  final String initials, name, specialty, location, description, verified;
-  final Color avBg, avColor;
-  final List<String> matchPhaseKeys;
-  final String? whyNow; // phase-specific reason shown in For You tab
-
-  const _Coach({
-    required this.initials, required this.name, required this.specialty,
-    required this.location, required this.description, required this.verified,
-    required this.avBg, required this.avColor,
-    required this.matchPhaseKeys, this.whyNow,
-  });
-}
-
-// ── Mentor & Coach database ───────────────────────────────────────────────────
-const _mentors = [
-  _Mentor(
-    initials: 'LM', name: 'Lena M.', status: 'Survivor · 4 years free',
-    protocol: 'AC-T · Breast · Dubai',
-    quote: 'Week 6 nadir nearly broke me. Here\'s what got me through it.',
-    avBg: Color(0xFFFBF4E0), avColor: Color(0xFFC49030),
-    matchPhaseKeys: ['Nadir window', 'Peak nausea window', 'Infusion day'],
-  ),
-  _Mentor(
-    initials: 'JK', name: 'James K.', status: 'Survivor · 2 years free',
-    protocol: 'TC · Colorectal · Abu Dhabi',
-    quote: 'Went through chemo twice. Happy to share what helped me.',
-    avBg: Color(0xFFEDE8F8), avColor: Color(0xFF7B5CC4),
-    matchPhaseKeys: ['Recovery week', 'Nadir window'],
-  ),
-  _Mentor(
-    initials: 'RA', name: 'Rania A.', status: 'Survivor · 6 years free',
-    protocol: 'AC-T · Breast · متحدثة عربية',
-    quote: 'أنا هنا لأدعمك بالعربي والإنجليزي. لستِ وحدكِ في هذه الرحلة.',
-    avBg: Color(0xFFEAF8F0), avColor: Color(0xFF3DB87A),
-    matchPhaseKeys: ['Nadir window', 'Peak nausea window', 'Joint pain peak',
-                     'Infusion day', 'Recovery week',
-                     'monitoring', 'scanxiety'],
-    arabicSpeaker: true,
-  ),
-  _Mentor(
-    initials: 'SR', name: 'Sara R.', status: 'Survivor · 2 years free',
-    protocol: 'CMF · Breast · Sharjah',
-    quote: 'I finished chemo. Here\'s what no one told me about recovery.',
-    avBg: Color(0xFFFEF0F3), avColor: Color(0xFFC04060),
-    matchPhaseKeys: ['Recovery week', 'Post-infusion week'],
-  ),
-  // ── Monitoring-specific mentors ──
-  _Mentor(
-    initials: 'HB', name: 'Hana B.', status: 'Survivor · 5 years free',
-    protocol: 'AC-T · Breast · Monitoring',
-    quote: 'Five years out. Scanxiety still hits before every mammogram — but it gets easier. I\'ll tell you how.',
-    avBg: Color(0xFFE8F8F0), avColor: Color(0xFF3DB87A),
-    matchPhaseKeys: ['monitoring', 'scanxiety'],
-  ),
-  _Mentor(
-    initials: 'NM', name: 'Nadia M.', status: 'Survivor · 3 years free',
-    protocol: 'TC · Breast · Monitoring',
-    quote: 'Hormone therapy side effects are real. Joint pain, hot flashes — I found ways to manage them all.',
-    avBg: Color(0xFFFBF4E0), avColor: Color(0xFFC49030),
-    matchPhaseKeys: ['monitoring'],
-  ),
-  _Mentor(
-    initials: 'FA', name: 'Fatima A.', status: 'Survivor · 7 years free · متحدثة عربية',
-    protocol: 'AC-T · Breast · Abu Dhabi',
-    quote: 'سبع سنوات منذ انتهيت من العلاج. الحياة بعد السرطان ممكنة وجميلة.',
-    avBg: Color(0xFFEDE8F8), avColor: Color(0xFF7B5CC4),
-    matchPhaseKeys: ['monitoring', 'scanxiety'],
-    arabicSpeaker: true,
-  ),
-];
-
-const _coaches = [
-  _Coach(
-    initials: 'DA', name: 'Dr. Amira Hassan',
-    specialty: 'Clinical Psychologist · Dubai',
-    location: 'Dubai',
-    description: 'Specialises in cancer-related anxiety, grief, and adjustment.',
-    verified: '✓ Verified professional',
-    avBg: Color(0xFFEDE8F8), avColor: Color(0xFF7B5CC4),
-    matchPhaseKeys: ['Nadir window', 'Peak nausea window', 'Infusion day',
-                     'Recovery week', 'monitoring', 'scanxiety'],
-    whyNow: 'Scanxiety before scans is very common and very real. '
-        'A session focused on scan anxiety can make a significant difference.',
-  ),
-  _Coach(
-    initials: 'NR', name: 'Nour R.',
-    specialty: 'Oncology Dietitian · Abu Dhabi',
-    location: 'Abu Dhabi',
-    description: 'Helping patients eat and recover well during and after treatment.',
-    verified: '✓ Verified professional',
-    avBg: Color(0xFFEAF8F0), avColor: Color(0xFF3DB87A),
-    matchPhaseKeys: ['Peak nausea window', 'Nadir window', 'Fluid & pain window',
-                     'Post-infusion week', 'Infusion day', 'monitoring'],
-    whyNow: 'Weight management and nutrition are important during hormone therapy. '
-        'A dietitian can help with strategies specific to Tamoxifen and aromatase inhibitors.',
-  ),
-  _Coach(
-    initials: 'MA', name: 'Mohammed A.',
-    specialty: 'Physiotherapist · Dubai',
-    location: 'Dubai',
-    description: 'Movement therapy for joint pain, fatigue, and post-treatment recovery.',
-    verified: '✓ Verified professional',
-    avBg: Color(0xFFE8F2F8), avColor: Color(0xFF4A8EC0),
-    matchPhaseKeys: ['Joint pain peak', 'Recovery week', 'Fluid & pain window',
-                     'monitoring'],
-    whyNow: 'Joint pain from aromatase inhibitors affects up to 50% of survivors. '
-        'Targeted physiotherapy can significantly reduce discomfort and improve mobility.',
-  ),
-  _Coach(
-    initials: 'LK', name: 'Dr. Layla K.',
-    specialty: 'Oncology Nurse Specialist · Dubai',
-    location: 'Dubai',
-    description: 'Long-term survivorship care, hormone therapy side effects, and surveillance planning.',
-    verified: '✓ Verified professional',
-    avBg: Color(0xFFFEF0F3), avColor: Color(0xFFC04060),
-    matchPhaseKeys: ['monitoring', 'scanxiety'],
-    whyNow: 'A survivorship specialist can help you understand your surveillance schedule, '
-        'manage long-term side effects, and know what to watch for.',
-  ),
-];
-
-// ── Phase matching logic ──────────────────────────────────────────────────────
-class _PhaseMatch {
-  static String _currentPhaseName() {
-    final session = UserSession();
-    if (session.isMonitoring) {
-      return session.isScanxietyPeriod ? 'scanxiety' : 'monitoring';
-    }
-    return session.currentPhase.name;
-  }
-
-  static List<_Mentor> matchedMentors() {
-    final phase = _currentPhaseName();
-    final session = UserSession();
-    final matched = _mentors.where((m) {
-      if (m.matchPhaseKeys.contains(phase)) return true;
-      // Also match by cancer type for monitoring
-      if (session.isMonitoring && m.matchPhaseKeys.contains('monitoring')) return true;
-      return false;
-    }).toList();
-    return matched.isEmpty ? _mentors.take(2).toList() : matched;
-  }
-
-  static List<_Coach> matchedCoaches() {
-    final phase = _currentPhaseName();
-    final session = UserSession();
-    final matched = _coaches.where((c) {
-      if (c.matchPhaseKeys.contains(phase)) return true;
-      if (session.isMonitoring && c.matchPhaseKeys.contains('monitoring')) return true;
-      return false;
-    }).toList();
-    return matched.isEmpty ? _coaches.take(2).toList() : matched;
-  }
-
-  static String matchBadge(_Mentor m) {
-    final session = UserSession();
-    if (session.isMonitoring) {
-      if (session.isScanxietyPeriod && m.matchPhaseKeys.contains('scanxiety'))
-        return 'Knows scan anxiety well';
-      return 'Fellow survivor · Long-term monitoring';
-    }
-    final phase = _currentPhaseName();
-    if (m.matchPhaseKeys.contains(phase)) {
-      if (phase.toLowerCase().contains('nadir')) return 'Has been through nadir';
-      if (phase.toLowerCase().contains('nausea')) return 'Knows peak nausea week';
-      if (phase.toLowerCase().contains('recovery')) return 'In recovery themselves';
-      if (phase.toLowerCase().contains('joint')) return 'Experienced Taxol pain';
-      return 'Matched to your phase';
-    }
-    return 'Same cancer type';
-  }
-
-  static String coachBadge(_Coach c) {
-    final session = UserSession();
-    if (session.isMonitoring) {
-      if (session.isScanxietyPeriod) return 'Relevant for scan anxiety';
-      return 'Relevant for survivorship';
-    }
-    final phase = _currentPhaseName();
-    if (phase.toLowerCase().contains('nadir')) return 'Relevant for nadir';
-    if (phase.toLowerCase().contains('nausea')) return 'Relevant for nausea';
-    if (phase.toLowerCase().contains('joint')) return 'Relevant for joint pain';
-    if (phase.toLowerCase().contains('recovery')) return 'Relevant for recovery';
-    return 'Relevant for your phase';
-  }
-
-  static String whyNowText(_Coach c) {
-    final session = UserSession();
-    if (session.isMonitoring && session.isScanxietyPeriod &&
-        c.matchPhaseKeys.contains('scanxiety')) {
-      return c.whyNow ?? 'Relevant to your current situation.';
-    }
-    return c.whyNow ?? 'Relevant to your current phase.';
-  }
-}
-
-// ── Main screen ───────────────────────────────────────────────────────────────
 class ConnectScreen extends StatefulWidget {
   const ConnectScreen({super.key});
   @override
@@ -226,646 +10,467 @@ class ConnectScreen extends StatefulWidget {
 
 class _ConnectScreenState extends State<ConnectScreen> {
   int _tabIndex = 0;
-  final _tabs = ['For You', 'Community', 'Support', 'Resources'];
+  final _tabs = ['Feed', 'Mentors', 'Coaches', 'Stories'];
 
   @override
   Widget build(BuildContext context) {
-    final session = UserSession();
     return Scaffold(
-      backgroundColor: AppColors.background,
-      body: Stack(children: [
-        Positioned(top: -40, right: -20,
-          child: Container(width: 150, height: 150,
-            decoration: BoxDecoration(shape: BoxShape.circle,
-              gradient: RadialGradient(colors: [
-                AppColors.primary.withOpacity(0.07), Colors.transparent])))),
-        SafeArea(child: Column(children: [
-          AppHeader(
-            title: 'Your |community',
-            subtitle: 'Coaches, mentors and peers — all in one place',
-          ),
-          // Safe space badge
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 6, 14, 0),
-            child: Row(children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.teal.withOpacity(0.07),
-                  borderRadius: AppRadius.fullBR,
-                  border: Border.all(
-                    color: AppColors.teal.withOpacity(0.18), width: 0.5)),
-                child: Text('✓ Safe space · Moderated',
-                  style: AppText.caption.copyWith(
-                    color: AppColors.teal, fontWeight: FontWeight.w500,
-                    fontSize: 10))),
-            ]),
-          ),
-          // Tabs
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: _tabs.asMap().entries.map((e) {
-                  final active = e.key == _tabIndex;
-                  return GestureDetector(
-                    onTap: () => setState(() => _tabIndex = e.key),
-                    child: Container(
-                      margin: const EdgeInsets.only(right: 6),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: active ? AppColors.primaryLight : AppColors.surface,
-                        borderRadius: AppRadius.fullBR,
-                        border: Border.all(
-                          color: active ? AppColors.primaryMid : AppColors.border,
-                          width: 0.5)),
-                      child: Text(e.value,
-                        style: AppText.caption.copyWith(
-                          fontSize: 12, fontWeight: FontWeight.w500,
-                          color: active ? AppColors.primary : AppColors.text2)),
-                    ),
-                  );
-                }).toList(),
-              ),
+      backgroundColor: RColors.sand50,
+      body: SafeArea(
+        bottom: false,
+        child: Column(children: [
+          _topbar(),
+          _tabBar(),
+          Expanded(child: SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 120),
+            child: _tabIndex == 0 ? _feedTab()
+                : _tabIndex == 1 ? _mentorsTab()
+                : _tabIndex == 2 ? _coachesTab()
+                : _storiesTab(),
+          )),
+        ]),
+      ),
+    );
+  }
+
+  // ── Topbar ───────────────────────────────────────────────────────────────────
+
+  Widget _topbar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      child: Row(children: [
+        const SizedBox(width: 36),
+        const Expanded(child: Center(child: Text('Connect',
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700,
+              letterSpacing: -0.2)))),
+        GestureDetector(
+          onTap: () {},
+          child: Container(
+            width: 36, height: 36,
+            decoration: BoxDecoration(
+              color: RColors.surface,
+              shape: BoxShape.circle,
+              border: Border.all(color: RColors.sand200),
             ),
+            child: const Icon(Icons.search_rounded, color: RColors.sand700, size: 20),
           ),
-          Expanded(
-            child: SingleChildScrollView(
-              child: _tabIndex == 0 ? _buildForYou(session)
-                  : _tabIndex == 1 ? _buildCommunity()
-                  : _tabIndex == 2 ? _buildSupport()
-                  : _buildResources(),
-            ),
-          ),
-        ])),
+        ),
       ]),
     );
   }
 
-  // ── Tab 0: For You ────────────────────────────────────────────────────────
-  Widget _buildForYou(UserSession session) {
-    final phase = session.currentPhase;
-    final isNadir = session.isNadirWindow;
-    final isNadirApproaching = session.isNadirApproaching;
-    final isMonitoring = session.isMonitoring;
-    final isScanxiety = session.isScanxietyPeriod;
-    final matchedMentors = _PhaseMatch.matchedMentors();
-    final matchedCoaches = _PhaseMatch.matchedCoaches();
+  // ── Tab bar ──────────────────────────────────────────────────────────────────
 
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const SizedBox(height: 10),
-
-      // Phase context banner
-      Container(
-        margin: const EdgeInsets.fromLTRB(14, 0, 14, 0),
-        padding: const EdgeInsets.all(13),
-        decoration: BoxDecoration(
-          color: isMonitoring
-              ? isScanxiety
-                  ? AppColors.gold.withOpacity(0.06)
-                  : AppColors.teal.withOpacity(0.05)
-              : isNadir
-                  ? AppColors.peach.withOpacity(0.06)
-                  : isNadirApproaching
-                      ? AppColors.gold.withOpacity(0.06)
-                      : AppColors.primary.withOpacity(0.05),
-          borderRadius: AppRadius.mdBR,
-          border: Border.all(
-            color: isMonitoring
-                ? isScanxiety
-                    ? AppColors.gold.withOpacity(0.2)
-                    : AppColors.teal.withOpacity(0.2)
-                : isNadir
-                    ? AppColors.peach.withOpacity(0.2)
-                    : isNadirApproaching
-                        ? AppColors.gold.withOpacity(0.2)
-                        : AppColors.primaryMid,
-            width: 0.5)),
-        child: Row(children: [
-          Text(
-            isMonitoring
-                ? isScanxiety ? '⚡' : '🎗️'
-                : isNadir ? '⚠' : isNadirApproaching ? '⚡' : '💜',
-            style: const TextStyle(fontSize: 18)),
-          const SizedBox(width: 10),
-          Expanded(child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                isMonitoring
-                    ? isScanxiety
-                        ? 'Scan approaching — scanxiety is real'
-                        : 'Monitoring & surveillance · ${session.daysCancerFree} days cancer-free'
-                    : isNadir
-                        ? 'You\'re in your nadir window'
-                        : isNadirApproaching
-                            ? 'Nadir window approaching'
-                            : '${session.protocol.name} · ${phase.name}',
-                style: AppText.bodySemibold.copyWith(
-                  fontSize: 13,
-                  color: isMonitoring
-                      ? isScanxiety ? AppColors.gold : AppColors.teal
-                      : isNadir ? AppColors.peach
-                          : isNadirApproaching ? AppColors.gold
-                          : AppColors.primary)),
-              const SizedBox(height: 2),
-              Text(
-                isMonitoring
-                    ? isScanxiety
-                        ? 'Connect with survivors who know exactly how scan week feels.'
-                        : 'Survivors and specialists who understand life after treatment.'
-                    : isNadir
-                        ? 'These mentors and coaches have been through exactly this.'
-                        : isNadirApproaching
-                            ? 'Connect with someone who knows what\'s coming.'
-                            : 'People matched to your current phase.',
-                style: AppText.bodySecondary.copyWith(fontSize: 12)),
-            ],
-          )),
-        ]),
-      ),
-
-      // Matched mentors
-      SectionLabel(isMonitoring ? 'Survivors in monitoring' : 'Mentors for your phase'),
-      ...matchedMentors.take(3).map((m) => _buildMentorCard(m, showBadge: true)),
-
-      // Matched coaches
-      SectionLabel(isMonitoring ? 'Specialists for survivorship' : 'Coaches for right now'),
-      ...matchedCoaches.take(2).map((c) => _buildCoachCard(c, showWhyNow: true)),
-
-      // Weekly prompt
-      _buildWeeklyPrompt(),
-      const SizedBox(height: 24),
-    ]);
+  Widget _tabBar() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: Row(children: _tabs.asMap().entries.map((e) {
+        final active = e.key == _tabIndex;
+        return GestureDetector(
+          onTap: () => setState(() => _tabIndex = e.key),
+          child: Container(
+            margin: const EdgeInsets.only(right: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+            decoration: BoxDecoration(
+              color: active ? RColors.teal700 : RColors.surface,
+              borderRadius: RRadius.pillBR,
+              border: Border.all(
+                color: active ? RColors.teal700 : RColors.sand200),
+            ),
+            child: Text(e.value,
+              style: TextStyle(
+                fontSize: 12.5, fontWeight: FontWeight.w500,
+                color: active ? Colors.white : RColors.sand700)),
+          ),
+        );
+      }).toList()),
+    );
   }
 
-  // ── Tab 1: Community ──────────────────────────────────────────────────────
-  Widget _buildCommunity() {
+  // ── Feed tab ─────────────────────────────────────────────────────────────────
+
+  Widget _feedTab() {
+    final session = UserSession();
+    final matchedMentor = _mentors.first;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _plumHero(matchedMentor, session),
+      _sectionHead('Stories from survivors', cta: 'See all'),
       const SizedBox(height: 8),
-      // Moderation note
-      Container(
-        margin: const EdgeInsets.fromLTRB(14, 0, 14, 0),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppColors.teal.withOpacity(0.04),
-          borderRadius: AppRadius.mdBR,
-          border: Border.all(
-            color: AppColors.teal.withOpacity(0.13), width: 0.5)),
-        child: Text(
-          '🛡️ Peer support only. Always consult your care team for medical advice.',
-          style: AppText.caption.copyWith(
-            color: AppColors.teal.withOpacity(0.65), fontSize: 10,
-            height: 1.5))),
+      ..._stories.map((s) => _storyRow(s)),
+      _sectionHead('Mentors near you', cta: 'See all'),
       const SizedBox(height: 8),
-      _buildWeeklyPrompt(),
-      _buildPost('SJ', AppColors.primaryLight, AppColors.primary,
-          'Sarah J.', '2 hours ago · Breast · Week 6',
-          'Week 6 done! Morning walks really help — even 10 minutes makes a difference. 🌸',
-          24, 12, true),
-      _buildPost('MR', AppColors.blueLight, AppColors.blue,
-          'Michael R.', '5 hours ago · Colorectal',
-          'Waiting for scan results is the hardest part. Sending strength 💜 — the scanxiety is very real.',
-          38, 5, false),
-      _buildPost('LA', AppColors.tealLight, AppColors.teal,
-          'Layla A.', 'Yesterday · Breast · Nadir week',
-          'Day 10 of nadir. Keeping temperature log twice a day as instructed. Day by day.',
-          19, 8, false),
+      ..._mentors.take(2).map((m) => _mentorRow(m)),
       const SizedBox(height: 24),
     ]);
   }
 
-  // ── Tab 2: Support (all mentors + all coaches) ───────────────────────────
-  Widget _buildSupport() {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const SizedBox(height: 8),
-      Container(
-        margin: const EdgeInsets.fromLTRB(14, 0, 14, 0),
-        padding: const EdgeInsets.all(11),
-        decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.05),
-          borderRadius: AppRadius.mdBR,
-          border: Border.all(color: AppColors.primaryMid, width: 0.5)),
-        child: Text(
-          '💜 Mentors are fellow patients and survivors. '
-          'Coaches are verified healthcare professionals. '
-          'First consultation with any coach is free.',
-          style: AppText.caption.copyWith(
-            color: AppColors.primary, fontSize: 11, height: 1.5))),
-
-      // All mentors
-      const SectionLabel('Mentors — patients & survivors'),
-      ..._mentors.map((m) => _buildMentorCard(m, showBadge: true)),
-
-      // All coaches
-      const SectionLabel('Coaches — verified professionals'),
-      Container(
-        margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
-        padding: const EdgeInsets.all(11),
-        decoration: BoxDecoration(
-          color: AppColors.blue.withOpacity(0.05),
-          borderRadius: AppRadius.mdBR,
-          border: Border.all(
-            color: AppColors.blue.withOpacity(0.15), width: 0.5)),
-        child: Text(
-          '✓ All coaches are verified healthcare professionals.',
-          style: AppText.caption.copyWith(
-            color: AppColors.blue, fontSize: 11))),
-      ..._coaches.map((c) => _buildCoachCard(c, showWhyNow: false)),
-      const SizedBox(height: 24),
-    ]);
-  }
-
-  // ── Tab 3: Resources ──────────────────────────────────────────────────────
-  Widget _buildResources() {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      // Crisis line — always first
-      Container(
-        margin: const EdgeInsets.fromLTRB(14, 14, 14, 0),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: AppColors.primaryLight,
-          borderRadius: AppRadius.mdBR,
-          border: Border.all(color: AppColors.primaryMid, width: 0.5)),
-        child: Column(children: [
-          Text('Need support right now?',
-            style: AppText.bodySemibold.copyWith(color: AppColors.primary)),
-          const SizedBox(height: 6),
-          Text('800 4673',
-            style: AppText.statNumber.copyWith(
-              color: AppColors.primary, fontSize: 24)),
-          const SizedBox(height: 4),
-          Text('Available 24/7 · Free to call · UAE MOHAP Hope Line',
-            style: AppText.caption.copyWith(fontSize: 10),
-            textAlign: TextAlign.center),
-        ]),
-      ),
-
-      // UAE support organisations
-      const SectionLabel('Support in the UAE'),
-      ...[
-        ('🏥', 'Tawam Hospital', 'Abu Dhabi · Oncology'),
-        ('🎗️', 'Emirates Cancer Society', 'Support & awareness'),
-        ('🏥', 'Al Jalila Foundation', 'Dubai · Research'),
-        ('🩷', 'Pink Caravan', 'Breast cancer UAE'),
-      ].map((s) => Container(
-        margin: const EdgeInsets.fromLTRB(14, 0, 14, 7),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: AppRadius.mdBR,
-          border: Border.all(color: AppColors.border, width: 0.5)),
-        child: Row(children: [
-          Text(s.$1, style: const TextStyle(fontSize: 18)),
-          const SizedBox(width: 10),
-          Expanded(child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(s.$2, style: AppText.bodySemibold),
-              Text(s.$3, style: AppText.bodySecondary),
-            ],
-          )),
-          Icon(Icons.arrow_forward_ios_rounded,
-            size: 12, color: AppColors.text3),
-        ]),
-      )),
-
-      // Stories
-      const SectionLabel('Survivor stories'),
-      _buildStoryCard(),
-      const SizedBox(height: 24),
-    ]);
-  }
-
-  // ── Shared widgets ────────────────────────────────────────────────────────
-  Widget _buildMentorCard(_Mentor m, {required bool showBadge}) {
-    final badge = showBadge ? _PhaseMatch.matchBadge(m) : null;
+  Widget _plumHero(_MentorData m, UserSession session) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(14, 0, 14, 7),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [RColors.plum700, RColors.plum500],
+        ),
+        borderRadius: RRadius.xlBR,
+      ),
+      child: Stack(children: [
+        Positioned(
+          top: -70, right: -70,
+          child: Container(
+            width: 200, height: 200,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withValues(alpha: 0.08),
+            ),
+          ),
+        ),
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Mentor of the week',
+            style: TextStyle(
+              fontSize: 10.5, letterSpacing: 1.4, fontWeight: FontWeight.w500,
+              color: Colors.white.withValues(alpha: 0.75))),
+          const SizedBox(height: 6),
+          Text(m.heroLine,
+            style: const TextStyle(
+              fontSize: 19, fontWeight: FontWeight.w700,
+              color: Colors.white, letterSpacing: -0.2, height: 1.25)),
+          const SizedBox(height: 6),
+          Text(m.heroSub,
+            style: TextStyle(
+              fontSize: 12.5, color: Colors.white.withValues(alpha: 0.78),
+              height: 1.5)),
+          const SizedBox(height: 14),
+          GestureDetector(
+            onTap: () {},
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+              decoration: BoxDecoration(
+                color: RColors.saffron500,
+                borderRadius: RRadius.pillBR,
+              ),
+              child: const Text('Request a chat',
+                style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600,
+                    color: RColors.sand950)),
+            ),
+          ),
+        ]),
+      ]),
+    );
+  }
+
+  Widget _sectionHead(String label, {String? cta}) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: Row(children: [
+        Text(label.toUpperCase(),
+          style: const TextStyle(
+            fontSize: 10.5, letterSpacing: 1.4,
+            fontWeight: FontWeight.w500, color: RColors.sand500)),
+        if (cta != null) ...[
+          const Spacer(),
+          Text(cta,
+            style: const TextStyle(fontSize: 12, color: RColors.teal700,
+                fontWeight: FontWeight.w500)),
+        ],
+      ]),
+    );
+  }
+
+  Widget _storyRow(_StoryData s) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadius.mdBR,
-        border: Border.all(color: AppColors.border, width: 0.5)),
+        color: RColors.surface,
+        borderRadius: RRadius.mdBR,
+        border: Border.all(color: RColors.sand200),
+      ),
       child: Row(children: [
         Container(
-          width: 38, height: 38,
+          width: 44, height: 44,
           decoration: BoxDecoration(
-            color: m.avBg, shape: BoxShape.circle,
-            border: Border.all(
-              color: Colors.white.withOpacity(0.7), width: 1.5)),
-          child: Center(child: Text(m.initials,
-            style: TextStyle(fontFamily: 'Inter', fontSize: 13,
-              fontWeight: FontWeight.w500, color: m.avColor)))),
-        const SizedBox(width: 10),
-        Expanded(child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-          Row(children: [
-            Text(m.name, style: AppText.bodySemibold.copyWith(fontSize: 13)),
-            if (m.arabicSpeaker) ...[
-              const SizedBox(width: 5),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 5, vertical: 1),
-                decoration: BoxDecoration(
-                  color: AppColors.tealLight,
-                  borderRadius: AppRadius.fullBR),
-                child: Text('🌐 عربي',
-                  style: AppText.caption.copyWith(
-                    color: AppColors.teal,
-                    fontSize: 8, fontWeight: FontWeight.w500))),
-            ],
-          ]),
-          const SizedBox(height: 1),
-          Text(m.status, style: AppText.caption.copyWith(
-            color: m.avColor, fontSize: 10,
-            fontWeight: FontWeight.w500)),
-          if (badge != null)
-            Text('● $badge',
-              style: AppText.caption.copyWith(
-                fontSize: 9, color: AppColors.teal,
-                fontWeight: FontWeight.w500)),
+            color: s.thumbBg, borderRadius: RRadius.smBR),
+          child: Center(child: Text(s.glyph,
+            style: TextStyle(fontSize: 18, color: s.thumbFg,
+                fontWeight: FontWeight.w700))),
+        ),
+        const SizedBox(width: 12),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const Text('4 min read',
+            style: TextStyle(fontSize: 10, color: RColors.sand400)),
+          const SizedBox(height: 2),
+          Text(s.title,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                color: RColors.sand950)),
+          const SizedBox(height: 2),
+          Text(s.author,
+            style: const TextStyle(fontSize: 11, color: RColors.sand500)),
+        ])),
+        const Icon(Icons.chevron_right_rounded, color: RColors.sand300, size: 18),
+      ]),
+    );
+  }
+
+  Widget _mentorRow(_MentorData m) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: RColors.surface,
+        borderRadius: RRadius.mdBR,
+        border: Border.all(color: RColors.sand200),
+      ),
+      child: Row(children: [
+        Container(
+          width: 40, height: 40,
+          decoration: BoxDecoration(color: m.avBg, shape: BoxShape.circle),
+          child: Center(child: Text(m.av,
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700,
+                color: m.avFg))),
+        ),
+        const SizedBox(width: 12),
+        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(m.name,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                color: RColors.sand950)),
+          const SizedBox(height: 2),
+          Text(m.sub,
+            style: const TextStyle(fontSize: 11, color: RColors.sand500)),
+          const SizedBox(height: 6),
+          Row(children: m.tags.map((t) => Container(
+            margin: const EdgeInsets.only(right: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: RColors.sand100, borderRadius: RRadius.pillBR),
+            child: Text(t,
+              style: const TextStyle(fontSize: 10, color: RColors.sand700)),
+          )).toList()),
         ])),
         const SizedBox(width: 8),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+          height: 24,
           decoration: BoxDecoration(
-            color: AppColors.background2,
-            borderRadius: AppRadius.fullBR),
-          child: Text('Message',
-            style: AppText.caption.copyWith(
-              color: AppColors.text2,
-              fontSize: 11, fontWeight: FontWeight.w500))),
+            color: RColors.sage100, borderRadius: RRadius.pillBR),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Container(width: 5, height: 5,
+              decoration: const BoxDecoration(
+                color: RColors.sage500, shape: BoxShape.circle)),
+            const SizedBox(width: 5),
+            const Text('Available',
+              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w500,
+                  color: RColors.sage700, height: 1)),
+          ]),
+        ),
       ]),
     );
   }
 
-  Widget _buildCoachCard(_Coach c, {required bool showWhyNow}) {
-    final badge = showWhyNow ? _PhaseMatch.coachBadge(c) : null;
+  // ── Mentors tab ───────────────────────────────────────────────────────────────
+
+  Widget _mentorsTab() {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _sectionHead('All mentors'),
+      const SizedBox(height: 8),
+      ..._mentors.map((m) => _mentorRow(m)),
+      const SizedBox(height: 24),
+    ]);
+  }
+
+  // ── Coaches tab ───────────────────────────────────────────────────────────────
+
+  Widget _coachesTab() {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const SizedBox(height: 8),
+      Container(
+        margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: RColors.teal50,
+          borderRadius: RRadius.mdBR,
+          border: Border.all(color: RColors.teal200),
+        ),
+        child: const Text(
+          'All coaches are verified healthcare professionals. First consultation is free.',
+          style: TextStyle(fontSize: 12, color: RColors.teal700, height: 1.5)),
+      ),
+      _sectionHead('Verified professionals'),
+      const SizedBox(height: 8),
+      ..._coaches.map((c) => _coachCard(c)),
+      const SizedBox(height: 24),
+    ]);
+  }
+
+  Widget _coachCard(_CoachData c) {
     return Container(
-      margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
-      padding: const EdgeInsets.all(13),
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadius.mdBR,
-        border: Border.all(color: AppColors.border, width: 0.5)),
+        color: RColors.surface,
+        borderRadius: RRadius.mdBR,
+        border: Border.all(color: RColors.sand200),
+      ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Container(
-            width: 40, height: 40,
+            width: 42, height: 42,
             decoration: BoxDecoration(color: c.avBg, shape: BoxShape.circle),
-            child: Center(child: Text(c.initials,
-              style: TextStyle(fontFamily: 'Inter', fontSize: 14,
-                fontWeight: FontWeight.w500, color: c.avColor)))),
-          const SizedBox(width: 10),
-          Expanded(child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (badge != null) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                  margin: const EdgeInsets.only(bottom: 5),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.07),
-                    borderRadius: AppRadius.fullBR,
-                    border: Border.all(
-                      color: AppColors.primaryMid, width: 0.5)),
-                  child: Text('⚡ $badge',
-                    style: AppText.caption.copyWith(
-                      fontSize: 10, color: AppColors.primary,
-                      fontWeight: FontWeight.w600))),
-              ],
-              Text(c.name, style: AppText.bodySemibold),
-              Text(c.specialty, style: AppText.caption),
-              const SizedBox(height: 3),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.blueLight,
-                  borderRadius: AppRadius.fullBR,
-                  border: Border.all(
-                    color: AppColors.blue.withOpacity(0.18), width: 0.5)),
-                child: Text(c.verified,
-                  style: AppText.caption.copyWith(
-                    color: AppColors.blue, fontSize: 9,
-                    fontWeight: FontWeight.w500))),
-            ],
-          )),
-        ]),
-        const SizedBox(height: 8),
-        Text(c.description, style: AppText.bodySecondary),
-        // Why now — only in For You tab
-        if (showWhyNow && c.whyNow != null) ...[
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(9),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.04),
-              borderRadius: AppRadius.smBR,
-              border: Border.all(
-                color: AppColors.primary.withOpacity(0.12), width: 0.5)),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Text('💡', style: TextStyle(fontSize: 12)),
-              const SizedBox(width: 6),
-              Expanded(child: Text('Why now: ${c.whyNow}',
-                style: AppText.caption.copyWith(
-                  fontSize: 11, color: AppColors.primary,
-                  height: 1.5))),
-            ]),
+            child: Center(child: Text(c.av,
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: c.avFg))),
           ),
-        ],
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(c.name,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                  color: RColors.sand950)),
+            const SizedBox(height: 2),
+            Text(c.specialty,
+              style: const TextStyle(fontSize: 11, color: RColors.sand500)),
+            const SizedBox(height: 5),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                color: RColors.sky100, borderRadius: RRadius.pillBR),
+              child: const Text('✓ Verified professional',
+                style: TextStyle(fontSize: 10, color: RColors.sky500,
+                    fontWeight: FontWeight.w500)),
+            ),
+          ])),
+        ]),
+        const SizedBox(height: 10),
+        Text(c.description,
+          style: const TextStyle(fontSize: 12, color: RColors.sand700, height: 1.5)),
         const SizedBox(height: 10),
         Row(children: [
           Expanded(child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.primaryLight,
-              borderRadius: AppRadius.mdBR,
-              border: Border.all(color: AppColors.primaryMid, width: 0.5)),
-            child: Center(child: Text('Book free consult',
-              style: AppText.caption.copyWith(
-                color: AppColors.primary, fontWeight: FontWeight.w500))))),
-          const SizedBox(width: 6),
-          Expanded(child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.background,
-              borderRadius: AppRadius.mdBR,
-              border: Border.all(color: AppColors.border, width: 0.5)),
-            child: Center(child: Text('View profile',
-              style: AppText.caption.copyWith(
-                color: AppColors.text2, fontWeight: FontWeight.w500))))),
-        ]),
-      ]),
-    );
-  }
-
-  Widget _buildWeeklyPrompt() {
-    final phase = UserSession().currentPhase;
-    final isNadir = UserSession().isNadirWindow;
-
-    final prompts = {
-      'nadir': '"What\'s one small thing that helped you through a hard day?"',
-      'Peak nausea window': '"What food or drink actually worked for you this week?"',
-      'Recovery week': '"What\'s one thing your body can do today that it couldn\'t last week?"',
-      'Taxol infusion': '"What helped you mentally prepare for treatment day?"',
-      'default': '"What\'s one small thing that helped you through a hard day?"',
-    };
-
-    final prompt = isNadir
-        ? prompts['nadir']!
-        : prompts[phase.name] ?? prompts['default']!;
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(14, 8, 14, 8),
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: AppColors.blue.withOpacity(0.06),
-        borderRadius: AppRadius.mdBR,
-        border: Border.all(color: AppColors.blue.withOpacity(0.15), width: 0.5)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('✦ THIS WEEK\'S PROMPT',
-          style: AppText.label.copyWith(color: AppColors.blue)),
-        const SizedBox(height: 5),
-        Text(prompt,
-          style: AppText.body.copyWith(color: AppColors.text1)),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-          decoration: BoxDecoration(
-            color: AppColors.blue.withOpacity(0.09),
-            borderRadius: AppRadius.fullBR,
-            border: Border.all(
-              color: AppColors.blue.withOpacity(0.18), width: 0.5)),
-          child: Text('+ Share your answer',
-            style: AppText.caption.copyWith(
-              color: AppColors.blue, fontWeight: FontWeight.w500))),
-      ]),
-    );
-  }
-
-  Widget _buildPost(String initials, Color avBg, Color avColor,
-      String name, String info, String text, int likes, int replies,
-      bool liked) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadius.mdBR,
-        border: Border.all(color: AppColors.border, width: 0.5)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Container(width: 30, height: 30,
-            decoration: BoxDecoration(color: avBg, shape: BoxShape.circle),
-            child: Center(child: Text(initials,
-              style: TextStyle(fontFamily: 'Inter', fontSize: 11,
-                fontWeight: FontWeight.w500, color: avColor)))),
+            height: 36,
+            decoration: const BoxDecoration(
+              color: RColors.teal700, borderRadius: RRadius.pillBR),
+            child: const Center(child: Text('Book free consult',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500,
+                  color: Colors.white))),
+          )),
           const SizedBox(width: 8),
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(name, style: AppText.bodySemibold),
-            Text(info, style: AppText.caption.copyWith(fontSize: 10)),
-          ]),
-        ]),
-        const SizedBox(height: 9),
-        Text(text, style: AppText.bodySecondary),
-        const SizedBox(height: 9),
-        Row(children: [
-          _reactBtn('💜 $likes', liked),
-          const SizedBox(width: 6),
-          _reactBtn('🤝 Me too', false),
-          const Spacer(),
-          Text('$replies replies',
-            style: AppText.caption.copyWith(fontSize: 10)),
+          Expanded(child: Container(
+            height: 36,
+            decoration: BoxDecoration(
+              color: RColors.sand100, borderRadius: RRadius.pillBR,
+              border: Border.all(color: RColors.sand200)),
+            child: const Center(child: Text('View profile',
+              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500,
+                  color: RColors.sand700))),
+          )),
         ]),
       ]),
     );
   }
 
-  Widget _reactBtn(String label, bool active) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-    decoration: BoxDecoration(
-      color: active ? AppColors.primaryLight : AppColors.background,
-      borderRadius: AppRadius.fullBR,
-      border: Border.all(
-        color: active ? AppColors.primaryMid : AppColors.border, width: 0.5)),
-    child: Text(label, style: AppText.caption.copyWith(
-      fontSize: 11,
-      color: active ? AppColors.primary : AppColors.text2)));
+  // ── Stories tab ───────────────────────────────────────────────────────────────
 
-  Widget _buildStoryCard() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(14, 0, 14, 0),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadius.mdBR,
-        border: Border.all(color: AppColors.border, width: 0.5)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Container(height: 52,
-          decoration: BoxDecoration(
-            color: AppColors.goldLight,
-            borderRadius: const BorderRadius.only(
-              topLeft: AppRadius.md, topRight: AppRadius.md)),
-          child: const Center(child: Text('🌟',
-            style: TextStyle(fontSize: 22)))),
-        Padding(padding: const EdgeInsets.all(12),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppColors.goldLight,
-                  borderRadius: AppRadius.fullBR),
-                child: Text('Featured',
-                  style: AppText.caption.copyWith(
-                    color: AppColors.gold, fontWeight: FontWeight.w600,
-                    fontSize: 10))),
-              Text('6 min read',
-                style: AppText.caption.copyWith(fontSize: 10)),
-            ]),
-            const SizedBox(height: 6),
-            Text('I finished chemo. Here\'s what no one told me.',
-              style: AppText.bodySemibold.copyWith(fontSize: 13)),
-            const SizedBox(height: 4),
-            Text(
-              'After 12 sessions, I thought the hard part was over. '
-              'I was wrong — and I was so grateful.',
-              style: AppText.bodySecondary,
-              maxLines: 2, overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 8),
-            Row(children: [
-              Container(width: 24, height: 24,
-                decoration: BoxDecoration(
-                  color: AppColors.goldLight, shape: BoxShape.circle),
-                child: Center(child: Text('SR',
-                  style: AppText.caption.copyWith(
-                    fontSize: 9, fontWeight: FontWeight.w500,
-                    color: AppColors.gold)))),
-              const SizedBox(width: 7),
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Sara R.', style: AppText.caption),
-                Text('Breast cancer survivor · 2 years free',
-                  style: AppText.caption.copyWith(fontSize: 9)),
-              ]),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: AppColors.goldLight,
-                  borderRadius: AppRadius.fullBR,
-                  border: Border.all(
-                    color: AppColors.gold.withOpacity(0.2), width: 0.5)),
-                child: Text('Read →',
-                  style: AppText.caption.copyWith(
-                    color: AppColors.gold, fontWeight: FontWeight.w500))),
-            ]),
-          ])),
-      ]),
-    );
+  Widget _storiesTab() {
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      _sectionHead('Survivor stories'),
+      const SizedBox(height: 8),
+      ..._stories.map((s) => _storyRow(s)),
+      const SizedBox(height: 24),
+    ]);
   }
 }
+
+// ── Data models ───────────────────────────────────────────────────────────────
+
+class _MentorData {
+  final String av, name, sub, heroLine, heroSub;
+  final Color avBg, avFg;
+  final List<String> tags;
+  const _MentorData({
+    required this.av, required this.name, required this.sub,
+    required this.heroLine, required this.heroSub,
+    required this.avBg, required this.avFg, required this.tags,
+  });
+}
+
+class _StoryData {
+  final String glyph, title, author;
+  final Color thumbBg, thumbFg;
+  const _StoryData({
+    required this.glyph, required this.title, required this.author,
+    required this.thumbBg, required this.thumbFg,
+  });
+}
+
+class _CoachData {
+  final String av, name, specialty, description;
+  final Color avBg, avFg;
+  const _CoachData({
+    required this.av, required this.name, required this.specialty,
+    required this.description, required this.avBg, required this.avFg,
+  });
+}
+
+const _mentors = [
+  _MentorData(
+    av: 'H', name: 'Huda Al-Mansouri', sub: 'Survivor · 3 yrs · breast cancer',
+    heroLine: 'Huda walked your exact cycle.',
+    heroSub: 'Survivor of 3 years. Available this week.',
+    avBg: RColors.saffron300, avFg: RColors.saffron700,
+    tags: ['Fatigue', 'Work'],
+  ),
+  _MentorData(
+    av: 'M', name: 'Mira Al-Hammadi', sub: 'Survivor · 6 yrs · stage II',
+    heroLine: 'Mira knows the Taxol fatigue.',
+    heroSub: 'Six years cancer-free. Ready to listen.',
+    avBg: RColors.sage300, avFg: RColors.sage700,
+    tags: ['Motherhood', 'Nutrition'],
+  ),
+  _MentorData(
+    av: 'R', name: 'Rania Al-Ahmad', sub: 'Survivor · 4 yrs · AC-T',
+    heroLine: 'Rania went through AC-T twice.',
+    heroSub: 'Happy to share what helped her.',
+    avBg: RColors.teal100, avFg: RColors.teal700,
+    tags: ['Nausea', 'Chemo'],
+  ),
+];
+
+const _stories = [
+  _StoryData(
+    glyph: 'M', title: 'What I wish I knew in cycle 1',
+    author: 'Um Mohammed · 42 · Abu Dhabi',
+    thumbBg: RColors.saffron100, thumbFg: RColors.saffron700,
+  ),
+  _StoryData(
+    glyph: 'N', title: 'Coping with hair changes',
+    author: 'Noura · 35 · Al Ain',
+    thumbBg: RColors.sage100, thumbFg: RColors.sage700,
+  ),
+  _StoryData(
+    glyph: 'H', title: 'Returning to work after treatment',
+    author: 'Hind · 47 · Dubai',
+    thumbBg: RColors.teal50, thumbFg: RColors.teal700,
+  ),
+];
+
+const _coaches = [
+  _CoachData(
+    av: 'A', name: 'Dr. Amira Hassan',
+    specialty: 'Clinical Psychologist · Dubai',
+    description: 'Specialises in cancer-related anxiety, grief, and adjustment.',
+    avBg: RColors.teal50, avFg: RColors.teal700,
+  ),
+  _CoachData(
+    av: 'N', name: 'Nour R.',
+    specialty: 'Oncology Dietitian · Abu Dhabi',
+    description: 'Helping patients eat and recover well during and after treatment.',
+    avBg: RColors.sage100, avFg: RColors.sage700,
+  ),
+  _CoachData(
+    av: 'M', name: 'Mohammed A.',
+    specialty: 'Physiotherapist · Dubai',
+    description: 'Movement therapy for joint pain, fatigue, and post-treatment recovery.',
+    avBg: RColors.sky100, avFg: RColors.sky500,
+  ),
+];

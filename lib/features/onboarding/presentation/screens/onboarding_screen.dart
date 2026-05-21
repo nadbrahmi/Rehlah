@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/theme/app_theme.dart';
+import '../../../../theme/rehlah_theme.dart';
 import '../../../../core/utils/user_session.dart';
 import '../../../../core/utils/protocols.dart';
 import '../../../../core/utils/invite_codes.dart';
@@ -37,8 +37,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       emoji: '💊',
       description: 'Most common for early-stage breast cancer. 4 AC cycles then 4 Taxol cycles.',
       protocol: BreastProtocol.act,
-      color: AppColors.primary,
-      bgColor: AppColors.primaryLight,
+      color: RColors.teal700,
+      bgColor: RColors.teal50,
     ),
     _ProtocolOption(
       name: 'TC',
@@ -46,8 +46,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       emoji: '🔵',
       description: 'Used for lower-risk breast cancer. 4–6 cycles of 21 days each.',
       protocol: BreastProtocol.tc,
-      color: AppColors.blue,
-      bgColor: AppColors.blueLight,
+      color: RColors.sky500,
+      bgColor: RColors.sky100,
     ),
     _ProtocolOption(
       name: 'CMF',
@@ -55,8 +55,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       emoji: '🟢',
       description: 'Older protocol, still used in some cases. 6 cycles of 28 days.',
       protocol: BreastProtocol.cmf,
-      color: AppColors.teal,
-      bgColor: AppColors.tealLight,
+      color: RColors.teal600,
+      bgColor: RColors.teal50,
     ),
     _ProtocolOption(
       name: 'Other / Not sure',
@@ -64,8 +64,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       emoji: '❓',
       description: 'You can update this later in your profile.',
       protocol: BreastProtocol.act, // default fallback
-      color: AppColors.text2,
-      bgColor: AppColors.background2,
+      color: RColors.sand700,
+      bgColor: RColors.sand100,
     ),
   ];
 
@@ -161,17 +161,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: RColors.sand50,
       resizeToAvoidBottomInset: true,
       body: Stack(children: [
         Positioned(top: -70, right: -50, child: Container(width: 220, height: 220,
           decoration: BoxDecoration(shape: BoxShape.circle,
             gradient: RadialGradient(colors: [
-              AppColors.primary.withOpacity(0.13), Colors.transparent])))),
+              RColors.teal700.withValues(alpha: 0.13), Colors.transparent])))),
         Positioned(bottom: 100, left: -30, child: Container(width: 160, height: 160,
           decoration: BoxDecoration(shape: BoxShape.circle,
             gradient: RadialGradient(colors: [
-              AppColors.teal.withOpacity(0.08), Colors.transparent])))),
+              RColors.teal600.withValues(alpha: 0.08), Colors.transparent])))),
         SafeArea(child: Column(children: [
           if (_page > 0 && _page < 8) _dots(),
           Expanded(child: PageView(
@@ -210,9 +210,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             margin: const EdgeInsets.symmetric(horizontal: 2),
             width: active ? 20 : (done ? 12 : 6), height: 4,
             decoration: BoxDecoration(
-              color: done ? AppColors.teal
-                  : active ? AppColors.primary
-                  : AppColors.primary.withOpacity(0.13),
+              color: done ? RColors.teal600
+                  : active ? RColors.teal700
+                  : RColors.teal700.withValues(alpha: 0.13),
               borderRadius: BorderRadius.circular(10)));
         })),
     );
@@ -228,36 +228,36 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           gradient: const LinearGradient(
             begin: Alignment(-0.6,-0.8), end: Alignment(1,1),
             colors: [Color(0xFFDDD4F5),Color(0xFFCCC0EC),Color(0xFFE8D4E0)]),
-          border: Border.all(color: Colors.white.withOpacity(0.8), width:0.5),
-          boxShadow: [BoxShadow(color: AppColors.primary.withOpacity(0.22),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.8), width:0.5),
+          boxShadow: [BoxShadow(color: RColors.teal700.withValues(alpha: 0.22),
             blurRadius:28, offset: const Offset(0,10))]),
-        child: const Icon(Icons.auto_awesome_rounded, size:28, color: AppColors.primary)),
+        child: const Icon(Icons.auto_awesome_rounded, size:28, color: RColors.teal700)),
       const SizedBox(height:16),
-      const Text('Rehlah', style: TextStyle(fontFamily:'Inter', fontSize:28,
-        fontWeight:FontWeight.w300, color:AppColors.text1, letterSpacing:0.02)),
+      const Text('Rehlah', style: TextStyle(fontSize:28,
+        fontWeight:FontWeight.w300, color:RColors.sand900, letterSpacing:0.02)),
       const SizedBox(height:3),
-      const Text('رحلة · Your journey', style: TextStyle(fontFamily:'Inter',
-        fontSize:15, color:AppColors.text2, fontWeight:FontWeight.w300)),
+      const Text('رحلة · Your journey', style: TextStyle(
+        fontSize:15, color:RColors.sand700, fontWeight:FontWeight.w300)),
       const SizedBox(height:8),
       const Text('A companion for every step\nof your cancer journey',
         textAlign: TextAlign.center,
-        style: TextStyle(fontFamily:'Inter', fontSize:13, color:AppColors.text3,
+        style: TextStyle(fontSize:13, color:RColors.sand400,
           fontWeight:FontWeight.w300, height:1.6)),
       const SizedBox(height:28),
-      _fpill(Icons.auto_awesome_rounded, AppColors.primaryLight, AppColors.primary,
+      _fpill(Icons.auto_awesome_rounded, RColors.teal50, RColors.teal700,
         'AI companion', 'that understands oncology'),
       const SizedBox(height:8),
-      _fpill(Icons.check_circle_outline_rounded, AppColors.tealLight, AppColors.teal,
+      _fpill(Icons.check_circle_outline_rounded, RColors.teal50, RColors.teal600,
         'Track', 'symptoms, meds & appointments'),
       const SizedBox(height:8),
-      _fpill(Icons.people_outline_rounded, AppColors.peachLight, AppColors.peach,
+      _fpill(Icons.people_outline_rounded, RColors.clay100, RColors.clay500,
         'Community', 'of patients & survivors'),
       const SizedBox(height:24),
       _ghost('Explore with sample data', _loadDemo),
       const SizedBox(height:10),
       const Text('🔒 Your data stays yours. We never sell your health information.',
         textAlign: TextAlign.center,
-        style: TextStyle(fontFamily:'Inter', fontSize:11, color:AppColors.text3,
+        style: TextStyle(fontSize:11, color:RColors.sand400,
           fontWeight:FontWeight.w300, height:1.6)),
       const SizedBox(height:16),
       _btn('Get started', _next),
@@ -267,20 +267,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _fpill(IconData icon, Color bg, Color color, String bold, String rest) =>
     Container(
       padding: const EdgeInsets.symmetric(horizontal:14,vertical:10),
-      decoration: BoxDecoration(color:AppColors.surface,
+      decoration: BoxDecoration(color:RColors.surface,
         borderRadius:BorderRadius.circular(100),
-        border: Border.all(color:AppColors.border,width:0.5)),
+        border: Border.all(color:RColors.sand200,width:0.5)),
       child: Row(children:[
         Container(width:26,height:26,
           decoration:BoxDecoration(color:bg,shape:BoxShape.circle),
           child:Icon(icon,size:13,color:color)),
         const SizedBox(width:10),
         RichText(text: TextSpan(
-          style: const TextStyle(fontFamily:'Inter',fontSize:13,
-            color:AppColors.text2,fontWeight:FontWeight.w300),
+          style: const TextStyle(fontSize:13,
+            color:RColors.sand700,fontWeight:FontWeight.w300),
           children:[
             TextSpan(text:bold,style:const TextStyle(
-              fontWeight:FontWeight.w500,color:AppColors.text1)),
+              fontWeight:FontWeight.w500,color:RColors.sand900)),
             TextSpan(text:' $rest'),
           ])),
       ]),
@@ -289,11 +289,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   // ── Page 1: Who ───────────────────────────────────────────────────────────
   Widget _who() {
     final opts = [
-      ('🧑‍⚕️',AppColors.primaryLight,"I'm a patient",
+      ('🧑‍⚕️',RColors.teal50,"I'm a patient",
           'Diagnosed with or undergoing treatment'),
-      ('🤝',AppColors.peachLight,"I'm a caregiver",
+      ('🤝',RColors.clay100,"I'm a caregiver",
           'Supporting a loved one through their journey'),
-      ('🌟',AppColors.tealLight,"I'm a survivor",
+      ('🌟',RColors.teal50,"I'm a survivor",
           'Cancer-free and in the monitoring phase'),
     ];
     return _scaffold('Step 1 of $_totalSteps','Who is\n','using Rehlah?',
@@ -304,9 +304,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           child: AnimatedContainer(duration:const Duration(milliseconds:150),
             margin:const EdgeInsets.only(bottom:8), padding:const EdgeInsets.all(13),
             decoration: BoxDecoration(
-              color: sel?AppColors.primary.withOpacity(0.06):AppColors.surface,
+              color: sel?RColors.teal700.withValues(alpha: 0.06):RColors.surface,
               borderRadius:BorderRadius.circular(14),
-              border:Border.all(color:sel?AppColors.primaryMid:AppColors.border,width:0.5)),
+              border:Border.all(color:sel?RColors.teal200:RColors.sand200,width:0.5)),
             child: Row(children:[
               Container(width:36,height:36,
                 decoration:BoxDecoration(color:e.value.$2,
@@ -316,16 +316,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               const SizedBox(width:10),
               Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,
                 children:[
-                  Text(e.value.$3,style:TextStyle(fontFamily:'Inter',fontSize:13,
+                  Text(e.value.$3,style:TextStyle(fontSize:13,
                     fontWeight:FontWeight.w500,
-                    color:sel?AppColors.primary:AppColors.text1)),
-                  Text(e.value.$4,style:const TextStyle(fontFamily:'Inter',
-                    fontSize:11,color:AppColors.text2,fontWeight:FontWeight.w300)),
+                    color:sel?RColors.teal700:RColors.sand900)),
+                  Text(e.value.$4,style:const TextStyle(
+                    fontSize:11,color:RColors.sand700,fontWeight:FontWeight.w300)),
                 ])),
               Container(width:18,height:18,
                 decoration:BoxDecoration(shape:BoxShape.circle,
-                  color:sel?AppColors.primary:Colors.transparent,
-                  border:Border.all(color:sel?AppColors.primary:AppColors.border,
+                  color:sel?RColors.teal700:Colors.transparent,
+                  border:Border.all(color:sel?RColors.teal700:RColors.sand200,
                     width:1.5)),
                 child:sel?const Icon(Icons.check_rounded,size:10,
                   color:Colors.white):null),
@@ -338,36 +338,36 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _name() => _scaffold('Step 2 of $_totalSteps','What should\nwe ','call you?',
     "First name only is fine. You're in control.",
     Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
-      const Text('YOUR NAME',style:TextStyle(fontFamily:'Inter',fontSize:11,
-        fontWeight:FontWeight.w600,letterSpacing:0.07,color:AppColors.text3)),
+      const Text('YOUR NAME',style:TextStyle(fontSize:11,
+        fontWeight:FontWeight.w600,letterSpacing:0.07,color:RColors.sand400)),
       const SizedBox(height:8),
       TextField(
         controller:_nameController, textCapitalization:TextCapitalization.words,
         onChanged:(_)=>setState((){}),
-        style:const TextStyle(fontFamily:'Inter',fontSize:15,color:AppColors.text1),
+        style:const TextStyle(fontSize:15,color:RColors.sand900),
         decoration:InputDecoration(
-          hintText:'First name', hintStyle:const TextStyle(color:AppColors.text3),
-          filled:true, fillColor:AppColors.surface,
+          hintText:'First name', hintStyle:const TextStyle(color:RColors.sand400),
+          filled:true, fillColor:RColors.surface,
           border:OutlineInputBorder(borderRadius:BorderRadius.circular(13),
-            borderSide:const BorderSide(color:AppColors.border,width:0.5)),
+            borderSide:const BorderSide(color:RColors.sand200,width:0.5)),
           enabledBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(13),
-            borderSide:const BorderSide(color:AppColors.border,width:0.5)),
+            borderSide:const BorderSide(color:RColors.sand200,width:0.5)),
           focusedBorder:OutlineInputBorder(borderRadius:BorderRadius.circular(13),
-            borderSide:BorderSide(color:AppColors.primaryMid,width:1)))),
+            borderSide:BorderSide(color:RColors.teal200,width:1)))),
       const SizedBox(height:8),
       const Text('No last name or email needed right now.',
-        style:TextStyle(fontFamily:'Inter',fontSize:11,color:AppColors.text3,
+        style:TextStyle(fontSize:11,color:RColors.sand400,
           fontWeight:FontWeight.w300)),
       const SizedBox(height:14),
       Container(padding:const EdgeInsets.all(11),
-        decoration:BoxDecoration(color:AppColors.teal.withOpacity(0.05),
+        decoration:BoxDecoration(color:RColors.teal600.withValues(alpha: 0.05),
           borderRadius:BorderRadius.circular(11),
-          border:Border.all(color:AppColors.teal.withOpacity(0.18),width:0.5)),
+          border:Border.all(color:RColors.teal600.withValues(alpha: 0.18),width:0.5)),
         child:Row(crossAxisAlignment:CrossAxisAlignment.start,children:[
           const Text('🔒',style:TextStyle(fontSize:14)),
           const SizedBox(width:8),
           const Expanded(child:Text('Your name is only used within the app.',
-            style:TextStyle(fontFamily:'Inter',fontSize:11,color:AppColors.teal,
+            style:TextStyle(fontSize:11,color:RColors.teal600,
               fontWeight:FontWeight.w300,height:1.5))),
         ])),
     ]),
@@ -385,22 +385,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           return GestureDetector(onTap:()=>setState(()=>_typeIndex=i),
             child:AnimatedContainer(duration:const Duration(milliseconds:150),
               decoration:BoxDecoration(
-                color:sel?AppColors.primary.withOpacity(0.07):AppColors.surface,
+                color:sel?RColors.teal700.withValues(alpha: 0.07):RColors.surface,
                 borderRadius:BorderRadius.circular(13),
-                border:Border.all(color:sel?AppColors.primaryMid:AppColors.border,
+                border:Border.all(color:sel?RColors.teal200:RColors.sand200,
                   width:0.5)),
               child:Row(mainAxisAlignment:MainAxisAlignment.center,children:[
                 Text(_cancerEmojis[i],style:const TextStyle(fontSize:20)),
                 const SizedBox(width:8),
-                Text(_cancerTypes[i],style:TextStyle(fontFamily:'Inter',fontSize:13,
+                Text(_cancerTypes[i],style:TextStyle(fontSize:13,
                   fontWeight:FontWeight.w500,
-                  color:sel?AppColors.primary:AppColors.text2)),
+                  color:sel?RColors.teal700:RColors.sand700)),
               ])));
         })),
       const SizedBox(height:10),
       const Text("Don't see yours? Choose Other — specify later.",
         textAlign:TextAlign.center,
-        style:TextStyle(fontFamily:'Inter',fontSize:11,color:AppColors.text3,
+        style:TextStyle(fontSize:11,color:RColors.sand400,
           fontWeight:FontWeight.w300)),
     ]),
     _next,_back);
@@ -428,15 +428,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: sel ? p.bgColor : AppColors.surface,
+                color: sel ? p.bgColor : RColors.surface,
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: sel ? p.color.withOpacity(0.35) : AppColors.border,
+                  color: sel ? p.color.withValues(alpha: 0.35) : RColors.sand200,
                   width: sel ? 1.5 : 0.5)),
               child: Row(children: [
                 Container(width: 40, height: 40,
                   decoration: BoxDecoration(
-                    color: sel ? p.color.withOpacity(0.12) : AppColors.background2,
+                    color: sel ? p.color.withValues(alpha: 0.12) : RColors.sand100,
                     borderRadius: BorderRadius.circular(12)),
                   child: Center(child: Text(p.emoji,
                     style: const TextStyle(fontSize: 18)))),
@@ -445,25 +445,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(children: [
-                      Text(p.name, style: TextStyle(fontFamily: 'Inter',
+                      Text(p.name, style: TextStyle(
                         fontSize: 14, fontWeight: FontWeight.w600,
-                        color: sel ? p.color : AppColors.text1)),
+                        color: sel ? p.color : RColors.sand900)),
                       const SizedBox(width: 6),
                       if (i == 0) Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.08),
+                          color: RColors.teal700.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(100)),
                         child: const Text('Most common',
-                          style: TextStyle(fontFamily: 'Inter', fontSize: 9,
-                            color: AppColors.primary,
+                          style: TextStyle(fontSize: 9,
+                            color: RColors.teal700,
                             fontWeight: FontWeight.w600))),
                     ]),
                     const SizedBox(height: 2),
                     Text(p.description, style: const TextStyle(
-                      fontFamily: 'Inter', fontSize: 11,
-                      color: AppColors.text2, fontWeight: FontWeight.w300,
+                      fontSize: 11,
+                      color: RColors.sand700, fontWeight: FontWeight.w300,
                       height: 1.5)),
                   ],
                 )),
@@ -471,7 +471,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   decoration: BoxDecoration(shape: BoxShape.circle,
                     color: sel ? p.color : Colors.transparent,
                     border: Border.all(
-                      color: sel ? p.color : AppColors.border, width: 1.5)),
+                      color: sel ? p.color : RColors.sand200, width: 1.5)),
                   child: sel ? const Icon(Icons.check_rounded,
                     size: 10, color: Colors.white) : null),
               ]),
@@ -482,16 +482,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         Container(
           padding: const EdgeInsets.all(11),
           decoration: BoxDecoration(
-            color: AppColors.blue.withOpacity(0.05),
+            color: RColors.sky500.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(11),
-            border: Border.all(color: AppColors.blue.withOpacity(0.18), width: 0.5)),
+            border: Border.all(color: RColors.sky500.withValues(alpha: 0.18), width: 0.5)),
           child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Text('💡', style: TextStyle(fontSize: 13)),
             const SizedBox(width: 8),
             const Expanded(child: Text(
               'Not sure? Ask your oncologist or check your treatment plan letter. You can always update this in your profile.',
-              style: TextStyle(fontFamily: 'Inter', fontSize: 11,
-                color: AppColors.blue, fontWeight: FontWeight.w300,
+              style: TextStyle(fontSize: 11,
+                color: RColors.sky500, fontWeight: FontWeight.w300,
                 height: 1.5))),
           ]),
         ),
@@ -520,7 +520,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
         // Cycle selector
         Text('WHICH CYCLE ARE YOU ON?',
-          style: AppText.label.copyWith(fontSize: 10)),
+          style: RText.eyebrow.copyWith(fontSize: 10)),
         const SizedBox(height: 10),
         Wrap(spacing: 8, runSpacing: 8,
           children: List.generate(totalCycles, (i) {
@@ -532,15 +532,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 duration: const Duration(milliseconds: 120),
                 width: 44, height: 44,
                 decoration: BoxDecoration(
-                  color: sel ? AppColors.primary : AppColors.surface,
-                  borderRadius: AppRadius.smBR,
+                  color: sel ? RColors.teal700 : RColors.surface,
+                  borderRadius: RRadius.smBR,
                   border: Border.all(
-                    color: sel ? AppColors.primary : AppColors.border,
+                    color: sel ? RColors.teal700 : RColors.sand200,
                     width: sel ? 2 : 0.5)),
                 child: Center(child: Text('$cycle',
-                  style: TextStyle(fontFamily: 'Inter', fontSize: 15,
+                  style: TextStyle(fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: sel ? Colors.white : AppColors.text2))),
+                    color: sel ? Colors.white : RColors.sand700))),
               ),
             );
           }),
@@ -550,16 +550,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
         // Day selector
         Text('WHICH DAY OF CYCLE $selectedCycle?',
-          style: AppText.label.copyWith(fontSize: 10)),
+          style: RText.eyebrow.copyWith(fontSize: 10)),
         const SizedBox(height: 6),
 
         // Legend
         Row(children: [
-          _dot(AppColors.primary, 'Selected'),
+          _dot(RColors.teal700, 'Selected'),
           const SizedBox(width: 12),
-          _dot(AppColors.peach, 'Nadir days'),
+          _dot(RColors.clay500, 'Nadir days'),
           const SizedBox(width: 12),
-          _dot(AppColors.background2, 'Normal'),
+          _dot(RColors.sand100, 'Normal'),
         ]),
         const SizedBox(height: 10),
 
@@ -583,17 +583,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
             Color bg, textColor, borderColor;
             if (sel) {
-              bg = AppColors.primary;
+              bg = RColors.teal700;
               textColor = Colors.white;
-              borderColor = AppColors.primary;
+              borderColor = RColors.teal700;
             } else if (isNadirDay) {
-              bg = AppColors.peachLight;
-              textColor = AppColors.peach;
-              borderColor = AppColors.peach.withOpacity(0.3);
+              bg = RColors.clay100;
+              textColor = RColors.clay500;
+              borderColor = RColors.clay500.withValues(alpha: 0.3);
             } else {
-              bg = AppColors.background2;
-              textColor = AppColors.text2;
-              borderColor = AppColors.border;
+              bg = RColors.sand100;
+              textColor = RColors.sand700;
+              borderColor = RColors.sand200;
             }
 
             return GestureDetector(
@@ -605,10 +605,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   borderRadius: BorderRadius.circular(7),
                   border: Border.all(color: borderColor, width: 0.5),
                   boxShadow: sel ? [BoxShadow(
-                    color: AppColors.primary.withOpacity(0.3),
+                    color: RColors.teal700.withValues(alpha: 0.3),
                     blurRadius: 6)] : null),
                 child: Center(child: Text('$day',
-                  style: TextStyle(fontFamily: 'Inter', fontSize: 11,
+                  style: TextStyle(fontSize: 11,
                     fontWeight: sel ? FontWeight.w700 : FontWeight.w400,
                     color: textColor))),
               ),
@@ -622,20 +622,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         Container(
           padding: const EdgeInsets.all(11),
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.05),
-            borderRadius: AppRadius.mdBR,
-            border: Border.all(color: AppColors.primaryMid, width: 0.5)),
+            color: RColors.teal700.withValues(alpha: 0.05),
+            borderRadius: RRadius.mdBR,
+            border: Border.all(color: RColors.teal200, width: 0.5)),
           child: Row(children: [
             const Text('📍', style: TextStyle(fontSize: 16)),
             const SizedBox(width: 8),
             Expanded(child: RichText(text: TextSpan(
-              style: AppText.bodySecondary,
+              style: RText.bodyMuted,
               children: [
                 const TextSpan(text: 'You are on '),
                 TextSpan(text: 'Cycle $selectedCycle, Day $selectedDay',
                   style: const TextStyle(
                     fontWeight: FontWeight.w600,
-                    color: AppColors.primary)),
+                    color: RColors.teal700)),
                 TextSpan(
                   text: ' · ${ProtocolResolver.resolve(currentProtocol, selectedDay).name}'),
               ],
@@ -650,7 +650,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     Container(width: 8, height: 8,
       decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
     const SizedBox(width: 4),
-    Text(label, style: AppText.caption.copyWith(fontSize: 10)),
+    Text(label, style: RText.small.copyWith(fontSize: 10)),
   ]);
 
   // ── Page 6: Treatment Phase ───────────────────────────────────────────────
@@ -664,20 +664,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             margin:const EdgeInsets.only(bottom:7),
             padding:const EdgeInsets.symmetric(horizontal:16,vertical:11),
             decoration:BoxDecoration(
-              color:sel?AppColors.primary.withOpacity(0.07):AppColors.surface,
+              color:sel?RColors.teal700.withValues(alpha: 0.07):RColors.surface,
               borderRadius:BorderRadius.circular(100),
-              border:Border.all(color:sel?AppColors.primaryMid:AppColors.border,
+              border:Border.all(color:sel?RColors.teal200:RColors.sand200,
                 width:0.5)),
             child:Row(children:[
               Container(width:7,height:7,decoration:BoxDecoration(
                 shape:BoxShape.circle,
-                color:sel?AppColors.primary:AppColors.border)),
+                color:sel?RColors.teal700:RColors.sand200)),
               const SizedBox(width:10),
-              Text(_phases[i],style:TextStyle(fontFamily:'Inter',fontSize:13,
+              Text(_phases[i],style:TextStyle(fontSize:13,
                 fontWeight:sel?FontWeight.w500:FontWeight.w400,
-                color:sel?AppColors.primary:AppColors.text2)),
+                color:sel?RColors.teal700:RColors.sand700)),
               if(sel)...[const Spacer(),
-                Text('✓',style:TextStyle(color:AppColors.primary,fontSize:14))],
+                Text('✓',style:TextStyle(color:RColors.teal700,fontSize:14))],
             ])));
       })),
       _next,_back,showSkip:true,skipLabel:'Prefer not to say');
@@ -689,11 +689,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final stepNum = _showProtocolStep ? 7 : 5;
     final totalNum = _showProtocolStep ? _totalSteps : _totalSteps - 2;
     final items = [
-      (Icons.notifications_outlined,AppColors.primaryLight,AppColors.primary,
+      (Icons.notifications_outlined,RColors.teal50,RColors.teal700,
           'Daily check-in reminder','A gentle nudge each morning'),
-      (Icons.medication_outlined,AppColors.tealLight,AppColors.teal,
+      (Icons.medication_outlined,RColors.teal50,RColors.teal600,
           'Medication reminders','Never miss a dose'),
-      (Icons.calendar_month_outlined,AppColors.peachLight,AppColors.peach,
+      (Icons.calendar_month_outlined,RColors.clay100,RColors.clay500,
           'Appointment alerts','Reminders 24 hours before'),
     ];
     return _scaffold('Step $stepNum of $totalNum','One last\nthing, ',n,
@@ -709,9 +709,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             child:AnimatedContainer(duration:const Duration(milliseconds:150),
               margin:const EdgeInsets.only(bottom:8),padding:const EdgeInsets.all(13),
               decoration:BoxDecoration(
-                color:sel?AppColors.primary.withOpacity(0.06):AppColors.surface,
+                color:sel?RColors.teal700.withValues(alpha: 0.06):RColors.surface,
                 borderRadius:BorderRadius.circular(14),
-                border:Border.all(color:sel?AppColors.primaryMid:AppColors.border,
+                border:Border.all(color:sel?RColors.teal200:RColors.sand200,
                   width:0.5)),
               child:Row(children:[
                 Container(width:36,height:36,
@@ -721,16 +721,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 const SizedBox(width:10),
                 Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,
                   children:[
-                    Text(e.value.$4,style:TextStyle(fontFamily:'Inter',fontSize:13,
+                    Text(e.value.$4,style:TextStyle(fontSize:13,
                       fontWeight:FontWeight.w500,
-                      color:sel?AppColors.primary:AppColors.text1)),
-                    Text(e.value.$5,style:const TextStyle(fontFamily:'Inter',
-                      fontSize:11,color:AppColors.text2,fontWeight:FontWeight.w300)),
+                      color:sel?RColors.teal700:RColors.sand900)),
+                    Text(e.value.$5,style:const TextStyle(
+                      fontSize:11,color:RColors.sand700,fontWeight:FontWeight.w300)),
                   ])),
                 Container(width:18,height:18,
                   decoration:BoxDecoration(shape:BoxShape.circle,
-                    color:sel?AppColors.primary:Colors.transparent,
-                    border:Border.all(color:sel?AppColors.primary:AppColors.border,
+                    color:sel?RColors.teal700:Colors.transparent,
+                    border:Border.all(color:sel?RColors.teal700:RColors.sand200,
                       width:1.5)),
                   child:sel?const Icon(Icons.check_rounded,size:10,
                     color:Colors.white):null),
@@ -739,7 +739,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         const SizedBox(height:8),
         const Text('You can change these anytime in Settings.',
           textAlign:TextAlign.center,
-          style:TextStyle(fontFamily:'Inter',fontSize:11,color:AppColors.text3,
+          style:TextStyle(fontSize:11,color:RColors.sand400,
             fontWeight:FontWeight.w300)),
       ]),
       _next,_back,showSkip:true,skipLabel:'Maybe later',
@@ -759,19 +759,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       Container(width:80,height:80,
         decoration:BoxDecoration(shape:BoxShape.circle,
           gradient:RadialGradient(colors:[
-            AppColors.teal.withOpacity(0.18),
-            AppColors.primary.withOpacity(0.10)]),
-          border:Border.all(color:AppColors.teal.withOpacity(0.28),width:1.5),
-          boxShadow:[BoxShadow(color:AppColors.teal.withOpacity(0.12),
+            RColors.teal600.withValues(alpha: 0.18),
+            RColors.teal700.withValues(alpha: 0.10)]),
+          border:Border.all(color:RColors.teal600.withValues(alpha: 0.28),width:1.5),
+          boxShadow:[BoxShadow(color:RColors.teal600.withValues(alpha: 0.12),
             blurRadius:28)]),
         child:const Center(child:Text('🌿',style:TextStyle(fontSize:30)))),
       const SizedBox(height:20),
       const Text('Your journey is ready,',
-        style:TextStyle(fontFamily:'Inter',fontSize:15,fontWeight:FontWeight.w300,
-          color:AppColors.text2)),
+        style:TextStyle(fontSize:15,fontWeight:FontWeight.w300,
+          color:RColors.sand700)),
       const SizedBox(height:4),
-      Text(name,style:const TextStyle(fontFamily:'Inter',fontSize:26,
-        fontWeight:FontWeight.w700,color:AppColors.primary,letterSpacing:-0.5)),
+      Text(name,style:const TextStyle(fontSize:26,
+        fontWeight:FontWeight.w700,color:RColors.teal700,letterSpacing:-0.5)),
       const SizedBox(height:14),
       Padding(padding:const EdgeInsets.symmetric(horizontal:40),
         child:Text(
@@ -779,8 +779,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ? 'Your $type journey is set up for ${protocol.name} · Cycle $cycle · Day $day. We\'re here every step of the way.'
               : 'Everything is personalised for your $type journey. We\'re here every step of the way.',
           textAlign:TextAlign.center,
-          style:const TextStyle(fontFamily:'Inter',fontSize:14,
-            fontWeight:FontWeight.w300,color:AppColors.text2,height:1.7))),
+          style:const TextStyle(fontSize:14,
+            fontWeight:FontWeight.w300,color:RColors.sand700,height:1.7))),
       if (protocol != null) ...[
         const SizedBox(height:16),
         Container(
@@ -789,12 +789,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           decoration: BoxDecoration(
             color: protocol.bgColor,
             borderRadius: BorderRadius.circular(100),
-            border: Border.all(color: protocol.color.withOpacity(0.25), width: 0.5)),
+            border: Border.all(color: protocol.color.withValues(alpha: 0.25), width: 0.5)),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
             Text(protocol.emoji, style: const TextStyle(fontSize: 14)),
             const SizedBox(width: 6),
             Text('${protocol.name} · ${protocol.fullName}',
-              style: TextStyle(fontFamily: 'Inter', fontSize: 11,
+              style: TextStyle(fontSize: 11,
                 color: protocol.color, fontWeight: FontWeight.w500)),
           ]),
         ),
@@ -815,26 +815,26 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               gradient:const LinearGradient(
                 colors:[Color(0xFF3DB87A),Color(0xFF2A9060)]),
               borderRadius:BorderRadius.circular(13),
-              boxShadow:[BoxShadow(color:AppColors.teal.withOpacity(0.3),
+              boxShadow:[BoxShadow(color:RColors.teal600.withValues(alpha: 0.3),
                 blurRadius:12,offset:const Offset(0,4))]),
             child:const Center(child:Text('Go to my dashboard',
-              style:TextStyle(fontFamily:'Inter',fontSize:15,
+              style:TextStyle(fontSize:15,
                 fontWeight:FontWeight.w500,color:Colors.white)))))),
     ]);
   }
 
   Widget _cs(String v,String l)=>Expanded(child:Container(
     padding:const EdgeInsets.symmetric(vertical:10),
-    decoration:BoxDecoration(color:AppColors.surface,
+    decoration:BoxDecoration(color:RColors.surface,
       borderRadius:BorderRadius.circular(13),
-      border:Border.all(color:AppColors.border,width:0.5)),
+      border:Border.all(color:RColors.sand200,width:0.5)),
     child:Column(children:[
-      Text(v,style:const TextStyle(fontFamily:'Inter',fontSize:16,
-        fontWeight:FontWeight.w400,color:AppColors.text1)),
+      Text(v,style:const TextStyle(fontSize:16,
+        fontWeight:FontWeight.w400,color:RColors.sand900)),
       const SizedBox(height:2),
       Text(l,textAlign:TextAlign.center,
-        style:const TextStyle(fontFamily:'Inter',fontSize:9,
-          color:AppColors.text3,letterSpacing:0.04)),
+        style:const TextStyle(fontSize:9,
+          color:RColors.sand400,letterSpacing:0.04)),
     ])));
 
   // ── Shared scaffold ───────────────────────────────────────────────────────
@@ -847,27 +847,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[
         GestureDetector(onTap:onBack,child:Row(children:[
           Icon(Icons.arrow_back_ios_new_rounded,size:15,
-            color:AppColors.text2.withOpacity(0.4)),
+            color:RColors.sand700.withValues(alpha: 0.4)),
           const SizedBox(width:4),
-          Text('Back',style:TextStyle(fontFamily:'Inter',
-            fontSize:12,color:AppColors.text2)),
+          Text('Back',style:TextStyle(
+            fontSize:12,color:RColors.sand700)),
         ])),
         const SizedBox(height:14),
-        Text(step.toUpperCase(),style:const TextStyle(fontFamily:'Inter',
+        Text(step.toUpperCase(),style:const TextStyle(
           fontSize:10,fontWeight:FontWeight.w600,letterSpacing:0.07,
-          color:AppColors.text3)),
+          color:RColors.sand400)),
         const SizedBox(height:8),
         RichText(text:TextSpan(
-          style:const TextStyle(fontFamily:'Inter',fontSize:22,
-            fontWeight:FontWeight.w300,color:AppColors.text1,
+          style:const TextStyle(fontSize:22,
+            fontWeight:FontWeight.w300,color:RColors.sand900,
             letterSpacing:-0.3,height:1.2),
           children:[
             TextSpan(text:title),
             TextSpan(text:bold,style:const TextStyle(fontWeight:FontWeight.w700)),
           ])),
         const SizedBox(height:5),
-        Text(sub,style:const TextStyle(fontFamily:'Inter',fontSize:13,
-          color:AppColors.text2,fontWeight:FontWeight.w300,height:1.6)),
+        Text(sub,style:const TextStyle(fontSize:13,
+          color:RColors.sand700,fontWeight:FontWeight.w300,height:1.6)),
         const SizedBox(height:18),
         body,
         const SizedBox(height:20),
@@ -879,18 +879,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Widget _btn(String l,VoidCallback t)=>GestureDetector(onTap:t,
     child:Container(width:double.infinity,
       padding:const EdgeInsets.symmetric(vertical:14),
-      decoration:BoxDecoration(color:AppColors.primary,
+      decoration:BoxDecoration(color:RColors.teal700,
         borderRadius:BorderRadius.circular(13),
-        boxShadow:[BoxShadow(color:AppColors.primary.withOpacity(0.3),
+        boxShadow:[BoxShadow(color:RColors.teal700.withValues(alpha: 0.3),
           blurRadius:10,offset:const Offset(0,3))]),
-      child:Center(child:Text(l,style:const TextStyle(fontFamily:'Inter',
+      child:Center(child:Text(l,style:const TextStyle(
         fontSize:15,fontWeight:FontWeight.w500,color:Colors.white)))));
 
   Widget _ghost(String l,VoidCallback t)=>GestureDetector(onTap:t,
     child:Container(width:double.infinity,
       padding:const EdgeInsets.symmetric(vertical:11),
-      child:Center(child:Text(l,style:const TextStyle(fontFamily:'Inter',
-        fontSize:13,color:AppColors.text3)))));
+      child:Center(child:Text(l,style:const TextStyle(
+        fontSize:13,color:RColors.sand400)))));
 }
 
 // ── Protocol option model ─────────────────────────────────────────────────────

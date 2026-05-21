@@ -30,6 +30,13 @@ dependencies:
   http: ^1.2.1
   flutter_dotenv: ^5.1.0
 
+  # Fonts
+  google_fonts: ^6.2.1
+
+  # PDF / print
+  pdf: ^3.10.8
+  printing: ^5.13.1
+
   # UI utilities
   intl: ^0.20.2
   flutter_svg: ^2.0.10+1
