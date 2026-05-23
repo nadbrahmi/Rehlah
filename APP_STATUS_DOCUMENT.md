@@ -1,6 +1,6 @@
 # Rehlah · رحلة — App Status Document
-**Version:** 1.7  
-**Last Updated:** 2026-05-20  
+**Version:** 1.8  
+**Last Updated:** 2026-05-23  
 **Branch:** main
 
 ---
@@ -62,7 +62,7 @@
 | `/onboarding` | `OnboardingScreen` | — |
 | `/caregiver` | `CaregiverHomeScreen` | — |
 
-**Navigation audit (2026-05-19):** All 23 defined routes have valid handlers. All `context.go()` / `context.push()` call sites point to defined routes. No broken links.
+**Navigation audit (2026-05-23):** All 23 defined routes have valid handlers. All `context.go()` / `context.push()` call sites point to defined routes. No broken links.
 
 ---
 
@@ -159,6 +159,8 @@
 - ✅ All navigation links verified — no broken routes
 - ✅ All screens render without errors
 - ✅ Prep report exports full 6-section clinical PDF (print + share)
+- ✅ Flutter web build (v1.7) deployed to GitHub Pages at `/Rehlah/app/`
+- ✅ Web form → app end-to-end flow verified: DB defaults handle `invite_status` and `invite_expires_at` automatically; no web form changes needed
 
 ---
 
@@ -166,13 +168,13 @@
 
 | Issue | Severity | Notes |
 |-------|----------|-------|
-| Check-in history not reloaded into session | Low | `saveCheckin()` writes to Supabase but `checkins` are not fetched back |
+| Check-in history not reloaded into session | Low | `UserSession.saveCheckIn()` updates in-memory history only; `SupabaseService.saveCheckin()` not called from check-in screen |
 | Vitals not persisted | Low | VitalRecord stored in-memory only; lost on app restart |
 | Cycle tracker data not persisted | Low | Period entries, menstrualStatus, cycleLength in-memory only |
 | Migration 002 not auto-applied | Medium | `supabase/migrations/002_labs_schema.sql` must be run manually; labs show mock data until applied |
+| PDF share on web build | Info | `printing` package share sheet is no-op on web — print dialog works; share requires native mobile build |
 | No Supabase auth (email/password) | Low | App uses invite codes only; no password reset or account management |
 | Windows VS toolchain warning | Info | "Unable to find suitable Visual Studio toolchain" — iOS/Android unaffected |
-| `caregiver_session.dart` access denied | Info | Intermittent Windows file lock during hot reload; resolves on restart |
 | `/checkin/sliders` dead route | Info | Defined as alias for `/checkin` but never navigated to; harmless |
 
 ---
@@ -207,20 +209,34 @@
 
 ---
 
-## 11. Open Decisions & TODOs
+## 11. Deployment
 
-- [ ] Apply migration 002 to production Supabase project
+| Target | URL | Status |
+|--------|-----|--------|
+| Marketing landing page | `nadbrahmi.github.io/Rehlah/` | ✅ Live |
+| Flutter web app | `nadbrahmi.github.io/Rehlah/app/` | ✅ Live — v1.7 build deployed 2026-05-23 |
+| Care team portal | `nadbrahmi.github.io/Rehlah/care-team/` | ✅ Live |
+| Patient onboarding form | `nadbrahmi.github.io/Rehlah/care-team/onboarding/` | ✅ Live — writes to Supabase `whafhfcbkilsnnfezxeu` |
+| Supabase project | `whafhfcbkilsnnfezxeu.supabase.co` | ✅ Live — migrations 001 applied |
+
+---
+
+## 12. Open Decisions & TODOs
+
+- [ ] Apply migration 002 to production Supabase project (labs table)
+- [ ] Wire `SupabaseService.saveCheckin()` from check-in screen — currently only updates in-memory history
 - [ ] Add `checkins` fetch to session restore (display check-in history on home or profile)
 - [ ] Persist vitals and cycle tracker data (Supabase or SharedPreferences)
-- [ ] Arabic localization — all strings currently English only
+- [ ] Arabic localization — strings bilingual in check-in + prep report; home/profile still EN only
 - [ ] Push notifications for appointment reminders
 - [ ] Caregiver flow — `CaregiverHomeScreen` exists but session/data not wired
 - [ ] App icon and splash screen (currently Flutter defaults)
 - [ ] TestFlight / Play Store internal testing track setup
+- [ ] PDF share on web — `Printing.sharePdf()` is no-op on web; consider server-side PDF or download link
 
 ---
 
-## Summary Statistics
+## 13. Summary Statistics
 
 | Metric | Count |
 |--------|-------|
