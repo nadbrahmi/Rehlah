@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rehlah · All Screens (v0.1 design system applied)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&family=Newsreader:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="rehlah-styles.css">
+</head>
+<body>
+
+<div id="root"></div>
+
+<template id="__bundler_thumbnail">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+    <rect width="200" height="200" fill="oklch(0.965 0.010 75)"/>
+    <rect x="60" y="40" width="80" height="120" rx="16" fill="oklch(0.380 0.060 195)"/>
+    <text x="100" y="115" font-family="Tajawal, serif" font-size="56" fill="oklch(0.760 0.130 75)" text-anchor="middle">ر</text>
+  </svg>
+</template>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="home-screen.jsx"></script>
+<script type="text/babel" src="screens.jsx"></script>
+<script type="text/babel" src="screens-checkin.jsx"></script>
+<script type="text/babel" src="screens-checkin-v2.jsx"></script>
+<script type="text/babel" src="screens-journey.jsx"></script>
+<script type="text/babel" src="screens-records.jsx"></script>
+<script type="text/babel" src="screens-social.jsx"></script>
+<script type="text/babel" src="screens-profile.jsx"></script>
+<script type="text/babel" src="screens-onboarding.jsx"></script>
+
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard } = window;
+const W = 402, H = 874;
+
+function App() {
+  // Helper that returns a DCArtboard element directly (not wrapped in another component)
+  const ab = (id, label, Screen, lang = "en") =>
+    React.createElement(DCArtboard, { id, label, width: W, height: H, key: id },
+      React.createElement(IOSDevice, { width: W, height: H },
+        React.createElement(Screen, { lang })));
+
+  return (
+    <DesignCanvas
+      title="Rehlah · All Screens"
+      subtitle="Every screen from the v1.7 app status doc, drawn in the v0.1 design system. English versions are primary; Arabic shown for the daily-loop screens (home, check-in, journey) to prove RTL holds. Same primitives, different stories."
+    >
+      <DCSection id="onboarding" title="01 · Welcome & Onboarding">
+        {ab("welcome-en", "Welcome", WelcomeScreen)}
+        {ab("onb-en", "Onboarding · step 2", OnboardingScreen)}
+        {ab("caregiver-en", "Caregiver Home", CaregiverHomeScreen)}
+      </DCSection>
+
+      <DCSection id="daily" title="02 · Daily loop (English)">
+        {ab("home-en", "Home", HomeScreen)}
+        {ab("checkin-emoji-en", "Check-in · mood", CheckinEmojiScreen)}
+        {ab("checkin-sliders-en", "Check-in · sliders", CheckinSlidersScreen)}
+        {ab("checkin-success-en", "Check-in · saved", CheckinSuccessScreen)}
+      </DCSection>
+
+      <DCSection id="checkin-v2" title="02b · Daily check-in v2 (phase-aware redesign)">
+        {ab("ckv2-treatment", "Treatment day · Day 1",
+          (p) => <CheckinTreatmentScreen {...p}/>, "en")}
+        {ab("ckv2-nadir", "Nadir window · Day 9",
+          (p) => <CheckinNadirScreen {...p} fever={false}/>, "en")}
+        {ab("ckv2-fever", "Nadir + fever ≥ 38°",
+          (p) => <CheckinNadirScreen {...p} fever={true}/>, "en")}
+        {ab("ckv2-recovery", "Recovery · Day 17",
+          (p) => <CheckinRecoveryScreen {...p}/>, "en")}
+        {ab("ckv2-success", "Success · with trend",
+          (p) => <CheckinSuccessV2Screen {...p}/>, "en")}
+        {ab("ckv2-nadir-ar", "فترة الهبوط (RTL)",
+          (p) => <CheckinNadirScreen {...p} fever={false}/>, "ar")}
+        {ab("ckv2-fever-ar", "تنبيه حرارة (RTL)",
+          (p) => <CheckinNadirScreen {...p} fever={true}/>, "ar")}
+        {ab("ckv2-success-ar", "تم التسجيل (RTL)",
+          (p) => <CheckinSuccessV2Screen {...p}/>, "ar")}
+      </DCSection>
+
+      <DCSection id="daily-ar" title="03 · Daily loop (Arabic / RTL)">
+        {ab("home-ar", "الرئيسية", HomeScreen, "ar")}
+        {ab("checkin-emoji-ar", "تسجيل · مزاج", CheckinEmojiScreen, "ar")}
+        {ab("checkin-sliders-ar", "تسجيل · شدة", CheckinSlidersScreen, "ar")}
+        {ab("checkin-success-ar", "تم الحفظ", CheckinSuccessScreen, "ar")}
+      </DCSection>
+
+      <DCSection id="health" title="04 · My Health">
+        {ab("journey-en", "Journey", JourneyScreen)}
+        {ab("journey-ar", "رحلتك", JourneyScreen, "ar")}
+        {ab("expect-en", "What to expect", ExpectScreen)}
+        {ab("cycle-en", "Cycle tracker", CycleTrackerScreen)}
+      </DCSection>
+
+      <DCSection id="care" title="05 · Care · Medications · Vitals">
+        {ab("care-en", "Care Hub", CareHubScreen)}
+        {ab("meds-en", "Medications", MedicationsScreen)}
+        {ab("meds-ar", "الأدوية", MedicationsScreen, "ar")}
+        {ab("vitals-en", "Vitals", VitalsScreen)}
+      </DCSection>
+
+      <DCSection id="records" title="06 · Labs & Appointments">
+        {ab("labs-en", "Lab results", LabResultsScreen)}
+        {ab("lab-hist-en", "Lab history", LabHistoryScreen)}
+        {ab("lab-add-en", "Add result", LabAddScreen)}
+        {ab("appts-en", "Appointments", AppointmentsScreen)}
+        {ab("prep-en", "AI prep report", PrepReportScreen)}
+      </DCSection>
+
+      <DCSection id="social" title="07 · AI Chat & Connect">
+        {ab("chat-en", "Ask Rehlah", AIChatScreen)}
+        {ab("chat-ar", "اسألي رحلة", AIChatScreen, "ar")}
+        {ab("connect-en", "Connect", ConnectScreen)}
+      </DCSection>
+
+      <DCSection id="profile" title="08 · Profile & Privacy">
+        {ab("profile-en", "Profile", ProfileScreen)}
+        {ab("privacy-en", "Privacy & data", PrivacyScreen)}
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+
+</body>
+</html>

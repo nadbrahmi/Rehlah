@@ -1,0 +1,1633 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rehlah · رحلة — Design System v0.1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&family=Newsreader:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  /* ============ TOKENS ============ */
+  :root{
+    /* Sand neutrals — warm, low chroma */
+    --sand-50:  oklch(0.985 0.006 75);   /* page bg */
+    --sand-100: oklch(0.965 0.010 75);   /* subtle surface */
+    --sand-200: oklch(0.930 0.014 75);   /* divider, chip bg */
+    --sand-300: oklch(0.870 0.016 75);
+    --sand-400: oklch(0.720 0.014 70);
+    --sand-500: oklch(0.560 0.014 65);   /* muted text */
+    --sand-700: oklch(0.360 0.014 60);
+    --sand-900: oklch(0.205 0.012 55);   /* ink */
+    --sand-950: oklch(0.140 0.010 50);
+
+    /* Surface */
+    --surface:        #ffffff;
+    --surface-tinted: oklch(0.985 0.010 75);
+
+    /* Teal — primary journey color */
+    --teal-50:  oklch(0.965 0.018 195);
+    --teal-100: oklch(0.920 0.030 195);
+    --teal-200: oklch(0.840 0.045 195);
+    --teal-500: oklch(0.520 0.075 195);
+    --teal-600: oklch(0.450 0.070 195);
+    --teal-700: oklch(0.380 0.060 195);
+    --teal-900: oklch(0.245 0.040 195);
+
+    /* Saffron — accent / milestones / FAB */
+    --saffron-100: oklch(0.955 0.030 75);
+    --saffron-300: oklch(0.860 0.090 75);
+    --saffron-500: oklch(0.760 0.130 75);
+    --saffron-700: oklch(0.580 0.115 60);
+
+    /* Sage — positive / "taken" / "calm" */
+    --sage-100: oklch(0.955 0.025 150);
+    --sage-300: oklch(0.860 0.060 150);
+    --sage-500: oklch(0.680 0.080 150);
+    --sage-700: oklch(0.450 0.065 150);
+
+    /* Clay — alert / fever / missed */
+    --clay-100: oklch(0.955 0.030 30);
+    --clay-300: oklch(0.860 0.080 30);
+    --clay-500: oklch(0.650 0.140 30);
+    --clay-700: oklch(0.480 0.115 30);
+
+    /* Sky — info / cool counterweight to teal */
+    --sky-100: oklch(0.950 0.025 230);
+    --sky-500: oklch(0.660 0.080 230);
+
+    /* Radii */
+    --r-xs: 6px;
+    --r-sm: 10px;
+    --r-md: 14px;
+    --r-lg: 20px;
+    --r-xl: 28px;
+    --r-2xl: 36px;
+    --r-pill: 999px;
+
+    /* Spacing scale (4px base) */
+    --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px;
+    --s-5: 20px; --s-6: 24px; --s-7: 32px; --s-8: 40px;
+    --s-9: 56px; --s-10: 72px;
+
+    /* Elevation */
+    --shadow-1: 0 1px 2px rgba(40,30,20,.04), 0 1px 1px rgba(40,30,20,.03);
+    --shadow-2: 0 2px 6px rgba(40,30,20,.05), 0 4px 12px rgba(40,30,20,.04);
+    --shadow-3: 0 8px 24px rgba(40,30,20,.08), 0 2px 6px rgba(40,30,20,.04);
+
+    /* Type */
+    --font-sans: "Tajawal", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-editorial: "Newsreader", "Iowan Old Style", Georgia, serif;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family: var(--font-sans);
+    background: var(--sand-50);
+    color: var(--sand-900);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    font-weight: 400;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  .page{
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: 64px 56px 120px;
+  }
+
+  /* ============ HERO ============ */
+  .hero{
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 56px;
+    align-items: end;
+    padding-bottom: 56px;
+    border-bottom: 1px solid var(--sand-200);
+    margin-bottom: 72px;
+  }
+  .hero-left .eyebrow{
+    font-size: 12px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--teal-700);
+    font-weight: 500;
+    margin-bottom: 24px;
+  }
+  .hero-title{
+    font-family: var(--font-editorial);
+    font-weight: 400;
+    font-size: 84px;
+    line-height: .95;
+    letter-spacing: -.02em;
+    margin: 0 0 4px;
+    color: var(--sand-950);
+  }
+  .hero-title .ar{
+    font-family: var(--font-sans);
+    font-weight: 500;
+    font-size: 72px;
+    color: var(--teal-700);
+    margin-inline-start: 16px;
+    letter-spacing: 0;
+  }
+  .hero-sub{
+    font-size: 19px;
+    color: var(--sand-700);
+    line-height: 1.55;
+    max-width: 52ch;
+    margin-top: 24px;
+  }
+  .hero-meta{
+    display: flex;
+    gap: 32px;
+    margin-top: 36px;
+    flex-wrap: wrap;
+  }
+  .hero-meta dt{
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    color: var(--sand-500);
+    margin-bottom: 4px;
+  }
+  .hero-meta dd{
+    margin: 0;
+    font-size: 15px;
+    color: var(--sand-900);
+    font-weight: 500;
+  }
+
+  .swatch-stack{
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    height: 220px;
+  }
+  .swatch-stack > *{
+    border-radius: var(--r-md);
+  }
+  .ss-1{background:var(--sand-100)}
+  .ss-2{background:var(--teal-600)}
+  .ss-3{background:var(--saffron-500)}
+  .ss-4{background:var(--sand-900)}
+  .ss-5{background:var(--sage-500)}
+  .ss-6{background:var(--clay-500)}
+  .ss-7{background:var(--teal-100)}
+  .ss-8{background:var(--saffron-100); border:1px solid var(--sand-200)}
+
+  /* ============ SECTION CHROME ============ */
+  section.block{
+    margin-bottom: 96px;
+  }
+  .block-head{
+    display: flex;
+    align-items: baseline;
+    gap: 20px;
+    margin-bottom: 36px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--sand-200);
+  }
+  .block-num{
+    font-family: var(--font-editorial);
+    font-style: italic;
+    font-size: 18px;
+    color: var(--teal-700);
+    font-weight: 400;
+  }
+  .block-title{
+    font-family: var(--font-editorial);
+    font-weight: 400;
+    font-size: 36px;
+    letter-spacing: -.01em;
+    margin: 0;
+    color: var(--sand-950);
+  }
+  .block-desc{
+    margin-left: auto;
+    color: var(--sand-500);
+    font-size: 14px;
+    max-width: 38ch;
+    text-align: end;
+  }
+  .sub-head{
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--sand-500);
+    font-weight: 500;
+    margin: 32px 0 16px;
+  }
+
+  /* ============ COLOR SECTION ============ */
+  .palette{
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 20px;
+  }
+  .pal-card{
+    background: var(--surface);
+    border: 1px solid var(--sand-200);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-1);
+  }
+  .pal-swatch{
+    height: 140px;
+    position: relative;
+  }
+  .pal-swatch .name{
+    position: absolute;
+    bottom: 12px;
+    left: 16px;
+    color: rgba(255,255,255,.92);
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: .01em;
+  }
+  .pal-swatch .name.dark{color: var(--sand-900)}
+  .pal-meta{
+    padding: 14px 16px 16px;
+    font-size: 12px;
+    color: var(--sand-700);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .pal-meta .hex{
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    color: var(--sand-900);
+    font-size: 12px;
+  }
+  .pal-meta .use{color: var(--sand-500)}
+
+  .ramp{
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 0;
+    border-radius: var(--r-md);
+    overflow: hidden;
+    border: 1px solid var(--sand-200);
+  }
+  .ramp > div{
+    height: 64px;
+    display: flex;
+    align-items: flex-end;
+    padding: 8px 10px;
+    font-family: ui-monospace, monospace;
+    font-size: 10px;
+    color: var(--sand-900);
+  }
+  .ramp .light{color: rgba(255,255,255,.9)}
+  .ramp-label{
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--sand-500);
+    margin-top: 8px;
+    padding: 0 2px;
+  }
+
+  /* ============ TYPE SECTION ============ */
+  .type-grid{
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    row-gap: 28px;
+    column-gap: 32px;
+    align-items: baseline;
+  }
+  .type-meta{
+    font-size: 11px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--sand-500);
+    padding-top: 12px;
+    border-top: 1px solid var(--sand-200);
+  }
+  .type-meta .px{
+    display: block;
+    margin-top: 6px;
+    font-family: ui-monospace, monospace;
+    color: var(--sand-700);
+    letter-spacing: 0;
+    text-transform: none;
+    font-size: 12px;
+  }
+  .type-sample{
+    padding-top: 12px;
+    border-top: 1px solid var(--sand-200);
+  }
+  .t-display{font-family:var(--font-editorial); font-weight:400; font-size:64px; line-height:1; letter-spacing:-.02em; margin:0}
+  .t-h1{font-weight:700; font-size:32px; line-height:1.15; letter-spacing:-.01em; margin:0}
+  .t-h2{font-weight:700; font-size:24px; line-height:1.2; margin:0}
+  .t-h3{font-weight:500; font-size:18px; line-height:1.3; margin:0}
+  .t-body{font-weight:400; font-size:15px; line-height:1.55; margin:0; max-width: 62ch}
+  .t-small{font-weight:400; font-size:13px; line-height:1.5; color:var(--sand-700); margin:0}
+  .t-eyebrow{font-weight:500; font-size:11px; line-height:1; letter-spacing:.14em; text-transform:uppercase; color:var(--sand-500); margin:0}
+  .t-numeric{font-weight:700; font-size:48px; line-height:1; letter-spacing:-.02em; font-variant-numeric: tabular-nums; margin:0}
+
+  .bilingual{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    padding: 32px;
+    background: var(--surface-tinted);
+    border-radius: var(--r-lg);
+    border: 1px solid var(--sand-200);
+  }
+  .bilingual .ar-side{direction: rtl; text-align: right; border-right: 1px solid var(--sand-200); padding-right: 32px; margin-right: -32px;}
+  .bilingual .en-side{}
+  .bilingual h3{margin: 0 0 16px; font-size: 22px; font-weight: 700}
+  .bilingual p{font-size: 16px; line-height: 1.65; color: var(--sand-700); margin: 0 0 12px}
+
+  /* ============ SPACING + RADIUS ============ */
+  .foundations{
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 24px;
+  }
+  .f-card{
+    background: var(--surface);
+    border: 1px solid var(--sand-200);
+    border-radius: var(--r-lg);
+    padding: 24px;
+  }
+  .f-card h4{
+    margin: 0 0 16px;
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--sand-500);
+    font-weight: 500;
+  }
+  .spacing-row{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .spacing-row .bar{
+    background: var(--teal-200);
+    height: 14px;
+    border-radius: 3px;
+  }
+  .spacing-row .label{
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--sand-700);
+    min-width: 80px;
+  }
+  .radius-row{
+    display: flex;
+    gap: 14px;
+    align-items: flex-end;
+    margin-bottom: 12px;
+  }
+  .radius-row .box{
+    width: 56px;
+    height: 56px;
+    background: var(--teal-100);
+    border: 1px solid var(--teal-200);
+  }
+  .radius-row .meta{
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--sand-700);
+    padding-bottom: 4px;
+  }
+  .radius-row .meta b{color: var(--sand-900); font-weight: 700}
+  .elev-row{
+    background: var(--surface);
+    border-radius: var(--r-md);
+    height: 56px;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    padding: 0 18px;
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--sand-700);
+  }
+
+  /* ============ COMPONENT SHOWCASE ============ */
+  .comp-grid{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+  }
+  .comp{
+    background: var(--surface);
+    border: 1px solid var(--sand-200);
+    border-radius: var(--r-xl);
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .comp.full{grid-column: 1 / -1}
+  .comp-head{
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--sand-200);
+  }
+  .comp-head h3{
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .comp-head .tag{
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--sand-500);
+  }
+  .comp-note{
+    font-size: 13px;
+    color: var(--sand-500);
+    line-height: 1.5;
+    margin: 0;
+  }
+  .comp-stage{
+    background: var(--sand-100);
+    border-radius: var(--r-lg);
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  .stage-tight{padding: 20px}
+  .stage-row{flex-direction: row; gap: 12px; align-items: center; flex-wrap: wrap}
+
+  /* ----- HeroCard ----- */
+  .hero-card{
+    background: linear-gradient(135deg, var(--teal-700) 0%, var(--teal-600) 100%);
+    color: white;
+    border-radius: var(--r-xl);
+    padding: 24px 24px 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-card::after{
+    content: "";
+    position: absolute;
+    width: 240px;
+    height: 240px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.06);
+    top: -80px;
+    right: -80px;
+  }
+  .hero-card .eyebrow{
+    font-size: 11px;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,.7);
+    margin-bottom: 6px;
+  }
+  .hero-card .title{font-size: 22px; font-weight: 700; margin: 0 0 4px}
+  .hero-card .sub{font-size: 14px; color: rgba(255,255,255,.78); margin: 0 0 16px}
+  .hero-card .stat{
+    font-size: 44px;
+    font-weight: 700;
+    letter-spacing: -.02em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .hero-card .stat-unit{font-size: 16px; color: rgba(255,255,255,.7); font-weight: 500; margin-left: 8px}
+
+  /* ----- SurfaceCard ----- */
+  .surface-card{
+    background: var(--surface);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-2);
+    padding: 20px;
+  }
+  .surface-card .row{display: flex; justify-content: space-between; align-items: center}
+  .surface-card .row + .row{margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--sand-200)}
+  .surface-card .k{font-size: 14px; color: var(--sand-700)}
+  .surface-card .v{font-weight: 700; font-variant-numeric: tabular-nums}
+
+  /* ----- ToolRow ----- */
+  .tool-row{
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 16px;
+    background: var(--surface);
+    border-radius: var(--r-md);
+    border: 1px solid var(--sand-200);
+  }
+  .tool-row .ic{
+    width: 40px;
+    height: 40px;
+    border-radius: var(--r-sm);
+    background: var(--teal-100);
+    color: var(--teal-700);
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+  }
+  .tool-row .ic svg{width: 20px; height: 20px}
+  .tool-row .body{flex: 1; min-width: 0}
+  .tool-row .body .ttl{font-weight: 500; font-size: 15px; line-height: 1.2}
+  .tool-row .body .sub{font-size: 12px; color: var(--sand-500); margin-top: 2px}
+  .tool-row .chev{color: var(--sand-400); font-size: 18px}
+
+  /* ----- Status pills ----- */
+  .pill{
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: var(--r-pill);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1;
+    height: 24px;
+  }
+  .pill .dot{
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .pill.pos{background: var(--sage-100); color: var(--sage-700)}
+  .pill.warn{background: var(--saffron-100); color: var(--saffron-700)}
+  .pill.alert{background: var(--clay-100); color: var(--clay-700)}
+  .pill.info{background: var(--teal-100); color: var(--teal-700)}
+  .pill.neutral{background: var(--sand-100); color: var(--sand-700); border: 1px solid var(--sand-200)}
+
+  /* ----- Buttons ----- */
+  .btn{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 48px;
+    padding: 0 24px;
+    border-radius: var(--r-pill);
+    font-family: inherit;
+    font-weight: 500;
+    font-size: 15px;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: transform .12s ease;
+  }
+  .btn:active{transform: translateY(1px)}
+  .btn.primary{background: var(--teal-700); color: white}
+  .btn.secondary{background: var(--sand-100); color: var(--sand-900); border-color: var(--sand-200)}
+  .btn.ghost{background: transparent; color: var(--teal-700)}
+  .btn.warm{background: var(--saffron-500); color: var(--sand-950)}
+  .btn.sm{height: 36px; padding: 0 14px; font-size: 13px}
+
+  /* ----- Mood tile ----- */
+  .mood-row{display: flex; gap: 10px; justify-content: space-between}
+  .mood{
+    flex: 1;
+    aspect-ratio: 1;
+    background: var(--surface);
+    border: 1.5px solid var(--sand-200);
+    border-radius: var(--r-lg);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    position: relative;
+    transition: all .15s ease;
+  }
+  .mood.selected{
+    background: var(--teal-700);
+    border-color: var(--teal-700);
+    box-shadow: 0 6px 18px -4px oklch(0.45 0.07 195 / 0.4);
+  }
+  .mood svg{width: 36px; height: 36px; stroke: var(--sand-700); stroke-width: 1.6; fill: none}
+  .mood.selected svg{stroke: white}
+  .mood .label{
+    position: absolute;
+    bottom: -22px;
+    left: 0; right: 0;
+    text-align: center;
+    font-size: 11px;
+    color: var(--sand-500);
+  }
+
+  /* ----- Progress ring ----- */
+  .ring-wrap{
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+  .ring{position: relative; width: 96px; height: 96px}
+  .ring svg{transform: rotate(-90deg)}
+  .ring .num{
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    font-size: 20px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .ring .num small{
+    display: block;
+    text-align: center;
+    font-size: 10px;
+    color: var(--sand-500);
+    font-weight: 500;
+    margin-top: 2px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  /* ----- Metric card ----- */
+  .metric{
+    background: var(--surface);
+    border-radius: var(--r-md);
+    padding: 16px;
+    border: 1px solid var(--sand-200);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .metric .ic{
+    width: 40px; height: 40px;
+    border-radius: var(--r-sm);
+    background: var(--sand-100);
+    display: grid; place-items: center;
+    color: var(--sand-700);
+    flex-shrink: 0;
+  }
+  .metric .ic svg{width: 20px; height: 20px}
+  .metric .body{flex: 1}
+  .metric .label{font-size: 12px; color: var(--sand-500); margin: 0 0 2px}
+  .metric .val{font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1}
+  .metric .when{font-size: 11px; color: var(--sand-500); margin-top: 2px}
+
+  /* ----- Timeline row ----- */
+  .timeline{position: relative; padding-left: 28px}
+  .timeline::before{
+    content: "";
+    position: absolute;
+    left: 11px;
+    top: 8px; bottom: 8px;
+    width: 2px;
+    background: var(--sand-200);
+  }
+  .tl-item{
+    position: relative;
+    display: flex;
+    gap: 14px;
+    padding: 12px 0;
+    align-items: center;
+  }
+  .tl-item::before{
+    content: "";
+    position: absolute;
+    left: -22px;
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    background: var(--sand-300);
+    border: 2px solid var(--sand-50);
+    box-shadow: 0 0 0 2px var(--sand-200);
+  }
+  .tl-item.taken::before{background: var(--sage-500); box-shadow: 0 0 0 2px var(--sage-300)}
+  .tl-item.missed::before{background: var(--clay-500); box-shadow: 0 0 0 2px var(--clay-300)}
+  .tl-item.next::before{background: var(--teal-700); box-shadow: 0 0 0 2px var(--teal-200)}
+  .tl-time{
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+    color: var(--sand-500);
+    width: 56px;
+    flex-shrink: 0;
+  }
+  .tl-body{flex: 1}
+  .tl-body .ttl{font-weight: 500; font-size: 14px}
+  .tl-body .sub{font-size: 12px; color: var(--sand-500); margin-top: 2px}
+
+  /* ----- Phase banner ----- */
+  .phase{
+    background: linear-gradient(100deg, var(--saffron-100), var(--sand-100));
+    border-radius: var(--r-lg);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid var(--saffron-300);
+  }
+  .phase .icon{
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--saffron-500);
+    color: var(--sand-950);
+    display: grid; place-items: center;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .phase .body{flex: 1}
+  .phase .lbl{font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--saffron-700); font-weight: 500}
+  .phase .ttl{font-size: 15px; font-weight: 700; margin-top: 2px}
+  .phase .sub{font-size: 12px; color: var(--sand-700); margin-top: 2px}
+
+  /* ----- Bottom nav ----- */
+  .bnav{
+    background: var(--surface);
+    border-radius: var(--r-xl);
+    box-shadow: var(--shadow-3);
+    padding: 10px 12px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+    position: relative;
+  }
+  .bnav .tab{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 4px;
+    color: var(--sand-500);
+    font-size: 10px;
+    font-weight: 500;
+    border-radius: var(--r-md);
+  }
+  .bnav .tab.active{color: var(--teal-700)}
+  .bnav .tab svg{width: 22px; height: 22px; stroke: currentColor; stroke-width: 1.8; fill: none}
+  .bnav .tab.active::after{
+    content: "";
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--teal-700);
+    position: absolute;
+    bottom: 4px;
+  }
+  .fab{
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: var(--saffron-500);
+    color: var(--sand-950);
+    display: grid; place-items: center;
+    box-shadow: var(--shadow-3);
+    position: absolute;
+    top: -28px; left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid var(--sand-50);
+  }
+  .fab.done{background: var(--sage-500); color: white}
+  .fab svg{width: 22px; height: 22px}
+
+  /* ----- Care strip ----- */
+  .care-strip{
+    display: flex;
+    gap: 12px;
+    overflow: hidden;
+  }
+  .care-strip .avatar{
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: var(--teal-100);
+    color: var(--teal-700);
+    display: grid; place-items: center;
+    font-weight: 700;
+    font-size: 18px;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .care-strip .avatar.add{background: var(--sand-100); color: var(--sand-500); border: 1.5px dashed var(--sand-300)}
+  .care-strip .avatar .role{
+    position: absolute;
+    bottom: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: var(--sand-500);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+
+  /* ----- Slider ----- */
+  .slider{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .slider .meta{display: flex; justify-content: space-between; font-size: 13px}
+  .slider .meta .lbl{font-weight: 500}
+  .slider .meta .val{font-family: ui-monospace, monospace; color: var(--teal-700); font-weight: 700}
+  .slider .track{
+    position: relative;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--sand-200);
+  }
+  .slider .fill{
+    position: absolute;
+    inset: 0 60% 0 0;
+    background: var(--teal-600);
+    border-radius: 4px;
+  }
+  .slider .thumb{
+    position: absolute;
+    width: 22px; height: 22px;
+    background: white;
+    border: 2px solid var(--teal-700);
+    border-radius: 50%;
+    top: 50%;
+    left: 40%;
+    transform: translate(-50%, -50%);
+    box-shadow: var(--shadow-2);
+  }
+  .slider .ticks{display: flex; justify-content: space-between; font-size: 10px; color: var(--sand-500); font-family: ui-monospace, monospace}
+
+  /* ----- Chips ----- */
+  .chip{
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 14px;
+    border-radius: var(--r-pill);
+    background: var(--surface);
+    border: 1px solid var(--sand-200);
+    font-size: 13px;
+    color: var(--sand-700);
+    cursor: pointer;
+  }
+  .chip.on{background: var(--teal-700); color: white; border-color: var(--teal-700)}
+
+  /* ============ PATTERN SECTION ============ */
+  .pattern-grid{
+    display: grid;
+    grid-template-columns: 320px 320px 320px;
+    gap: 28px;
+    justify-content: start;
+  }
+  .device{
+    background: var(--sand-900);
+    border-radius: 44px;
+    padding: 12px;
+    box-shadow: var(--shadow-3);
+  }
+  .screen{
+    background: var(--sand-50);
+    border-radius: 32px;
+    padding: 20px 20px 0;
+    height: 580px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    position: relative;
+  }
+  .screen-cap{
+    text-align: center;
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--sand-500);
+  }
+  .screen-cap b{color: var(--sand-900); font-weight: 700; display: block; margin-bottom: 2px; font-size: 13px}
+
+  .topbar{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 4px;
+  }
+  .topbar .greet .hi{font-size: 12px; color: var(--sand-500)}
+  .topbar .greet .name{font-size: 18px; font-weight: 700}
+  .topbar .av{
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--teal-100);
+    color: var(--teal-700);
+    display: grid; place-items: center;
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  /* RTL demo */
+  .rtl{direction: rtl}
+  .rtl .topbar{flex-direction: row}
+  .rtl .care-strip{flex-direction: row-reverse}
+
+  /* small icons */
+  .ico{width:20px;height:20px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+  /* Anatomy callout boxes */
+  .anatomy{
+    background: var(--sand-100);
+    border-radius: var(--r-lg);
+    padding: 24px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  .anatomy .kv{
+    background: var(--surface);
+    border-radius: var(--r-md);
+    padding: 12px 14px;
+    border: 1px solid var(--sand-200);
+  }
+  .anatomy .kv .k{font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--sand-500); margin-bottom: 4px}
+  .anatomy .kv .v{font-size: 13px; color: var(--sand-900); font-family: ui-monospace, monospace}
+
+  /* Footer */
+  .foot{
+    margin-top: 96px;
+    padding-top: 32px;
+    border-top: 1px solid var(--sand-200);
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--sand-500);
+  }
+
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- =========================== HERO =========================== -->
+  <header class="hero">
+    <div class="hero-left">
+      <div class="eyebrow">Design System · v0.1</div>
+      <h1 class="hero-title">Rehlah<span class="ar">رحلة</span></h1>
+      <p class="hero-sub">A calm, grounded design language for cancer-care companionship. Sand-warm neutrals, journey-teal as the anchor, saffron for what matters today. Bilingual by default; built to feel like a steady hand, not a clinic.</p>
+      <dl class="hero-meta">
+        <div><dt>Type</dt><dd>Tajawal · Newsreader</dd></div>
+        <div><dt>Primary</dt><dd>Teal 700</dd></div>
+        <div><dt>Accent</dt><dd>Saffron 500</dd></div>
+        <div><dt>Grid</dt><dd>4 px base</dd></div>
+        <div><dt>Locales</dt><dd>عربي · English</dd></div>
+      </dl>
+    </div>
+    <div class="hero-right">
+      <div class="swatch-stack">
+        <div class="ss-1"></div><div class="ss-2"></div><div class="ss-3"></div><div class="ss-4"></div>
+        <div class="ss-7"></div><div class="ss-5"></div><div class="ss-8"></div><div class="ss-6"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- =========================== 01 PRINCIPLES =========================== -->
+  <section class="block">
+    <div class="block-head">
+      <span class="block-num">01</span>
+      <h2 class="block-title">Principles</h2>
+      <p class="block-desc">Four commitments the system enforces, so every screen agrees.</p>
+    </div>
+    <div class="foundations">
+      <div class="f-card">
+        <h4>Grounded, not clinical</h4>
+        <p class="t-body" style="font-size:14px">Warm sand neutrals and natural radii. No glossy gradients, no medical blue, no purple. The app should feel like a room, not a chart.</p>
+      </div>
+      <div class="f-card">
+        <h4>Journey before task</h4>
+        <p class="t-body" style="font-size:14px">Every screen answers "where am I in my journey?" before "what's due?". Phase, cycle, and day-of-cycle are first-class data.</p>
+      </div>
+      <div class="f-card">
+        <h4>Bilingual, not translated</h4>
+        <p class="t-body" style="font-size:14px">RTL is a starting condition, not an afterthought. Type, icons, motion direction and progress all mirror cleanly.</p>
+      </div>
+      <div class="f-card">
+        <h4>Quiet by default</h4>
+        <p class="t-body" style="font-size:14px">Color is reserved for state, not decoration. Saffron means "today matters". Clay means "needs your attention". Sage means "you did it".</p>
+      </div>
+      <div class="f-card">
+        <h4>Touch-first density</h4>
+        <p class="t-body" style="font-size:14px">44 pt minimum targets. Generous gaps. One primary action per screen — usually a check-in, sometimes a log.</p>
+      </div>
+      <div class="f-card">
+        <h4>Numbers earn their size</h4>
+        <p class="t-body" style="font-size:14px">Adherence, temperature, days-to-next: numbers get hero treatment with tabular figures so they're scannable at arm's length.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================== 02 COLOR =========================== -->
+  <section class="block">
+    <div class="block-head">
+      <span class="block-num">02</span>
+      <h2 class="block-title">Color</h2>
+      <p class="block-desc">Sand neutrals as the canvas. Teal as the journey. Saffron, sage, clay as the three things color is allowed to say.</p>
+    </div>
+
+    <h3 class="sub-head">Core palette</h3>
+    <div class="palette">
+      <div class="pal-card">
+        <div class="pal-swatch" style="background:var(--sand-50)"><span class="name dark">Sand 50</span></div>
+        <div class="pal-meta"><span class="hex">oklch(.985 .006 75)</span><span class="use">Page background</span></div>
+      </div>
+      <div class="pal-card">
+        <div class="pal-swatch" style="background:var(--sand-100)"><span class="name dark">Sand 100</span></div>
+        <div class="pal-meta"><span class="hex">oklch(.965 .010 75)</span><span class="use">Subtle surface, chips</span></div>
+      </div>
+      <div class="pal-card">
+        <div class="pal-swatch" style="background:var(--teal-700)"><span class="name">Teal 700</span></div>
+        <div class="pal-meta"><span class="hex">oklch(.380 .060 195)</span><span class="use">Primary, journey, CTAs</span></div>
+      </div>
+      <div class="pal-card">
+        <div class="pal-swatch" style="background:var(--saffron-500)"><span class="name dark">Saffron 500</span></div>
+        <div class="pal-meta"><span class="hex">oklch(.760 .130 75)</span><span class="use">FAB, milestones, "today"</span></div>
+      </div>
+      <div class="pal-card">
+        <div class="pal-swatch" style="background:var(--sand-900)"><span class="name">Ink 900</span></div>
+        <div class="pal-meta"><span class="hex">oklch(.205 .012 55)</span><span class="use">Primary text</span></div>
+      </div>
+    </div>
+
+    <h3 class="sub-head">State accents</h3>
+    <div class="palette" style="grid-template-columns: repeat(3, 1fr)">
+      <div class="pal-card">
+        <div class="pal-swatch" style="background:var(--sage-500)"><span class="name">Sage 500</span></div>
+        <div class="pal-meta"><span class="hex">oklch(.680 .080 150)</span><span class="use">Positive · taken · completed</span></div>
+      </div>
+      <div class="pal-card">
+        <div class="pal-swatch" style="background:var(--clay-500)"><span class="name">Clay 500</span></div>
+        <div class="pal-meta"><span class="hex">oklch(.650 .140 30)</span><span class="use">Alert · fever · missed dose</span></div>
+      </div>
+      <div class="pal-card">
+        <div class="pal-swatch" style="background:var(--sky-500)"><span class="name">Sky 500</span></div>
+        <div class="pal-meta"><span class="hex">oklch(.660 .080 230)</span><span class="use">Informational · neutral data</span></div>
+      </div>
+    </div>
+
+    <h3 class="sub-head">Sand ramp · 50–950</h3>
+    <div class="ramp">
+      <div style="background:var(--sand-50)">50</div>
+      <div style="background:var(--sand-100)">100</div>
+      <div style="background:var(--sand-200)">200</div>
+      <div style="background:var(--sand-300)">300</div>
+      <div style="background:var(--sand-400)" class="light">400</div>
+      <div style="background:var(--sand-500)" class="light">500</div>
+      <div style="background:var(--sand-700)" class="light">700</div>
+      <div style="background:var(--sand-900)" class="light">900</div>
+    </div>
+
+    <h3 class="sub-head">Teal ramp · 50–900</h3>
+    <div class="ramp">
+      <div style="background:var(--teal-50)">50</div>
+      <div style="background:var(--teal-100)">100</div>
+      <div style="background:var(--teal-200)">200</div>
+      <div style="background:var(--teal-500)" class="light">500</div>
+      <div style="background:var(--teal-600)" class="light">600</div>
+      <div style="background:var(--teal-700)" class="light">700</div>
+      <div style="background:var(--teal-900)" class="light">900</div>
+      <div style="background:var(--teal-900); opacity:.8" class="light">—</div>
+    </div>
+  </section>
+
+  <!-- =========================== 03 TYPE =========================== -->
+  <section class="block">
+    <div class="block-head">
+      <span class="block-num">03</span>
+      <h2 class="block-title">Typography</h2>
+      <p class="block-desc">One family carries both scripts: Tajawal 300–900. Newsreader appears only for editorial moments — milestone names, journal headers.</p>
+    </div>
+
+    <div class="type-grid">
+      <div class="type-meta">Display / Editorial<span class="px">Newsreader · 64 / 60</span></div>
+      <div class="type-sample"><p class="t-display">Your second cycle is underway.</p></div>
+
+      <div class="type-meta">Numeric Hero<span class="px">Tajawal 700 · 48 / 48</span></div>
+      <div class="type-sample"><p class="t-numeric">38.9 <span style="font-size:24px;color:var(--sand-500)">°C</span></p></div>
+
+      <div class="type-meta">Heading 1<span class="px">Tajawal 700 · 32 / 36</span></div>
+      <div class="type-sample"><p class="t-h1">Today's medication</p></div>
+
+      <div class="type-meta">Heading 2<span class="px">Tajawal 700 · 24 / 28</span></div>
+      <div class="type-sample"><p class="t-h2">How are you feeling today?</p></div>
+
+      <div class="type-meta">Heading 3<span class="px">Tajawal 500 · 18 / 24</span></div>
+      <div class="type-sample"><p class="t-h3">Lab results · 14 May</p></div>
+
+      <div class="type-meta">Body<span class="px">Tajawal 400 · 15 / 23</span></div>
+      <div class="type-sample"><p class="t-body">Your white-cell count has returned to the expected range for this stage of cycle 2. Your team has reviewed your latest labs and there is nothing that needs your attention today.</p></div>
+
+      <div class="type-meta">Small / Meta<span class="px">Tajawal 400 · 13 / 19</span></div>
+      <div class="type-sample"><p class="t-small">Last updated 12 hours ago · synced from Tawam</p></div>
+
+      <div class="type-meta">Eyebrow<span class="px">Tajawal 500 · 11 / 11 · 0.14em</span></div>
+      <div class="type-sample"><p class="t-eyebrow">Cycle 2 · Day 7</p></div>
+    </div>
+
+    <h3 class="sub-head">Bilingual specimen</h3>
+    <div class="bilingual">
+      <div class="ar-side" lang="ar">
+        <p class="t-eyebrow" style="color:var(--teal-700)">الدورة ٢ · اليوم ٧</p>
+        <h3 style="margin-top:8px">كيف تشعر اليوم؟</h3>
+        <p>عاد عدد كريات الدم البيضاء إلى النطاق المتوقع في هذه المرحلة من دورتك الثانية. راجع فريقك أحدث تحاليلك ولا يوجد ما يستدعي قلقك اليوم.</p>
+        <p style="font-family:var(--font-editorial); font-style:italic; color:var(--sand-900); font-size:18px; margin-top:16px">"رحلتك تسير وفق ما هو متوقع."</p>
+      </div>
+      <div class="en-side" lang="en">
+        <p class="t-eyebrow" style="color:var(--teal-700)">Cycle 2 · Day 7</p>
+        <h3 style="margin-top:8px">How are you feeling today?</h3>
+        <p>Your white-cell count has returned to the expected range for this stage of cycle 2. Your team has reviewed your latest labs and there is nothing that needs your attention today.</p>
+        <p style="font-family:var(--font-editorial); font-style:italic; color:var(--sand-900); font-size:18px; margin-top:16px">"Your journey is moving as expected."</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================== 04 SPACING / RADIUS / SHADOW =========================== -->
+  <section class="block">
+    <div class="block-head">
+      <span class="block-num">04</span>
+      <h2 class="block-title">Spacing · Radius · Elevation</h2>
+      <p class="block-desc">4 px base grid. Soft radii on cards, pill radii on actions. Three shadow steps, all warm-tinted.</p>
+    </div>
+
+    <div class="foundations">
+      <div class="f-card">
+        <h4>Spacing scale</h4>
+        <div class="spacing-row"><span class="label">s-1 · 4</span><span class="bar" style="width:4px"></span></div>
+        <div class="spacing-row"><span class="label">s-2 · 8</span><span class="bar" style="width:8px"></span></div>
+        <div class="spacing-row"><span class="label">s-3 · 12</span><span class="bar" style="width:12px"></span></div>
+        <div class="spacing-row"><span class="label">s-4 · 16</span><span class="bar" style="width:16px"></span></div>
+        <div class="spacing-row"><span class="label">s-5 · 20</span><span class="bar" style="width:20px"></span></div>
+        <div class="spacing-row"><span class="label">s-6 · 24</span><span class="bar" style="width:24px"></span></div>
+        <div class="spacing-row"><span class="label">s-7 · 32</span><span class="bar" style="width:32px"></span></div>
+        <div class="spacing-row"><span class="label">s-8 · 40</span><span class="bar" style="width:40px"></span></div>
+        <div class="spacing-row"><span class="label">s-9 · 56</span><span class="bar" style="width:56px"></span></div>
+        <div class="spacing-row"><span class="label">s-10 · 72</span><span class="bar" style="width:72px"></span></div>
+      </div>
+
+      <div class="f-card">
+        <h4>Corner radius</h4>
+        <div class="radius-row"><div class="box" style="border-radius:6px"></div><div class="meta"><b>r-xs · 6</b><br>Pills inside chips, tags</div></div>
+        <div class="radius-row"><div class="box" style="border-radius:10px"></div><div class="meta"><b>r-sm · 10</b><br>Inputs, small icons</div></div>
+        <div class="radius-row"><div class="box" style="border-radius:14px"></div><div class="meta"><b>r-md · 14</b><br>Inline rows, metric cards</div></div>
+        <div class="radius-row"><div class="box" style="border-radius:20px"></div><div class="meta"><b>r-lg · 20</b><br>Surface cards</div></div>
+        <div class="radius-row"><div class="box" style="border-radius:28px"></div><div class="meta"><b>r-xl · 28</b><br>Hero cards, sheets</div></div>
+        <div class="radius-row"><div class="box" style="border-radius:999px;width:120px"></div><div class="meta"><b>r-pill</b><br>Buttons, status pills</div></div>
+      </div>
+
+      <div class="f-card">
+        <h4>Elevation</h4>
+        <div class="elev-row" style="box-shadow:none; border:1px solid var(--sand-200)"><span>shadow-0 — flat with hairline</span></div>
+        <div class="elev-row" style="box-shadow:var(--shadow-1)"><span>shadow-1 — resting card</span></div>
+        <div class="elev-row" style="box-shadow:var(--shadow-2)"><span>shadow-2 — surface card</span></div>
+        <div class="elev-row" style="box-shadow:var(--shadow-3)"><span>shadow-3 — sheet, FAB, nav</span></div>
+
+        <h4 style="margin-top:24px">Motion</h4>
+        <p class="t-small">Default ease <code style="font-family:ui-monospace,monospace">cubic-bezier(.2,.8,.2,1)</code> at 180&nbsp;ms. Page transitions slide-up 240&nbsp;ms. Mirror on RTL.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================== 05 COMPONENTS =========================== -->
+  <section class="block">
+    <div class="block-head">
+      <span class="block-num">05</span>
+      <h2 class="block-title">Components</h2>
+      <p class="block-desc">Every primitive in Rehlah's current app, redrawn in the system. Drop-in replacements for HeroCard, SurfaceCard, ToolRow, AppBottomNav.</p>
+    </div>
+
+    <div class="comp-grid">
+
+      <!-- HeroCard -->
+      <div class="comp">
+        <div class="comp-head"><h3>HeroCard</h3><span class="tag">HeroCard()</span></div>
+        <p class="comp-note">The teal gradient block. Used once per screen, at the top, to anchor the screen's main number or status.</p>
+        <div class="comp-stage">
+          <div class="hero-card">
+            <div class="eyebrow">Cycle 2 · Day 7</div>
+            <h4 class="title">Your maximum today</h4>
+            <p class="sub">Recorded at 14:08, two hours ago</p>
+            <div class="stat">38.9<span class="stat-unit">°C</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SurfaceCard -->
+      <div class="comp">
+        <div class="comp-head"><h3>SurfaceCard</h3><span class="tag">SurfaceCard()</span></div>
+        <p class="comp-note">White card with shadow-2. The general-purpose container for lists, summaries, grouped rows.</p>
+        <div class="comp-stage">
+          <div class="surface-card">
+            <div class="row"><span class="k">Hemoglobin</span><span class="v">11.8 g/dL</span></div>
+            <div class="row"><span class="k">White cells</span><span class="v">3.4 ×10⁹/L</span></div>
+            <div class="row"><span class="k">Platelets</span><span class="v">182 ×10⁹/L</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ToolRow -->
+      <div class="comp">
+        <div class="comp-head"><h3>ToolRow</h3><span class="tag">ToolRow()</span></div>
+        <p class="comp-note">Icon + label + chevron. Used inside the Care Hub and Profile for navigation tiles.</p>
+        <div class="comp-stage" style="gap:8px">
+          <div class="tool-row">
+            <span class="ic"><svg viewBox="0 0 24 24" class="ico"><path d="M12 2v6m0 0l-3-3m3 3l3-3M5 13a7 7 0 0014 0"/></svg></span>
+            <div class="body"><div class="ttl">Lab results</div><div class="sub">Last drawn 12 May · all in range</div></div>
+            <span class="chev">›</span>
+          </div>
+          <div class="tool-row">
+            <span class="ic" style="background:var(--saffron-100); color:var(--saffron-700)"><svg viewBox="0 0 24 24" class="ico"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+            <div class="body"><div class="ttl">Appointments</div><div class="sub">Oncology · in 4 days</div></div>
+            <span class="chev">›</span>
+          </div>
+          <div class="tool-row">
+            <span class="ic" style="background:var(--sage-100); color:var(--sage-700)"><svg viewBox="0 0 24 24" class="ico"><path d="M4 7h16M6 7v12a2 2 0 002 2h8a2 2 0 002-2V7M9 7V5a3 3 0 016 0v2"/></svg></span>
+            <div class="body"><div class="ttl">Medications</div><div class="sub">6 of 8 taken today</div></div>
+            <span class="chev">›</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="comp">
+        <div class="comp-head"><h3>Buttons</h3><span class="tag">Button.*</span></div>
+        <p class="comp-note">Pill radius, 48 px tall. Primary teal for journey actions; saffron warm for "log today"; ghost teal for tertiary; secondary sand for cancels.</p>
+        <div class="comp-stage stage-row">
+          <button class="btn primary">Log my check-in</button>
+          <button class="btn warm">Take now</button>
+          <button class="btn secondary">Skip today</button>
+          <button class="btn ghost">View history</button>
+          <button class="btn primary sm">Save</button>
+          <button class="btn secondary sm">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Pills -->
+      <div class="comp">
+        <div class="comp-head"><h3>Status pills</h3><span class="tag">Pill(state)</span></div>
+        <p class="comp-note">Five states, one tone of voice. Used on appointments, meds, lab metrics, caregiver invites.</p>
+        <div class="comp-stage stage-row">
+          <span class="pill pos"><span class="dot"></span>Taken</span>
+          <span class="pill warn"><span class="dot"></span>Due now</span>
+          <span class="pill alert"><span class="dot"></span>Missed</span>
+          <span class="pill info"><span class="dot"></span>Scheduled</span>
+          <span class="pill neutral"><span class="dot"></span>Pending invite</span>
+        </div>
+      </div>
+
+      <!-- Mood -->
+      <div class="comp">
+        <div class="comp-head"><h3>Mood selector</h3><span class="tag">MoodRow()</span></div>
+        <p class="comp-note">Five-state mood row used on <code style="font-family:ui-monospace,monospace">/checkin</code>. Selected face fills teal — never purple. Faces are line-only icons, not emoji.</p>
+        <div class="comp-stage" style="padding-bottom: 44px">
+          <div class="mood-row">
+            <div class="mood"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 15c1.5-2 6.5-2 8 0"/><path d="M8 9.5h.01M16 9.5h.01"/></svg><span class="label">Down</span></div>
+            <div class="mood"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14c1.5-1 6.5-1 8 0"/><path d="M8 9.5h.01M16 9.5h.01"/></svg><span class="label">Low</span></div>
+            <div class="mood"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8.5 14h7"/><path d="M8 9.5h.01M16 9.5h.01"/></svg><span class="label">OK</span></div>
+            <div class="mood selected"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 13c1.5 2 6.5 2 8 0"/><path d="M8 9.5h.01M16 9.5h.01"/></svg><span class="label" style="color:var(--teal-700);font-weight:600">Good</span></div>
+            <div class="mood"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M7.5 12c1.5 3 7.5 3 9 0"/><path d="M8 9.5h.01M16 9.5h.01"/></svg><span class="label">Great</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slider -->
+      <div class="comp">
+        <div class="comp-head"><h3>Symptom slider</h3><span class="tag">SeveritySlider()</span></div>
+        <p class="comp-note">0–10 scale used on <code style="font-family:ui-monospace,monospace">/checkin/sliders</code>. Tick row uses tabular numerals.</p>
+        <div class="comp-stage">
+          <div class="slider">
+            <div class="meta"><span class="lbl">Fatigue</span><span class="val">4 / 10</span></div>
+            <div class="track"><div class="fill"></div><div class="thumb"></div></div>
+            <div class="ticks"><span>0</span><span>2</span><span>4</span><span>6</span><span>8</span><span>10</span></div>
+          </div>
+          <div class="slider">
+            <div class="meta"><span class="lbl">Nausea</span><span class="val">1 / 10</span></div>
+            <div class="track"><div class="fill" style="inset:0 90% 0 0"></div><div class="thumb" style="left:10%"></div></div>
+            <div class="ticks"><span>0</span><span>2</span><span>4</span><span>6</span><span>8</span><span>10</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Progress ring -->
+      <div class="comp">
+        <div class="comp-head"><h3>Adherence ring</h3><span class="tag">AdherenceRing()</span></div>
+        <p class="comp-note">Hero for <code style="font-family:ui-monospace,monospace">/care/medications</code>. Stroke 8 px, sage when ≥90%, saffron 60–89, clay below 60.</p>
+        <div class="comp-stage stage-row">
+          <div class="ring-wrap">
+            <div class="ring">
+              <svg width="96" height="96"><circle cx="48" cy="48" r="40" stroke="var(--sand-200)" stroke-width="8" fill="none"/><circle cx="48" cy="48" r="40" stroke="var(--sage-500)" stroke-width="8" fill="none" stroke-dasharray="251" stroke-dashoffset="63" stroke-linecap="round"/></svg>
+              <div class="num">6/8<small>today</small></div>
+            </div>
+            <div>
+              <div class="t-eyebrow">Adherence</div>
+              <div style="font-size:28px;font-weight:700;margin-top:2px">75%</div>
+              <div class="t-small">Two doses remaining today</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metric cards -->
+      <div class="comp">
+        <div class="comp-head"><h3>Metric card</h3><span class="tag">MetricCard()</span></div>
+        <p class="comp-note">For vitals and lab metrics. Icon · label · big tabular value · timestamp. Lives in grids of 2 or vertical stacks.</p>
+        <div class="comp-stage" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="metric">
+            <span class="ic" style="background:var(--clay-100); color:var(--clay-700)"><svg class="ico" viewBox="0 0 24 24"><path d="M12 2v13"/><circle cx="12" cy="18" r="3"/></svg></span>
+            <div class="body"><p class="label">Temperature</p><p class="val">38.9 °C</p><p class="when">2h ago</p></div>
+          </div>
+          <div class="metric">
+            <span class="ic" style="background:var(--sky-100); color:var(--sky-500)"><svg class="ico" viewBox="0 0 24 24"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg></span>
+            <div class="body"><p class="label">Heart rate</p><p class="val">82 bpm</p><p class="when">2h ago</p></div>
+          </div>
+          <div class="metric">
+            <span class="ic"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+            <div class="body"><p class="label">Oxygen</p><p class="val">98%</p><p class="when">2h ago</p></div>
+          </div>
+          <div class="metric">
+            <span class="ic" style="background:var(--sage-100); color:var(--sage-700)"><svg class="ico" viewBox="0 0 24 24"><path d="M4 18l5-5 4 4 7-9"/></svg></span>
+            <div class="body"><p class="label">Activity</p><p class="val">3,210 steps</p><p class="when">today</p></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <div class="comp">
+        <div class="comp-head"><h3>Timeline row</h3><span class="tag">Timeline.Item()</span></div>
+        <p class="comp-note">Replaces the stacked "Due now / Taken today" split. Status colors on the dot, time on the left, action chip on the right.</p>
+        <div class="comp-stage">
+          <div class="timeline">
+            <div class="tl-item taken">
+              <span class="tl-time">08:00</span>
+              <div class="tl-body"><div class="ttl">Anastrozole · 1 mg</div><div class="sub">Taken 08:04</div></div>
+              <span class="pill pos"><span class="dot"></span>Taken</span>
+            </div>
+            <div class="tl-item missed">
+              <span class="tl-time">13:00</span>
+              <div class="tl-body"><div class="ttl">Ondansetron · 8 mg</div><div class="sub">Missed</div></div>
+              <span class="pill alert"><span class="dot"></span>Missed</span>
+            </div>
+            <div class="tl-item next">
+              <span class="tl-time">17:00</span>
+              <div class="tl-body"><div class="ttl">Capecitabine · 1500 mg</div><div class="sub">Due in 45 min</div></div>
+              <span class="pill warn"><span class="dot"></span>Due soon</span>
+            </div>
+            <div class="tl-item">
+              <span class="tl-time">22:00</span>
+              <div class="tl-body"><div class="ttl">Capecitabine · 1500 mg</div><div class="sub">Scheduled</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phase banner -->
+      <div class="comp">
+        <div class="comp-head"><h3>Phase banner</h3><span class="tag">PhaseBanner()</span></div>
+        <p class="comp-note">Replaces the purple header. Persistent across most screens — tells the user where they are in the cycle without taking over the screen.</p>
+        <div class="comp-stage">
+          <div class="phase">
+            <div class="icon">2</div>
+            <div class="body">
+              <div class="lbl">Cycle 2 of 6</div>
+              <div class="ttl">Recovery week · Day 7</div>
+              <div class="sub">Nadir window expected in 3 days · vitals more important now</div>
+            </div>
+            <span class="pill warn" style="margin-inline-start:auto"><span class="dot"></span>Nadir soon</span>
+          </div>
+          <div class="phase" style="background: linear-gradient(100deg, var(--sage-100), var(--sand-100)); border-color: var(--sage-300)">
+            <div class="icon" style="background:var(--sage-500); color:white">✓</div>
+            <div class="body">
+              <div class="lbl" style="color:var(--sage-700)">Cycle 1 complete</div>
+              <div class="ttl">Recovery on track</div>
+              <div class="sub">All labs reviewed by your team</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Care strip -->
+      <div class="comp">
+        <div class="comp-head"><h3>Care team strip</h3><span class="tag">CareStrip()</span></div>
+        <p class="comp-note">Horizontal avatar list for the bottom of the Home screen. Initials when no photo. Role appears below the avatar.</p>
+        <div class="comp-stage" style="padding-bottom:30px">
+          <div class="care-strip">
+            <div class="avatar" style="background:var(--saffron-300); color:var(--saffron-700)">DA<span class="role">Dr. Aisha · Onc.</span></div>
+            <div class="avatar">NM<span class="role">Nour · Nurse</span></div>
+            <div class="avatar" style="background:var(--clay-100); color:var(--clay-700)">FT<span class="role">Fatima · Sister</span></div>
+            <div class="avatar" style="background:var(--sage-100); color:var(--sage-700)">RH<span class="role">Reem · Mentor</span></div>
+            <div class="avatar add">+<span class="role">Invite</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chips -->
+      <div class="comp">
+        <div class="comp-head"><h3>Chips</h3><span class="tag">Chip()</span></div>
+        <p class="comp-note">Topic filter for Connect tabs and symptom selection on check-in. Single-select fills teal; multi-select uses outline + sage check.</p>
+        <div class="comp-stage stage-row">
+          <span class="chip on">All</span>
+          <span class="chip">Fatigue</span>
+          <span class="chip">Nausea</span>
+          <span class="chip">Mood</span>
+          <span class="chip">Sleep</span>
+          <span class="chip">Appetite</span>
+          <span class="chip">Pain</span>
+        </div>
+      </div>
+
+      <!-- Bottom nav -->
+      <div class="comp full">
+        <div class="comp-head"><h3>Bottom nav + FAB</h3><span class="tag">AppBottomNav(checkInDone)</span></div>
+        <p class="comp-note">Five tabs: Today · Health · Connect · Care · Profile. Center FAB is the daily check-in shortcut; it turns sage once the check-in is logged (already wired in the Flutter build — keep it).</p>
+        <div class="comp-stage" style="background:var(--sand-50); padding:40px 24px 24px">
+          <div class="bnav">
+            <div class="tab active">
+              <svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z"/></svg>Today
+            </div>
+            <div class="tab">
+              <svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z"/></svg>Health
+            </div>
+            <div class="tab" style="visibility:hidden">spacer</div>
+            <div class="tab">
+              <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M21 11h-4M19 9v4"/></svg>Connect
+            </div>
+            <div class="tab">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></svg>Profile
+            </div>
+            <div class="fab done" title="Check-in complete">
+              <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-11"/></svg>
+            </div>
+          </div>
+          <div style="text-align:center;font-size:12px;color:var(--sand-500);margin-top:18px">FAB turns <b style="color:var(--sage-700)">sage</b> when today's check-in is complete. Saffron otherwise.</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- =========================== 06 PATTERNS =========================== -->
+  <section class="block">
+    <div class="block-head">
+      <span class="block-num">06</span>
+      <h2 class="block-title">Patterns in context</h2>
+      <p class="block-desc">Three Rehlah screens redrawn with the new tokens — including one in Arabic to prove the system is RTL-ready.</p>
+    </div>
+
+    <div class="pattern-grid">
+
+      <!-- Home -->
+      <div>
+        <div class="device">
+          <div class="screen">
+            <div class="topbar">
+              <div class="greet"><div class="hi">السلام عليكم</div><div class="name">Salma</div></div>
+              <div class="av">S</div>
+            </div>
+            <div class="phase">
+              <div class="icon">2</div>
+              <div class="body">
+                <div class="lbl">Cycle 2 of 6</div>
+                <div class="ttl">Day 7 · recovery</div>
+              </div>
+            </div>
+            <div class="hero-card">
+              <div class="eyebrow">Today's check-in</div>
+              <h4 class="title">How are you feeling?</h4>
+              <p class="sub" style="margin-bottom: 14px">Two minutes · helps your team</p>
+              <button class="btn warm sm" style="background:white; color:var(--teal-700)">Start check-in →</button>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px">
+              <div class="surface-card" style="padding:14px">
+                <div class="t-eyebrow">Meds</div>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+                  <div class="ring" style="width:48px;height:48px">
+                    <svg width="48" height="48"><circle cx="24" cy="24" r="20" stroke="var(--sand-200)" stroke-width="5" fill="none"/><circle cx="24" cy="24" r="20" stroke="var(--sage-500)" stroke-width="5" fill="none" stroke-dasharray="125" stroke-dashoffset="31" stroke-linecap="round" transform="rotate(-90 24 24)"/></svg>
+                  </div>
+                  <div><div style="font-weight:700;font-size:18px">6/8</div><div class="t-small" style="font-size:11px">today</div></div>
+                </div>
+              </div>
+              <div class="surface-card" style="padding:14px">
+                <div class="t-eyebrow">Vitals</div>
+                <div style="font-weight:700;font-size:20px;margin-top:6px">38.9°<span style="font-size:12px;color:var(--sand-500);font-weight:500"> max</span></div>
+                <div class="t-small" style="font-size:11px">2h ago · slight fever</div>
+              </div>
+            </div>
+            <div class="tool-row" style="padding:12px 14px">
+              <span class="ic" style="background:var(--saffron-100); color:var(--saffron-700)"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+              <div class="body"><div class="ttl">Oncology follow-up</div><div class="sub">Thu · in 4 days</div></div>
+              <span class="chev">›</span>
+            </div>
+          </div>
+        </div>
+        <div class="screen-cap"><b>Home · /</b>Phase banner + check-in card + meds/vitals row + next appointment</div>
+      </div>
+
+      <!-- Vitals -->
+      <div>
+        <div class="device">
+          <div class="screen">
+            <div class="topbar">
+              <div class="greet"><div class="hi" style="font-size:11px">‹ Back</div><div class="name" style="font-size:16px">Vitals</div></div>
+              <div class="av" style="background:var(--sand-100);color:var(--sand-500)">⋯</div>
+            </div>
+            <div class="hero-card">
+              <div class="eyebrow">My maximum today</div>
+              <div class="stat" style="margin-top:8px">38.9<span class="stat-unit">°C</span></div>
+              <p class="sub" style="margin-top:8px">Recorded 14:08 · slight fever range</p>
+            </div>
+            <div style="background:var(--surface); border-radius:var(--r-lg); padding:16px; box-shadow:var(--shadow-2)">
+              <div style="display:flex;justify-content:space-between;margin-bottom:12px">
+                <div class="t-eyebrow">Last 7 days</div>
+                <div class="t-small" style="color:var(--teal-700);font-weight:600">Day ›</div>
+              </div>
+              <svg viewBox="0 0 280 100" style="width:100%;height:90px">
+                <defs>
+                  <linearGradient id="g" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0" stop-color="oklch(.380 .060 195)" stop-opacity=".22"/>
+                    <stop offset="1" stop-color="oklch(.380 .060 195)" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <line x1="0" y1="50" x2="280" y2="50" stroke="var(--sand-200)" stroke-dasharray="2 4"/>
+                <path d="M10,60 L50,55 L90,52 L130,48 L170,35 L210,30 L250,20" fill="none" stroke="var(--teal-700)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M10,60 L50,55 L90,52 L130,48 L170,35 L210,30 L250,20 L250,100 L10,100 Z" fill="url(#g)"/>
+                <circle cx="250" cy="20" r="5" fill="var(--teal-700)" stroke="white" stroke-width="2"/>
+              </svg>
+            </div>
+            <div class="metric">
+              <span class="ic" style="background:var(--sky-100); color:var(--sky-500)"><svg class="ico" viewBox="0 0 24 24"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg></span>
+              <div class="body"><p class="label">Heart rate</p><p class="val">82 bpm</p></div>
+              <span class="pill pos"><span class="dot"></span>Normal</span>
+            </div>
+            <button class="btn warm" style="width:100%">＋ Record temperature</button>
+          </div>
+        </div>
+        <div class="screen-cap"><b>Vitals · /vitals</b>Stat hero · 7-day trend · current heart rate · primary log button</div>
+      </div>
+
+      <!-- Arabic check-in -->
+      <div>
+        <div class="device">
+          <div class="screen rtl" lang="ar">
+            <div class="topbar">
+              <div class="greet"><div class="hi" style="font-size:11px">› رجوع</div><div class="name" style="font-size:16px">تسجيل اليوم</div></div>
+              <div class="av" style="background:var(--sand-100);color:var(--sand-500)">⋯</div>
+            </div>
+            <p class="t-eyebrow" style="color:var(--teal-700)">الدورة ٢ · اليوم ٧</p>
+            <h2 class="t-h2" style="margin-top:-4px">كيف تشعرين اليوم؟</h2>
+            <div class="mood-row" style="margin-top:8px;padding-bottom:24px">
+              <div class="mood"><svg viewBox="0 0 24 24" style="stroke:var(--sand-700);stroke-width:1.6;fill:none"><circle cx="12" cy="12" r="9"/><path d="M8 15c1.5-2 6.5-2 8 0"/><path d="M8 9.5h.01M16 9.5h.01"/></svg></div>
+              <div class="mood"><svg viewBox="0 0 24 24" style="stroke:var(--sand-700);stroke-width:1.6;fill:none"><circle cx="12" cy="12" r="9"/><path d="M8 14c1.5-1 6.5-1 8 0"/><path d="M8 9.5h.01M16 9.5h.01"/></svg></div>
+              <div class="mood selected"><svg viewBox="0 0 24 24" style="stroke:white;stroke-width:1.6;fill:none"><circle cx="12" cy="12" r="9"/><path d="M8.5 14h7"/><path d="M8 9.5h.01M16 9.5h.01"/></svg></div>
+              <div class="mood"><svg viewBox="0 0 24 24" style="stroke:var(--sand-700);stroke-width:1.6;fill:none"><circle cx="12" cy="12" r="9"/><path d="M8 13c1.5 2 6.5 2 8 0"/><path d="M8 9.5h.01M16 9.5h.01"/></svg></div>
+              <div class="mood"><svg viewBox="0 0 24 24" style="stroke:var(--sand-700);stroke-width:1.6;fill:none"><circle cx="12" cy="12" r="9"/><path d="M7.5 12c1.5 3 7.5 3 9 0"/><path d="M8 9.5h.01M16 9.5h.01"/></svg></div>
+            </div>
+            <h3 class="t-h3" style="margin-top:4px">هل تشعرين بأعراض؟</h3>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              <span class="chip on">إرهاق</span>
+              <span class="chip">غثيان</span>
+              <span class="chip on">صداع</span>
+              <span class="chip">قشعريرة</span>
+              <span class="chip">ألم</span>
+              <span class="chip">قلة شهية</span>
+            </div>
+            <button class="btn primary" style="width:100%; margin-top:auto; margin-bottom:16px">حفظ التسجيل</button>
+          </div>
+        </div>
+        <div class="screen-cap"><b>Check-in · /checkin</b>Same components, mirrored. Arabic-first specimen.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =========================== 07 USAGE RULES =========================== -->
+  <section class="block">
+    <div class="block-head">
+      <span class="block-num">07</span>
+      <h2 class="block-title">Usage rules</h2>
+      <p class="block-desc">A short list of "do this, not that" so the system doesn't drift as more screens get built.</p>
+    </div>
+
+    <div class="foundations">
+      <div class="f-card">
+        <h4>Color rules</h4>
+        <p class="t-small" style="margin-bottom:8px">✓ Teal 700 for one primary action per screen.</p>
+        <p class="t-small" style="margin-bottom:8px">✓ Saffron for "today" — FAB, milestone, next appointment.</p>
+        <p class="t-small" style="margin-bottom:8px">✓ Sage / Clay reserved for state. Never decorative.</p>
+        <p class="t-small" style="margin-bottom:8px;color:var(--clay-700)">✗ No gradients except the HeroCard.</p>
+        <p class="t-small" style="color:var(--clay-700)">✗ No purple. Never. Anywhere.</p>
+      </div>
+      <div class="f-card">
+        <h4>Type rules</h4>
+        <p class="t-small" style="margin-bottom:8px">✓ One Newsreader moment per screen, max.</p>
+        <p class="t-small" style="margin-bottom:8px">✓ Tabular numerals on all values, doses, times.</p>
+        <p class="t-small" style="margin-bottom:8px">✓ Arabic numerals (٠١٢٣) for Arabic locale dates.</p>
+        <p class="t-small" style="color:var(--clay-700)">✗ Don't use Newsreader for buttons or labels.</p>
+      </div>
+      <div class="f-card">
+        <h4>Layout rules</h4>
+        <p class="t-small" style="margin-bottom:8px">✓ One HeroCard per screen, at the top.</p>
+        <p class="t-small" style="margin-bottom:8px">✓ One primary button per screen.</p>
+        <p class="t-small" style="margin-bottom:8px">✓ Phase banner above the fold on Home, Health, Care.</p>
+        <p class="t-small" style="color:var(--clay-700)">✗ Don't stack two coloured banners.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <span>Rehlah Design System · v0.1 · 17 May 2026</span>
+    <span>Tokens live in <code style="font-family:ui-monospace,monospace">:root</code> · Tajawal + Newsreader from Google Fonts</span>
+  </footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Rehlah · Home v2 — English & Arabic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&family=Newsreader:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  /* ============ Rehlah tokens ============ */
+  :root{
+    --sand-50:  oklch(0.985 0.006 75);
+    --sand-100: oklch(0.965 0.010 75);
+    --sand-200: oklch(0.930 0.014 75);
+    --sand-300: oklch(0.870 0.016 75);
+    --sand-400: oklch(0.720 0.014 70);
+    --sand-500: oklch(0.560 0.014 65);
+    --sand-700: oklch(0.360 0.014 60);
+    --sand-900: oklch(0.205 0.012 55);
+    --sand-950: oklch(0.140 0.010 50);
+    --surface:  #ffffff;
+
+    --teal-50:  oklch(0.965 0.018 195);
+    --teal-100: oklch(0.920 0.030 195);
+    --teal-200: oklch(0.840 0.045 195);
+    --teal-500: oklch(0.520 0.075 195);
+    --teal-600: oklch(0.450 0.070 195);
+    --teal-700: oklch(0.380 0.060 195);
+    --teal-900: oklch(0.245 0.040 195);
+
+    --saffron-100: oklch(0.955 0.030 75);
+    --saffron-300: oklch(0.860 0.090 75);
+    --saffron-500: oklch(0.760 0.130 75);
+    --saffron-700: oklch(0.580 0.115 60);
+
+    --sage-100: oklch(0.955 0.025 150);
+    --sage-300: oklch(0.860 0.060 150);
+    --sage-500: oklch(0.680 0.080 150);
+    --sage-700: oklch(0.450 0.065 150);
+
+    --clay-100: oklch(0.955 0.030 30);
+    --clay-300: oklch(0.860 0.080 30);
+    --clay-500: oklch(0.650 0.140 30);
+    --clay-700: oklch(0.480 0.115 30);
+
+    --font-sans: "Tajawal", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    --font-editorial: "Newsreader", Georgia, serif;
+  }
+
+  html, body { margin: 0; padding: 0; font-family: var(--font-sans); background: var(--sand-100); color: var(--sand-900); }
+
+  /* ============ Rehlah Home screen styles ============ */
+  .rh-screen{
+    width: 100%; height: 100%;
+    background: var(--sand-50);
+    display: flex; flex-direction: column;
+    position: relative;
+    font-size: 14px;
+    overflow: hidden;
+  }
+  .rh-scroll{
+    flex: 1;
+    overflow-y: auto;
+    padding: 56px 20px 130px;
+  }
+  .rh-scroll > * + * { margin-top: 16px; }
+
+  /* Greeting */
+  .rh-greet{
+    display: flex; align-items: center; justify-content: space-between;
+    padding-top: 8px;
+  }
+  .rh-hi{ font-size: 13px; color: var(--sand-500); font-weight: 400; }
+  .rh-name{ font-size: 22px; font-weight: 700; line-height: 1.1; letter-spacing: -.01em; margin-top: 2px; }
+  .rh-avatar{
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--teal-100); color: var(--teal-700);
+    display: grid; place-items: center;
+    font-weight: 700; font-size: 15px;
+  }
+
+  /* Eyebrow */
+  .rh-eyebrow{
+    font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--sand-500); font-weight: 500;
+  }
+  .rh-eyebrow-warm{ color: var(--saffron-700); }
+  .rh-eyebrow-onhero{ color: rgba(255,255,255,.75); }
+
+  /* Phase banner */
+  .rh-phase{
+    background: linear-gradient(100deg, var(--saffron-100), var(--sand-100));
+    border-radius: 16px;
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+    border: 1px solid var(--saffron-300);
+  }
+  .rh-phase-ic{
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--saffron-500); color: var(--sand-950);
+    display: grid; place-items: center;
+    font-weight: 700; font-size: 15px; flex-shrink: 0;
+  }
+  .rh-phase-body{ flex: 1; min-width: 0; }
+  .rh-phase-ttl{ font-size: 14px; font-weight: 700; margin-top: 2px; }
+  .rh-phase-sub{ font-size: 11px; color: var(--sand-700); margin-top: 1px; }
+
+  /* Pills */
+  .rh-pill{
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 9px; border-radius: 999px;
+    font-size: 10.5px; font-weight: 500; line-height: 1;
+    height: 22px; flex-shrink: 0;
+  }
+  .rh-pill .rh-dot{ width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+  .rh-pill-warn{ background: var(--saffron-100); color: var(--saffron-700); }
+  .rh-pill-pos{ background: var(--sage-100); color: var(--sage-700); }
+  .rh-pill-alert{ background: var(--clay-100); color: var(--clay-700); }
+
+  /* HeroCard */
+  .rh-hero{
+    background: linear-gradient(135deg, var(--teal-700) 0%, var(--teal-600) 100%);
+    color: white;
+    border-radius: 24px;
+    padding: 20px 20px 22px;
+    position: relative;
+    overflow: hidden;
+  }
+  .rh-hero-bloom{
+    position: absolute;
+    width: 200px; height: 200px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.08);
+    top: -70px; right: -70px;
+  }
+  [dir="rtl"] .rh-hero-bloom{ right: auto; left: -70px; }
+  .rh-hero-ttl{ font-size: 22px; font-weight: 700; margin: 4px 0 8px; letter-spacing: -.01em; position: relative; }
+  .rh-hero-sub{ font-size: 13px; color: rgba(255,255,255,.78); margin: 0 0 16px; line-height: 1.5; position: relative; }
+  .rh-btn-warm{
+    height: 40px; padding: 0 18px;
+    border: none; cursor: pointer;
+    border-radius: 999px;
+    background: var(--saffron-500); color: var(--sand-950);
+    font-family: inherit; font-weight: 500; font-size: 14px;
+    display: inline-flex; align-items: center; gap: 8px;
+    position: relative;
+  }
+  [dir="rtl"] .rh-btn-warm svg{ transform: scaleX(-1); }
+
+  /* Row 2 cards */
+  .rh-row-2{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .rh-card{
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 14px;
+    box-shadow: 0 1px 2px rgba(40,30,20,.04), 0 4px 12px rgba(40,30,20,.04);
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .rh-card-head{ display: flex; align-items: center; gap: 8px; }
+  .rh-card-ic{
+    width: 26px; height: 26px; border-radius: 8px;
+    display: grid; place-items: center; flex-shrink: 0;
+  }
+  .rh-ic-sage{ background: var(--sage-100); color: var(--sage-700); }
+  .rh-ic-clay{ background: var(--clay-100); color: var(--clay-700); }
+  .rh-card-sub{ font-size: 11px; color: var(--sand-500); }
+
+  .rh-meds-body{ display: flex; align-items: center; gap: 10px; }
+  .rh-ring{ position: relative; width: 52px; height: 52px; flex-shrink: 0; }
+  .rh-ring-num{
+    position: absolute; inset: 0; display: grid; place-items: center;
+    font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums;
+  }
+  .rh-meds-meta{ flex: 1; min-width: 0; }
+  .rh-num{
+    font-size: 18px; font-weight: 700;
+    font-variant-numeric: tabular-nums; line-height: 1.1;
+    letter-spacing: -.01em;
+  }
+  .rh-num-lg{ font-size: 28px; }
+  .rh-num-unit{ font-size: 11px; color: var(--sand-500); font-weight: 500; margin-left: 4px; }
+  [dir="rtl"] .rh-num-unit{ margin-left: 0; margin-right: 4px; }
+
+  .rh-vitals-body{ display: flex; flex-direction: column; gap: 4px; }
+  .rh-spark{ width: 100%; height: 28px; margin: 2px 0 -2px; }
+  [dir="rtl"] .rh-spark{ transform: scaleX(-1); }
+
+  /* Appointment */
+  .rh-appt{
+    background: var(--surface);
+    border-radius: 16px;
+    padding: 14px;
+    box-shadow: 0 1px 2px rgba(40,30,20,.04), 0 4px 12px rgba(40,30,20,.04);
+    display: flex; gap: 14px; align-items: stretch;
+  }
+  .rh-appt-date{
+    width: 50px;
+    background: var(--saffron-100);
+    border-radius: 12px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 8px 4px;
+    flex-shrink: 0;
+  }
+  .rh-appt-day{ font-size: 22px; font-weight: 700; line-height: 1; color: var(--saffron-700); font-variant-numeric: tabular-nums; }
+  .rh-appt-mon{ font-size: 10px; letter-spacing: .12em; color: var(--saffron-700); margin-top: 4px; font-weight: 500; }
+  .rh-appt-body{ flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .rh-appt-ttl{ font-size: 14px; font-weight: 700; margin-top: 2px; }
+  .rh-appt-meta{ font-size: 11px; color: var(--sand-500); margin-bottom: 6px; }
+  .rh-btn-ghost{
+    align-self: flex-start;
+    background: transparent;
+    border: 1px solid var(--teal-200);
+    color: var(--teal-700);
+    border-radius: 999px;
+    height: 28px;
+    padding: 0 12px;
+    font-family: inherit; font-weight: 500; font-size: 12px;
+    display: inline-flex; align-items: center; gap: 6px;
+    cursor: pointer;
+  }
+
+  /* Ask Rehlah */
+  .rh-ask{
+    background: var(--sand-100);
+    border: 1px solid var(--sand-200);
+    border-radius: 16px;
+    padding: 12px 14px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .rh-ask-ic{
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--teal-700); color: white;
+    display: grid; place-items: center; flex-shrink: 0;
+  }
+  .rh-ask-body{ flex: 1; min-width: 0; }
+  .rh-ask-body .rh-eyebrow.rh-eyebrow-onhero{ color: var(--teal-700); }
+  .rh-ask-ttl{ font-size: 13px; font-weight: 500; margin-top: 2px; color: var(--sand-900); }
+  .rh-ask svg{ color: var(--sand-400); }
+
+  /* Care team */
+  .rh-team{ display: flex; flex-direction: column; gap: 14px; padding-top: 4px; }
+  .rh-team-head{ display: flex; align-items: center; justify-content: space-between; }
+  .rh-team-cta{ font-size: 12px; color: var(--teal-700); font-weight: 500; }
+  .rh-team-row{ display: flex; gap: 12px; }
+  .rh-av{
+    width: 48px; height: 48px; border-radius: 50%;
+    display: grid; place-items: center;
+    font-weight: 700; font-size: 14px;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .rh-av span{
+    position: absolute;
+    bottom: -16px; left: 50%; transform: translateX(-50%);
+    font-size: 9.5px; color: var(--sand-500); font-weight: 500;
+    white-space: nowrap;
+  }
+  .rh-av-teal{ background: var(--teal-100); color: var(--teal-700); }
+  .rh-av-saffron{ background: var(--saffron-300); color: var(--saffron-700); }
+  .rh-av-clay{ background: var(--clay-100); color: var(--clay-700); }
+  .rh-av-sage{ background: var(--sage-100); color: var(--sage-700); }
+  .rh-av-add{ background: var(--sand-100); color: var(--sand-500); border: 1.5px dashed var(--sand-300); }
+
+  /* Bottom nav */
+  .rh-nav-wrap{
+    position: absolute;
+    bottom: 38px; left: 16px; right: 16px;
+    pointer-events: none;
+  }
+  .rh-nav{
+    background: var(--surface);
+    border-radius: 24px;
+    box-shadow: 0 8px 24px rgba(40,30,20,.10), 0 2px 6px rgba(40,30,20,.06);
+    padding: 8px 10px;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 2px;
+    position: relative;
+    pointer-events: auto;
+  }
+  .rh-tab{
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 6px 4px;
+    color: var(--sand-500);
+    font-size: 9.5px; font-weight: 500;
+    border-radius: 12px;
+  }
+  .rh-tab-on{ color: var(--teal-700); }
+  .rh-tab-spacer{ visibility: hidden; }
+  .rh-fab{
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: var(--sage-500);
+    color: white;
+    display: grid; place-items: center;
+    box-shadow: 0 6px 16px rgba(40,30,20,.15);
+    position: absolute;
+    top: -22px; left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid var(--sand-50);
+  }
+
+  /* Hide system scrollbar inside the iPhone */
+  .rh-scroll::-webkit-scrollbar{ display: none; }
+
+</style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<template id="__bundler_thumbnail">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+    <rect width="200" height="200" fill="oklch(0.965 0.010 75)"/>
+    <rect x="60" y="40" width="80" height="120" rx="16" fill="oklch(0.380 0.060 195)"/>
+    <text x="100" y="115" font-family="serif" font-size="48" fill="oklch(0.760 0.130 75)" text-anchor="middle">ر</text>
+  </svg>
+</template>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="home-screen.jsx"></script>
+
+<script type="text/babel">
+const { DesignCanvas, DCSection, DCArtboard } = window;
+
+function App() {
+  return (
+    <DesignCanvas title="Rehlah · Home v2" subtitle="The check-in card sits front and centre. Phase banner anchors every visit in the journey. Bottom-right shows the saffron 'today' action via the appointment date chip and FAB. Same components, mirrored cleanly in Arabic.">
+      <DCSection id="home" title="Home screen — bilingual">
+        <DCArtboard id="home-en" label="English (LTR)" width={402} height={874}>
+          <IOSDevice width={402} height={874}>
+            <HomeScreen lang="en" />
+          </IOSDevice>
+        </DCArtboard>
+
+        <DCArtboard id="home-ar" label="عربي (RTL)" width={402} height={874}>
+          <IOSDevice width={402} height={874}>
+            <HomeScreen lang="ar" />
+          </IOSDevice>
+        </DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+
+</body>
+</html>
