@@ -1,6 +1,8 @@
 # Environment variables — never commit real keys
 .env
 env
+# Allow the bundled web asset (Supabase public key only, no Anthropic key)
+!docs/app/assets/env
 .claude/
 
 # Miscellaneous
