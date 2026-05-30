@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../theme/rehlah_theme.dart';
 import '../../../../core/utils/user_session.dart';
 import '../../../../core/utils/protocols.dart';
+import '../../../../core/services/supabase_service.dart';
 
 class CheckInScreen extends StatefulWidget {
   const CheckInScreen({super.key});
@@ -19,6 +20,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
   bool? _interferenceAnswer;
   final Map<String, double> _scores = {};
   final TextEditingController _notesCtrl = TextEditingController();
+  late final bool _isEditing;
 
   static const _moodEmojis = ['😣', '😔', '😐', '🙂', '😊'];
   static const _moodLabels = ['Awful', 'Low', 'Okay', 'Good', 'Great'];
@@ -26,6 +28,8 @@ class _CheckInScreenState extends State<CheckInScreen> {
   @override
   void initState() {
     super.initState();
+    _isEditing = _session.checkedInToday;
+
     if (_session.isMonitoring) {
       _primarySymptoms = _session.isScanxietyPeriod
           ? MonitoringSymptomLibrary.scanxietySymptoms
@@ -35,6 +39,19 @@ class _CheckInScreenState extends State<CheckInScreen> {
     }
     for (final s in _primarySymptoms) {
       _scores[s.key] = 0.0;
+    }
+
+    if (_isEditing && _session.moodEmoji.isNotEmpty) {
+      final idx = _moodEmojis.indexOf(_session.moodEmoji);
+      if (idx >= 0) _moodIndex = idx;
+      for (final key in _scores.keys) {
+        final v = _session.symptomScores[key];
+        if (v != null) _scores[key] = v;
+      }
+      _notesCtrl.text = _session.checkInNote;
+      if (_session.interferenceAnswers.containsKey('general')) {
+        _interferenceAnswer = _session.interferenceAnswers['general'];
+      }
     }
   }
 
@@ -92,6 +109,17 @@ class _CheckInScreenState extends State<CheckInScreen> {
     _session.checkInNote = _notesCtrl.text.trim();
     _session.lastCheckIn = DateTime.now();
     _session.saveCheckIn();
+    if (_session.supabasePatientId != null) {
+      SupabaseService.saveCheckin(_session.supabasePatientId!, {
+        'mood':       _moodEmojis[_moodIndex!],
+        'mood_score': _moodIndex,
+        'fatigue':    _scores['fatigue'] ?? 0,
+        'pain':       _scores['pain'] ?? 0,
+        'nausea':     _scores['nausea'] ?? 0,
+        'fever':      _scores['fever'] ?? 0,
+        'notes':      _notesCtrl.text.trim(),
+      });
+    }
     context.go('/checkin/success');
   }
 
@@ -111,9 +139,9 @@ class _CheckInScreenState extends State<CheckInScreen> {
               const SizedBox(height: 12),
               _moodPicker(),
               _sectionHead('Symptoms'),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-                child: const Text('Rate each from 0 (none) to 10 (worst)',
+              const Padding(
+                padding: EdgeInsets.fromLTRB(20, 4, 20, 0),
+                child: Text('Rate each from 0 (none) to 10 (worst)',
                   style: TextStyle(fontSize: 11, color: RColors.sand500)),
               ),
               const SizedBox(height: 10),
@@ -197,7 +225,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
           ),
         ),
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(_greeting,
+          Text(_isEditing ? 'Update today\'s check-in' : _greeting,
             style: const TextStyle(
               fontSize: 20, fontWeight: FontWeight.w700,
               color: Colors.white, letterSpacing: -0.2, height: 1.2)),
@@ -342,11 +370,11 @@ class _CheckInScreenState extends State<CheckInScreen> {
             },
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 4),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
+            children: [
               Text('0', style: TextStyle(fontSize: 9, color: RColors.sand400)),
               Text('5', style: TextStyle(fontSize: 9, color: RColors.sand400)),
               Text('10', style: TextStyle(fontSize: 9, color: RColors.sand400)),
@@ -379,11 +407,11 @@ class _CheckInScreenState extends State<CheckInScreen> {
                 color: RColors.sand950),
           ),
           const SizedBox(height: 2),
-          Align(
+          const Align(
             alignment: Alignment.centerRight,
             child: Text(
               'هل يمنعكِ هذا من ممارسة أنشطتكِ العادية اليوم؟',
-              style: const TextStyle(fontSize: 11, color: RColors.plum500),
+              style: TextStyle(fontSize: 11, color: RColors.plum500),
             ),
           ),
           const SizedBox(height: 10),
@@ -465,7 +493,7 @@ class _CheckInScreenState extends State<CheckInScreen> {
             color: _canSubmit ? RColors.teal700 : RColors.sand200,
             borderRadius: RRadius.pillBR,
           ),
-          child: Center(child: Text('Log check-in',
+          child: Center(child: Text(_isEditing ? 'Update check-in' : 'Log check-in',
             style: TextStyle(
               fontSize: 15, fontWeight: FontWeight.w600,
               color: _canSubmit ? Colors.white : RColors.sand400))),

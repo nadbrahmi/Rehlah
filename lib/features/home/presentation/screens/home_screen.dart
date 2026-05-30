@@ -288,7 +288,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
     );
   }
-
   // ── Meds + Vitals 2-column row ─────────────────────────────────────────────
   Widget _buildMedsVitalsRow(BuildContext context, UserSession session) {
     session.initDefaultLabs();
@@ -319,7 +318,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             onTap: () => context.push('/care/medications'),
             child: Container(
               padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: RColors.surface,
                 borderRadius: RRadius.lgBR,
                 boxShadow: RShadow.shadow2,
@@ -328,7 +327,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 Row(children: [
                   Container(
                     width: 30, height: 30,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: RColors.sage100,
                       borderRadius: RRadius.smBR,
                     ),
@@ -383,7 +382,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             onTap: () => context.push('/vitals'),
             child: Container(
               padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: RColors.surface,
                 borderRadius: RRadius.lgBR,
                 boxShadow: RShadow.shadow2,
@@ -436,10 +435,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       Container(
         margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: RColors.clay100,
           borderRadius: RRadius.lgBR,
-          border: const Border(left: BorderSide(color: RColors.clay500, width: 3)),
+          border: Border(left: BorderSide(color: RColors.clay500, width: 3)),
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(
@@ -690,7 +689,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 1),
-                        decoration: BoxDecoration(
+                        decoration: const BoxDecoration(
                           color: RColors.sage100,
                           borderRadius: RRadius.pillBR),
                         child: Text('🎉 $milestone',
@@ -732,7 +731,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       child: Container(
         margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: RColors.surface,
           borderRadius: RRadius.lgBR,
           boxShadow: RShadow.shadow1,
@@ -740,7 +739,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         child: Row(children: [
           Container(
             width: 40, height: 40,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: RColors.plum100,
               borderRadius: RRadius.smBR),
             child: const Center(
@@ -851,7 +850,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               d.hasData
                   ? Text(d.emoji, style: const TextStyle(fontSize: 15))
                   : isToday
-                      ? _DashedCircle(
+                      ? const _DashedCircle(
                           size: 22,
                           color: RColors.teal700,
                           child: Text('+',
@@ -866,7 +865,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: RColors.sand200, width: 0.5)),
-                          child: Center(child: Text('·',
+                          child: const Center(child: Text('·',
                             style: TextStyle(
                               fontSize: 14,
                               color: RColors.sand400)))),
@@ -971,7 +970,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       child: Container(
         margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
         padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: RColors.surface,
           borderRadius: RRadius.lgBR,
           boxShadow: RShadow.shadow2,
@@ -1015,7 +1014,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           const SizedBox(width: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: RColors.saffron100,
               borderRadius: RRadius.pillBR,
             ),
@@ -1213,7 +1212,7 @@ class _DashedCirclePainter extends CustomPainter {
     const dashAngle = 2 * math.pi / dashCount;
     for (int i = 0; i < dashCount; i++) {
       final startAngle = i * dashAngle;
-      final sweepAngle = dashAngle * (1 - gapRatio);
+      const sweepAngle = dashAngle * (1 - gapRatio);
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: radius),
         startAngle, sweepAngle, false, paint);

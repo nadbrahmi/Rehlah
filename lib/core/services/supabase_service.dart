@@ -25,18 +25,28 @@ class SupabaseService {
   // ── Invite code ─────────────────────────────────────────────────────────────
 
   /// Looks up a patient by invite code.
-  /// Returns null if not found, expired, already used, or Supabase unavailable.
+  /// First tries pending+unexpired (first-time activation). If not found,
+  /// falls back to any matching code (re-login after clearing app data).
   static Future<Map<String, dynamic>?> validateInviteCode(String code) async {
     if (!isAvailable) return null;
+    final upper = code.trim().toUpperCase();
     try {
-      final response = await _client
+      // First-time activation path
+      final fresh = await _client
           .from('patients')
           .select()
-          .eq('invite_code', code.trim().toUpperCase())
+          .eq('invite_code', upper)
           .eq('invite_status', 'pending')
           .gt('invite_expires_at', DateTime.now().toIso8601String())
           .maybeSingle();
-      return response;
+      if (fresh != null) return fresh;
+
+      // Re-login path — code was already activated on a previous device/install
+      return await _client
+          .from('patients')
+          .select()
+          .eq('invite_code', upper)
+          .maybeSingle();
     } catch (_) {
       return null;
     }
@@ -135,6 +145,14 @@ class SupabaseService {
       String patientId, Map<String, dynamic> data) async {
     if (!isAvailable) return;
     try {
+      final now = DateTime.now();
+      final dayStart = DateTime.utc(now.year, now.month, now.day);
+      final dayEnd   = dayStart.add(const Duration(days: 1));
+      await _client.from('checkins')
+          .delete()
+          .eq('patient_id', patientId)
+          .gte('created_at', dayStart.toIso8601String())
+          .lt('created_at', dayEnd.toIso8601String());
       await _client.from('checkins').insert({
         'patient_id': patientId,
         ...data,
@@ -156,6 +174,9 @@ class SupabaseService {
 
     _populateSession(data, meds, apts, labs);
     UserSession().initCheckinHistoryFromData(checkins);
+    UserSession().initCheckInHistoryTyped(checkins);
+    await UserSession().loadVitalsFromPrefs();
+    await UserSession().loadCycleDataFromPrefs();
 
     // Cache for offline recovery — fire-and-forget, never blocks
     try {
@@ -184,6 +205,9 @@ class SupabaseService {
 
       _populateSession(data, meds, apts, labs);
       UserSession().initCheckinHistoryFromData(checkins);
+      UserSession().initCheckInHistoryTyped(checkins);
+      await UserSession().loadVitalsFromPrefs();
+      await UserSession().loadCycleDataFromPrefs();
       return true;
     } catch (_) {
       return false;

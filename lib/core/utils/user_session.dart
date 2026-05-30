@@ -1,6 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'models.dart';
 import 'protocols.dart';
 
@@ -91,6 +93,96 @@ class UserSession extends ChangeNotifier {
   // ── Supabase patient link ─────────────────────────────────────────────────
   String? supabasePatientId;
   DateTime? cycleStartDate;
+
+  // ── Local persistence keys (vitals + monitoring cycle supplement) ─────────
+  static const _kVitalsCache = 'rehlah_vitals';
+  static const _kCycleCache  = 'rehlah_cycle';
+
+  Future<void> _saveVitalsCache() async {
+    if (supabasePatientId == null) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_kVitalsCache,
+          jsonEncode(_vitals.map((v) => v.toJson()).toList()));
+    } catch (_) {}
+  }
+
+  Future<void> loadVitalsFromPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_kVitalsCache);
+      if (raw == null) return;
+      final list = jsonDecode(raw) as List<dynamic>;
+      _vitals.clear();
+      for (final item in list) {
+        final v = VitalRecord.fromJson(item as Map<String, dynamic>);
+        if (v != null) _vitals.add(v);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _saveCycleDataCache() async {
+    if (supabasePatientId == null) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_kCycleCache, jsonEncode({
+        'menstrual_status': _menstrualStatus,
+        'last_period_date': _lastPeriodDate?.toIso8601String(),
+        'cycle_length':     _cycleLength,
+      }));
+    } catch (_) {}
+  }
+
+  Future<void> loadCycleDataFromPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_kCycleCache);
+      if (raw == null) return;
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      _menstrualStatus = (data['menstrual_status'] as String?) ?? 'unknown';
+      final lpd = data['last_period_date'] as String?;
+      _lastPeriodDate = lpd != null ? DateTime.tryParse(lpd) : null;
+      _cycleLength = (data['cycle_length'] as int?) ?? 28;
+    } catch (_) {}
+  }
+
+  /// Converts raw Supabase checkin rows into typed [CheckInRecord] objects
+  /// and loads them into [_history] so streak/mood strip/FAB colour work
+  /// correctly after a restart.
+  void initCheckInHistoryTyped(List<Map<String, dynamic>> rows) {
+    _history.clear();
+    const moodLabels = ['Awful', 'Low', 'Okay', 'Good', 'Great'];
+    for (final row in rows.reversed) {
+      final createdAt = row['created_at'] as String?;
+      if (createdAt == null) continue;
+      final date = DateTime.tryParse(createdAt);
+      if (date == null) continue;
+      final scoreIdx = (row['mood_score'] as int?) ?? 2;
+      _history.add(CheckInRecord(
+        date: date,
+        moodEmoji: (row['mood'] as String?) ?? '😐',
+        moodLabel: scoreIdx >= 0 && scoreIdx < moodLabels.length
+            ? moodLabels[scoreIdx] : 'Okay',
+        symptomScores: {
+          if ((row['fatigue'] as num?) != null)
+            'fatigue': (row['fatigue'] as num).toDouble(),
+          if ((row['pain'] as num?) != null)
+            'pain': (row['pain'] as num).toDouble(),
+          if ((row['nausea'] as num?) != null)
+            'nausea': (row['nausea'] as num).toDouble(),
+          if ((row['fever'] as num?) != null)
+            'fever': (row['fever'] as num).toDouble(),
+        },
+        interferenceAnswers: {},
+        note: (row['notes'] as String?) ?? '',
+        dayInCycle: 0,
+        cycle: 0,
+      ));
+    }
+    if (_history.isNotEmpty) {
+      lastCheckIn = _history.last.date;
+    }
+  }
 
   // ── Computed phase ────────────────────────────────────────────────────────
   ChemoPhase get currentPhase => ProtocolResolver.resolve(
@@ -314,9 +406,18 @@ class UserSession extends ChangeNotifier {
 
   // ── Monitoring & Surveillance ─────────────────────────────────────────────
   DateTime? treatmentEndDate;
-  String menstrualStatus = 'unknown';
-  DateTime? lastPeriodDate;
-  int cycleLength = 28;
+
+  String _menstrualStatus = 'unknown';
+  String get menstrualStatus => _menstrualStatus;
+  set menstrualStatus(String v) { _menstrualStatus = v; _saveCycleDataCache(); }
+
+  DateTime? _lastPeriodDate;
+  DateTime? get lastPeriodDate => _lastPeriodDate;
+  set lastPeriodDate(DateTime? v) { _lastPeriodDate = v; _saveCycleDataCache(); }
+
+  int _cycleLength = 28;
+  int get cycleLength => _cycleLength;
+  set cycleLength(int v) { _cycleLength = v; _saveCycleDataCache(); }
   final List<ControlRecord> _controls = [];
 
   List<ControlRecord> get controls => List.unmodifiable(_controls);
@@ -635,10 +736,10 @@ class UserSession extends ChangeNotifier {
           emoji: '💊', category: 'hormone_therapy',
           startDate: tamoxStart,
           totalSupply: 30),
-        Medication(id: 'med2', name: 'Vitamin D 1000 IU',
+        const Medication(id: 'med2', name: 'Vitamin D 1000 IU',
           dose: '1 capsule', frequency: 'Daily · With food',
           emoji: '🌤️', category: 'supplement'),
-        Medication(id: 'med3', name: 'Calcium 500mg',
+        const Medication(id: 'med3', name: 'Calcium 500mg',
           dose: '1 tablet', frequency: 'Twice daily',
           emoji: '🦴', category: 'supplement'),
       ]);
@@ -694,7 +795,7 @@ class UserSession extends ChangeNotifier {
   // Remaining doses for a medication (computed from pack size minus taken count)
   int? remainingDoses(String medId) {
     final med = _medications.firstWhere((m) => m.id == medId,
-        orElse: () => Medication(id: '', name: '', dose: '',
+        orElse: () => const Medication(id: '', name: '', dose: '',
             frequency: '', emoji: ''));
     if (med.totalSupply == null) return null;
     final taken = _medsAdherenceCount[medId] ?? 0;
@@ -714,7 +815,7 @@ class UserSession extends ChangeNotifier {
   int? daysRemainingForMed(String medId) {
     final rem = remainingDoses(medId);
     final med = _medications.firstWhere((m) => m.id == medId,
-        orElse: () => Medication(id: '', name: '', dose: '',
+        orElse: () => const Medication(id: '', name: '', dose: '',
             frequency: '', emoji: ''));
     if (rem == null) return null;
     return (rem / med.dosesPerDay.toDouble()).floor();
@@ -783,6 +884,7 @@ class UserSession extends ChangeNotifier {
 
   void recordVital(VitalRecord record) {
     _vitals.add(record);
+    _saveVitalsCache();
     _saveCount++;
     notifyListeners();
   }
@@ -901,4 +1003,24 @@ class VitalRecord {
   bool get isFever    => temperatureCelsius >= 38.0;
   bool get isHighFever => temperatureCelsius >= 38.5;
   bool get isLowTemp  => temperatureCelsius < 36.0;
+
+  Map<String, dynamic> toJson() => {
+    'at':    recordedAt.toIso8601String(),
+    'temp':  temperatureCelsius,
+    'pulse': pulse,
+    'o2':    oxygenSaturation,
+  };
+
+  static VitalRecord? fromJson(Map<String, dynamic> j) {
+    try {
+      return VitalRecord(
+        recordedAt: DateTime.parse(j['at'] as String),
+        temperatureCelsius: (j['temp'] as num).toDouble(),
+        pulse: j['pulse'] as int?,
+        oxygenSaturation: j['o2'] as int?,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
 }

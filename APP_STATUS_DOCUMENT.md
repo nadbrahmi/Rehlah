@@ -1,6 +1,6 @@
 # Rehlah · رحلة — App Status Document
-**Version:** 1.8  
-**Last Updated:** 2026-05-23  
+**Version:** 1.9  
+**Last Updated:** 2026-05-26  
 **Branch:** main
 
 ---
@@ -161,6 +161,7 @@
 - ✅ Prep report exports full 6-section clinical PDF (print + share)
 - ✅ Flutter web build (v1.7) deployed to GitHub Pages at `/Rehlah/app/`
 - ✅ Web form → app end-to-end flow verified: DB defaults handle `invite_status` and `invite_expires_at` automatically; no web form changes needed
+- ✅ Blank-screen root causes resolved: `.nojekyll`, local CanvasKit (`canvasKitBaseUrl`), and committed `docs/app/assets/env`
 
 ---
 
@@ -176,6 +177,7 @@
 | No Supabase auth (email/password) | Low | App uses invite codes only; no password reset or account management |
 | Windows VS toolchain warning | Info | "Unable to find suitable Visual Studio toolchain" — iOS/Android unaffected |
 | `/checkin/sliders` dead route | Info | Defined as alias for `/checkin` but never navigated to; harmless |
+| Noto font CDN timeout on web | Info | Flutter CanvasKit fetches Noto Sans Arabic + Noto Sans Symbols from `fonts.gstatic.com` as fallback glyphs; times out on restricted networks. Non-fatal — app renders with system font fallback. App fonts (Almarai, Inter) are bundled locally and unaffected. |
 
 ---
 
@@ -214,10 +216,17 @@
 | Target | URL | Status |
 |--------|-----|--------|
 | Marketing landing page | `nadbrahmi.github.io/Rehlah/` | ✅ Live |
-| Flutter web app | `nadbrahmi.github.io/Rehlah/app/` | ✅ Live — v1.7 build deployed 2026-05-23 |
+| Flutter web app | `nadbrahmi.github.io/Rehlah/app/` | ✅ Live — v1.7 build, blank-screen fixes deployed 2026-05-25 |
 | Care team portal | `nadbrahmi.github.io/Rehlah/care-team/` | ✅ Live |
 | Patient onboarding form | `nadbrahmi.github.io/Rehlah/care-team/onboarding/` | ✅ Live — writes to Supabase `whafhfcbkilsnnfezxeu` |
 | Supabase project | `whafhfcbkilsnnfezxeu.supabase.co` | ✅ Live — migrations 001 applied |
+
+### Web deployment infrastructure
+| File | Purpose |
+|------|---------|
+| `docs/.nojekyll` | Prevents GitHub Pages Jekyll processing from interfering with Flutter asset paths |
+| `web/flutter_bootstrap.js` | Custom bootstrap template — sets `canvasKitBaseUrl: "canvaskit/"` so CanvasKit loads from bundled files, not `gstatic.com` CDN |
+| `docs/app/assets/env` | Committed web env asset (Supabase public keys only; no Anthropic key). Gitignore exception `!docs/app/assets/env` added so it survives future builds. |
 
 ---
 

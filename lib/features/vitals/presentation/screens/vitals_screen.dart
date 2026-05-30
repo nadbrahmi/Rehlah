@@ -227,7 +227,7 @@ class _VitalsScreenState extends State<VitalsScreen> {
                 letterSpacing: -1,
                 fontFeatures: const [FontFeature('tnum')],
               ),
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 border: InputBorder.none,
                 hintText: '36.6',
                 hintStyle: TextStyle(
@@ -364,7 +364,7 @@ class _VitalsScreenState extends State<VitalsScreen> {
 
   Widget _buildHistory(List<VitalRecord> vitals) {
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: RColors.surface,
         borderRadius: RRadius.mdBR,
         boxShadow: RShadow.shadow1),

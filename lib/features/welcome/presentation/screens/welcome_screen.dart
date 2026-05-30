@@ -21,6 +21,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   bool _isValidating = false;
   bool _isApplying = false;
   late String _language;
+  int _validationEpoch = 0;
 
   @override
   void initState() {
@@ -41,6 +42,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   Future<void> _validateCode(String code) async {
     final trimmed = code.trim().toUpperCase();
     if (trimmed.isEmpty) return;
+    final epoch = ++_validationEpoch;
     setState(() {
       _isValidating = true;
       _errorMessage = null;
@@ -50,14 +52,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
 
     if (SupabaseService.isAvailable) {
       final data = await SupabaseService.validateInviteCode(trimmed);
-      if (!mounted) return;
-      if (_codeController.text.trim().toUpperCase() == trimmed && data != null) {
+      if (!mounted || epoch != _validationEpoch) return;
+      if (data != null) {
         setState(() { _isValidating = false; _supabaseData = data; });
         return;
       }
     }
 
-    if (!mounted) return;
+    if (!mounted || epoch != _validationEpoch) return;
     final profile = InviteCodes.validate(trimmed);
     setState(() {
       _isValidating = false;
@@ -139,10 +141,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   horizontal: 14, vertical: 12),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: RColors.sand200, width: 0.5)),
+                  borderSide: const BorderSide(color: RColors.sand200, width: 0.5)),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: RColors.sand200, width: 0.5)),
+                  borderSide: const BorderSide(color: RColors.sand200, width: 0.5)),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                   borderSide: const BorderSide(color: RColors.teal200, width: 1.5)),
@@ -165,7 +167,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 13),
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: RColors.teal700,
                   borderRadius: RRadius.pillBR,
                   boxShadow: RShadow.shadow2),
@@ -248,13 +250,13 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 const SizedBox(height: 20),
 
                 Row(children: [
-                  Expanded(child: Divider(
+                  const Expanded(child: Divider(
                     color: RColors.sand200, thickness: 0.5)),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 14),
                     child: Text('or',
                       style: RText.small.copyWith(color: RColors.sand400, fontSize: 12))),
-                  Expanded(child: Divider(
+                  const Expanded(child: Divider(
                     color: RColors.sand200, thickness: 0.5)),
                 ]),
 
@@ -390,8 +392,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
             colors: [RColors.teal600, RColors.teal700],
             begin: Alignment.topLeft, end: Alignment.bottomRight),
           borderRadius: RRadius.mdBR,
@@ -425,7 +427,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
               _codeController.clear();
             }),
             child: Row(children: [
-              Icon(Icons.arrow_back_ios_new_rounded, size: 13,
+              const Icon(Icons.arrow_back_ios_new_rounded, size: 13,
                 color: RColors.sand400),
               const SizedBox(width: 4),
               Text('Back', style: RText.small.copyWith(color: RColors.sand700)),
@@ -471,10 +473,10 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                     : null,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: RColors.sand200, width: 0.5)),
+              borderSide: const BorderSide(color: RColors.sand200, width: 0.5)),
             enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
-              borderSide: BorderSide(color: RColors.sand200, width: 0.5)),
+              borderSide: const BorderSide(color: RColors.sand200, width: 0.5)),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
               borderSide: BorderSide(
