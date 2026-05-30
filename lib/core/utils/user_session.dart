@@ -158,21 +158,16 @@ class UserSession extends ChangeNotifier {
       final date = DateTime.tryParse(createdAt);
       if (date == null) continue;
       final scoreIdx = (row['mood_score'] as int?) ?? 2;
+      final rawScores =
+          (row['symptom_scores'] as Map<String, dynamic>?) ?? {};
       _history.add(CheckInRecord(
         date: date,
         moodEmoji: (row['mood'] as String?) ?? '😐',
         moodLabel: scoreIdx >= 0 && scoreIdx < moodLabels.length
             ? moodLabels[scoreIdx] : 'Okay',
-        symptomScores: {
-          if ((row['fatigue'] as num?) != null)
-            'fatigue': (row['fatigue'] as num).toDouble(),
-          if ((row['pain'] as num?) != null)
-            'pain': (row['pain'] as num).toDouble(),
-          if ((row['nausea'] as num?) != null)
-            'nausea': (row['nausea'] as num).toDouble(),
-          if ((row['fever'] as num?) != null)
-            'fever': (row['fever'] as num).toDouble(),
-        },
+        symptomScores: rawScores.map(
+          (k, v) => MapEntry(k, (v as num).toDouble()),
+        ),
         interferenceAnswers: {},
         note: (row['notes'] as String?) ?? '',
         dayInCycle: 0,

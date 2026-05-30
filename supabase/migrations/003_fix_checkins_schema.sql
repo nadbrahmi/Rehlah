@@ -1,23 +1,20 @@
 -- ── Rehlah · رحلة — Fix checkins schema ──────────────────────────────────────
 -- Run in Supabase SQL editor: https://app.supabase.com → SQL Editor
 --
--- The original checkins table used jsonb/renamed columns that don't match the
--- app code. This migration replaces it with flat columns the app actually writes.
--- Also adds the missing DELETE policy so the daily upsert (delete+insert) works.
+-- Uses symptom_scores JSONB so any phase's symptom set works without schema
+-- changes: {"fatigue":3,"pain":1} for chemo, {"scan_anxiety":5,...} for monitoring.
+-- Also adds the DELETE policy required for the daily upsert (delete + insert).
 
 DROP TABLE IF EXISTS checkins;
 
 CREATE TABLE checkins (
-  id          uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  patient_id  uuid        REFERENCES patients(id) ON DELETE CASCADE,
-  mood        text,          -- emoji character e.g. '😊'
-  mood_score  integer,       -- 0 (Awful) … 4 (Great)
-  fatigue     numeric,       -- 0–10
-  pain        numeric,
-  nausea      numeric,
-  fever       numeric,
-  notes       text,
-  created_at  timestamptz DEFAULT now()
+  id              uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id      uuid        REFERENCES patients(id) ON DELETE CASCADE,
+  mood            text,          -- emoji e.g. '😊'
+  mood_score      integer,       -- 0 Awful … 4 Great
+  symptom_scores  jsonb,         -- {"fatigue":3,"pain":1} — any phase's keys
+  notes           text,
+  created_at      timestamptz DEFAULT now()
 );
 
 ALTER TABLE checkins ENABLE ROW LEVEL SECURITY;

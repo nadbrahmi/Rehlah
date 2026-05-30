@@ -111,13 +111,10 @@ class _CheckInScreenState extends State<CheckInScreen> {
     _session.saveCheckIn();
     if (_session.supabasePatientId != null) {
       SupabaseService.saveCheckin(_session.supabasePatientId!, {
-        'mood':       _moodEmojis[_moodIndex!],
-        'mood_score': _moodIndex,
-        'fatigue':    _scores['fatigue'] ?? 0,
-        'pain':       _scores['pain'] ?? 0,
-        'nausea':     _scores['nausea'] ?? 0,
-        'fever':      _scores['fever'] ?? 0,
-        'notes':      _notesCtrl.text.trim(),
+        'mood':            _moodEmojis[_moodIndex!],
+        'mood_score':      _moodIndex,
+        'symptom_scores':  _scores,
+        'notes':           _notesCtrl.text.trim(),
       });
     }
     context.go('/checkin/success');
