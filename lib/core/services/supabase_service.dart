@@ -217,6 +217,7 @@ class SupabaseService {
       await UserSession().loadVitalsFromPrefs();
     }
     await UserSession().loadCycleDataFromPrefs();
+    await UserSession().loadMedsStateFromPrefs();
 
     // Cache for offline recovery — fire-and-forget, never blocks
     try {
@@ -248,6 +249,7 @@ class SupabaseService {
       UserSession().initCheckInHistoryTyped(checkins);
       await UserSession().loadVitalsFromPrefs();
       await UserSession().loadCycleDataFromPrefs();
+      await UserSession().loadMedsStateFromPrefs();
       return true;
     } catch (_) {
       return false;

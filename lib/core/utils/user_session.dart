@@ -94,9 +94,10 @@ class UserSession extends ChangeNotifier {
   String? supabasePatientId;
   DateTime? cycleStartDate;
 
-  // ── Local persistence keys (vitals + monitoring cycle supplement) ─────────
-  static const _kVitalsCache = 'rehlah_vitals';
-  static const _kCycleCache  = 'rehlah_cycle';
+  // ── Local persistence keys ─────────────────────────────────────────────────
+  static const _kVitalsCache    = 'rehlah_vitals';
+  static const _kCycleCache     = 'rehlah_cycle';
+  static const _kMedsStateCache = 'rehlah_meds_state';
 
   Future<void> _saveVitalsCache() async {
     if (supabasePatientId == null) return;
@@ -143,6 +144,47 @@ class UserSession extends ChangeNotifier {
       final lpd = data['last_period_date'] as String?;
       _lastPeriodDate = lpd != null ? DateTime.tryParse(lpd) : null;
       _cycleLength = (data['cycle_length'] as int?) ?? 28;
+    } catch (_) {}
+  }
+
+  // ── Medication state persistence ─────────────────────────────────────────
+  // Persists today's taken map + adherence counts (adherence only for Supabase
+  // users so we don't collide with demo simulation data).
+  void _saveMedsState() {
+    SharedPreferences.getInstance().then((prefs) {
+      final data = <String, dynamic>{
+        'day':   DateTime.now().day,
+        'taken': Map<String, dynamic>.from(_medsTakenToday),
+      };
+      if (supabasePatientId != null) {
+        data['adherence'] = Map<String, dynamic>.from(
+            _medsAdherenceCount.map((k, v) => MapEntry(k, v)));
+      }
+      prefs.setString(_kMedsStateCache, jsonEncode(data));
+    });
+  }
+
+  Future<void> loadMedsStateFromPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_kMedsStateCache);
+      if (raw == null) return;
+      final data = jsonDecode(raw) as Map<String, dynamic>;
+      final savedDay = (data['day'] as num?)?.toInt();
+      final today = DateTime.now().day;
+      if (savedDay == today) {
+        _medsLastResetDay = today;
+        final taken = data['taken'] as Map<String, dynamic>? ?? {};
+        _medsTakenToday.clear();
+        taken.forEach((k, v) => _medsTakenToday[k] = v as String?);
+      }
+      if (supabasePatientId != null && data.containsKey('adherence')) {
+        final adherence = data['adherence'] as Map<String, dynamic>? ?? {};
+        _medsAdherenceCount.clear();
+        adherence.forEach((k, v) =>
+            _medsAdherenceCount[k] = (v as num).toInt());
+      }
+      notifyListeners();
     } catch (_) {}
   }
 
@@ -340,6 +382,7 @@ class UserSession extends ChangeNotifier {
     if (_medsLastResetDay != today) {
       _medsTakenToday.clear();
       _medsLastResetDay = today;
+      _saveMedsState(); // persist the day reset so reload knows it's a new day
     }
   }
 
@@ -358,6 +401,7 @@ class UserSession extends ChangeNotifier {
     final time = DateFormat('h:mm a').format(DateTime.now());
     _medsTakenToday[medId] = time;
     _medsAdherenceCount[medId] = (_medsAdherenceCount[medId] ?? 0) + 1;
+    _saveMedsState(); // persist immediately after marking taken
     _saveCount++;
     notifyListeners();
   }
@@ -767,6 +811,8 @@ class UserSession extends ChangeNotifier {
       for (var i = 0; i < 14; i++) { medsAdherenceSimulate('med2'); } // 100%
       for (var i = 0; i < 9;  i++) { medsAdherenceSimulate('med3'); } // 64%
     }
+    // Restore today's taken state from prefs (fire-and-forget; notifies on load)
+    loadMedsStateFromPrefs();
   }
 
   // Hormone therapy streak — days since earliest hormone_therapy med start date
