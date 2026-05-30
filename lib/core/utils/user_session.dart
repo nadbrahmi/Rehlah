@@ -155,7 +155,9 @@ class UserSession extends ChangeNotifier {
     for (final row in rows.reversed) {
       final createdAt = row['created_at'] as String?;
       if (createdAt == null) continue;
-      final date = DateTime.tryParse(createdAt);
+      // Convert to local time so checkedInToday (which uses DateTime.now())
+      // compares correctly regardless of the Supabase server timezone.
+      final date = DateTime.tryParse(createdAt)?.toLocal();
       if (date == null) continue;
       final scoreIdx = (row['mood_score'] as int?) ?? 2;
       final rawScores =
@@ -176,6 +178,18 @@ class UserSession extends ChangeNotifier {
     }
     if (_history.isNotEmpty) {
       lastCheckIn = _history.last.date;
+      // Restore today's check-in state so the home screen and check-in
+      // pre-fill work correctly after a browser refresh or cold start.
+      final latest = _history.last;
+      final now = DateTime.now();
+      if (latest.date.year == now.year &&
+          latest.date.month == now.month &&
+          latest.date.day == now.day) {
+        moodEmoji     = latest.moodEmoji;
+        moodLabel     = latest.moodLabel;
+        symptomScores = Map.from(latest.symptomScores);
+        checkInNote   = latest.note;
+      }
     }
   }
 
@@ -446,7 +460,6 @@ class UserSession extends ChangeNotifier {
     final planningStart = now.add(const Duration(days: 14));
     while (cycleStart.isBefore(sixMonthsAhead)) {
       final windowStart = cycleStart.add(const Duration(days: 6)); // day 7
-      final windowEnd = cycleStart.add(const Duration(days: 13)); // day 14
       if (windowStart.isAfter(planningStart)) {
         return windowStart;
       }
