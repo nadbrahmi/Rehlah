@@ -890,6 +890,27 @@ class UserSession extends ChangeNotifier {
     return temp != null && temp >= 38.0;
   }
 
+  bool get hasHighAlertToday {
+    final now = DateTime.now();
+    return _vitals.any((v) =>
+        v.recordedAt.year  == now.year &&
+        v.recordedAt.month == now.month &&
+        v.recordedAt.day   == now.day &&
+        v.worstFlag == VitalFlag.high);
+  }
+
+  /// Populate vitals from Supabase rows (newest-first, converted via fromSupabase).
+  /// Replaces any locally cached data and refreshes the prefs cache.
+  void initVitalsFromData(List<Map<String, dynamic>> rows) {
+    _vitals.clear();
+    for (final row in rows.reversed) { // oldest-first in _vitals
+      final v = VitalRecord.fromSupabase(row);
+      if (v != null) _vitals.add(v);
+    }
+    _saveVitalsCache(); // refresh local cache for offline recovery
+    notifyListeners();
+  }
+
   void recordVital(VitalRecord record) {
     _vitals.add(record);
     _saveVitalsCache();
@@ -994,38 +1015,139 @@ class ControlRecord {
   }
 }
 
+// ── Vital alert flag ──────────────────────────────────────────────────────────
+enum VitalFlag { normal, moderate, high }
+
 // ── Vital record ──────────────────────────────────────────────────────────────
 class VitalRecord {
+  final String? id;
   final DateTime recordedAt;
-  final double temperatureCelsius;
-  final int? pulse;
-  final int? oxygenSaturation;
+  final double? weightKg;
+  final int? systolicBp;
+  final int? diastolicBp;
+  final int? heartRateBpm;
+  final double? temperatureCelsius;
+  final int? spo2Pct;
+  final double? glucoseMmol;
+  final int? cycleDay;
+  final String? phase;
 
   const VitalRecord({
+    this.id,
     required this.recordedAt,
-    required this.temperatureCelsius,
-    this.pulse,
-    this.oxygenSaturation,
+    this.weightKg,
+    this.systolicBp,
+    this.diastolicBp,
+    this.heartRateBpm,
+    this.temperatureCelsius,
+    this.spo2Pct,
+    this.glucoseMmol,
+    this.cycleDay,
+    this.phase,
   });
 
-  bool get isFever    => temperatureCelsius >= 38.0;
-  bool get isHighFever => temperatureCelsius >= 38.5;
-  bool get isLowTemp  => temperatureCelsius < 36.0;
+  // ── Alert thresholds ────────────────────────────────────────────────────────
+
+  VitalFlag get tempFlag {
+    final t = temperatureCelsius;
+    if (t == null) return VitalFlag.normal;
+    if (t >= 38.0) return VitalFlag.high;
+    if (t >= 37.5) return VitalFlag.moderate;
+    return VitalFlag.normal;
+  }
+
+  VitalFlag get bpFlag {
+    final s = systolicBp; final d = diastolicBp;
+    if (s == null && d == null) return VitalFlag.normal;
+    if ((s != null && (s > 160 || s < 90)) || (d != null && d > 100)) return VitalFlag.high;
+    if ((s != null && s >= 140) || (d != null && d >= 90)) return VitalFlag.moderate;
+    return VitalFlag.normal;
+  }
+
+  VitalFlag get hrFlag {
+    final hr = heartRateBpm;
+    if (hr == null) return VitalFlag.normal;
+    if (hr > 100 || hr < 50) return VitalFlag.high;
+    if (hr >= 90) return VitalFlag.moderate;
+    return VitalFlag.normal;
+  }
+
+  VitalFlag get spo2Flag {
+    final s = spo2Pct;
+    if (s == null) return VitalFlag.normal;
+    if (s < 94) return VitalFlag.high;
+    if (s <= 95) return VitalFlag.moderate;
+    return VitalFlag.normal;
+  }
+
+  VitalFlag get glucoseFlag {
+    final g = glucoseMmol;
+    if (g == null) return VitalFlag.normal;
+    if (g > 11.0 || g < 3.9) return VitalFlag.high;
+    if (g >= 8.0) return VitalFlag.moderate;
+    return VitalFlag.normal;
+  }
+
+  // Worst flag excluding weight (weight comparison requires previous record context)
+  VitalFlag get worstFlag {
+    final flags = [tempFlag, bpFlag, hrFlag, spo2Flag, glucoseFlag];
+    if (flags.any((f) => f == VitalFlag.high))     return VitalFlag.high;
+    if (flags.any((f) => f == VitalFlag.moderate)) return VitalFlag.moderate;
+    return VitalFlag.normal;
+  }
+
+  bool get isFever     => temperatureCelsius != null && temperatureCelsius! >= 38.0;
+  bool get isHighFever => temperatureCelsius != null && temperatureCelsius! >= 38.5;
+  bool get isLowTemp   => temperatureCelsius != null && temperatureCelsius! < 36.0;
 
   Map<String, dynamic> toJson() => {
-    'at':    recordedAt.toIso8601String(),
-    'temp':  temperatureCelsius,
-    'pulse': pulse,
-    'o2':    oxygenSaturation,
+    'at':   recordedAt.toIso8601String(),
+    'wt':   weightKg,
+    'sbp':  systolicBp,
+    'dbp':  diastolicBp,
+    'hr':   heartRateBpm,
+    'temp': temperatureCelsius,
+    'o2':   spo2Pct,
+    'glu':  glucoseMmol,
+    'cd':   cycleDay,
+    'ph':   phase,
+    if (id != null) 'id': id,
   };
 
   static VitalRecord? fromJson(Map<String, dynamic> j) {
     try {
       return VitalRecord(
-        recordedAt: DateTime.parse(j['at'] as String),
-        temperatureCelsius: (j['temp'] as num).toDouble(),
-        pulse: j['pulse'] as int?,
-        oxygenSaturation: j['o2'] as int?,
+        id:                 j['id'] as String?,
+        recordedAt:         DateTime.parse(j['at'] as String),
+        weightKg:           (j['wt']   as num?)?.toDouble(),
+        systolicBp:         (j['sbp']  as num?)?.toInt(),
+        diastolicBp:        (j['dbp']  as num?)?.toInt(),
+        heartRateBpm:       (j['hr']   as num?)?.toInt(),
+        temperatureCelsius: (j['temp'] as num?)?.toDouble(),
+        spo2Pct:            (j['o2']   as num?)?.toInt(),
+        glucoseMmol:        (j['glu']  as num?)?.toDouble(),
+        cycleDay:           (j['cd']   as num?)?.toInt(),
+        phase:              j['ph'] as String?,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static VitalRecord? fromSupabase(Map<String, dynamic> row) {
+    try {
+      return VitalRecord(
+        id:                 row['id']             as String?,
+        recordedAt:         DateTime.parse(row['created_at'] as String).toLocal(),
+        weightKg:           (row['weight_kg']     as num?)?.toDouble(),
+        systolicBp:         (row['systolic_bp']   as num?)?.toInt(),
+        diastolicBp:        (row['diastolic_bp']  as num?)?.toInt(),
+        heartRateBpm:       (row['heart_rate_bpm'] as num?)?.toInt(),
+        temperatureCelsius: (row['temperature_c'] as num?)?.toDouble(),
+        spo2Pct:            (row['spo2_pct']      as num?)?.toInt(),
+        glucoseMmol:        (row['glucose_mmol']  as num?)?.toDouble(),
+        cycleDay:           (row['cycle_day']     as num?)?.toInt(),
+        phase:              row['phase']           as String?,
       );
     } catch (_) {
       return null;

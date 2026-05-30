@@ -55,6 +55,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           SliverToBoxAdapter(child: _buildHeader(context, session)),
           SliverToBoxAdapter(child: _buildPhaseBanner(session, isInChemo, isMonitoring)),
           SliverToBoxAdapter(child: _buildHeroCard(context, session)),
+          if (session.hasHighAlertToday)
+            SliverToBoxAdapter(child: _buildHighAlertBanner(context)),
           SliverToBoxAdapter(child: _buildMedsVitalsRow(context, session)),
           // Micro-education — hide when more specific card already shows
           if (!session.isNadirWindow &&
@@ -288,6 +290,29 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
     );
   }
+  // ── HIGH vitals alert banner ───────────────────────────────────────────────
+  Widget _buildHighAlertBanner(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.push('/vitals'),
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        decoration: BoxDecoration(
+          color: RColors.clay100,
+          borderRadius: RRadius.mdBR,
+          border: Border.all(color: RColors.clay500.withValues(alpha: 0.35))),
+        child: Row(children: [
+          const Icon(Icons.warning_amber_rounded, size: 18, color: RColors.clay700),
+          const SizedBox(width: 10),
+          Expanded(child: Text('Vitals HIGH alert — tap to review',
+            style: RText.small.copyWith(
+              fontWeight: FontWeight.w600, color: RColors.clay700))),
+          const Icon(Icons.chevron_right_rounded, size: 16, color: RColors.clay500),
+        ]),
+      ),
+    );
+  }
+
   // ── Meds + Vitals 2-column row ─────────────────────────────────────────────
   Widget _buildMedsVitalsRow(BuildContext context, UserSession session) {
     session.initDefaultLabs();
@@ -301,14 +326,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             : RColors.clay500;
 
     final temp = session.latestTemperature;
+    final latest = session.latestVital;
     final hasFever = session.hasFeverToday;
+    final hasHigh  = session.hasHighAlertToday;
+    final worstFlag = latest?.worstFlag ?? VitalFlag.normal;
+    final tileIconColor = hasHigh
+        ? RColors.clay500
+        : worstFlag == VitalFlag.moderate
+            ? RColors.saffron500
+            : RColors.saffron500;
+    final tileIconBg = hasHigh
+        ? RColors.clay100
+        : worstFlag == VitalFlag.moderate
+            ? RColors.saffron100
+            : RColors.saffron100;
     final tempStr = temp != null ? '${temp.toStringAsFixed(1)}°' : '—';
-    final tempColor = hasFever ? RColors.clay500 : RColors.sand900;
-    final tempCaption = hasFever
-        ? 'Fever — contact your care team'
-        : temp != null
-            ? 'Latest reading'
-            : 'Tap to record vitals';
+    final tempColor = hasHigh ? RColors.clay500
+        : worstFlag == VitalFlag.moderate ? RColors.saffron500
+        : RColors.sand900;
+    final tempCaption = hasHigh
+        ? 'HIGH alert — see care team'
+        : hasFever
+            ? 'Fever — contact your care team'
+            : latest != null
+                ? 'Latest reading'
+                : 'Tap to record vitals';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
@@ -392,12 +434,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   Container(
                     width: 30, height: 30,
                     decoration: BoxDecoration(
-                      color: hasFever ? RColors.clay100 : RColors.saffron100,
+                      color: tileIconBg,
                       borderRadius: RRadius.smBR,
                     ),
                     child: Icon(Icons.thermostat_rounded,
                       size: 16,
-                      color: hasFever ? RColors.clay500 : RColors.saffron500),
+                      color: tileIconColor),
                   ),
                   const SizedBox(width: 8),
                   Text('VITALS', style: RText.eyebrow),
@@ -410,12 +452,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     fontFeatures: const [FontFeature('tnum')],
                   ),
                 ),
-                const SizedBox(height: 2),
-                _TempSparkline(hasFever: hasFever),
                 const SizedBox(height: 4),
+                if (latest?.heartRateBpm != null)
+                  Text('${latest!.heartRateBpm} bpm',
+                    style: RText.small.copyWith(color: RColors.sand500)),
+                const SizedBox(height: 3),
                 Text(tempCaption,
                   style: RText.small.copyWith(
-                    color: hasFever ? RColors.clay500 : RColors.sand500,
+                    color: hasHigh
+                        ? RColors.clay500
+                        : hasFever
+                            ? RColors.clay500
+                            : RColors.sand500,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -1119,60 +1167,6 @@ class _MiniRingPainter extends CustomPainter {
       old.value != value || old.color != color;
 }
 
-// ── Temperature sparkline (simple rising line for fever context) ────────────
-
-class _TempSparkline extends StatelessWidget {
-  final bool hasFever;
-  const _TempSparkline({required this.hasFever});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 24,
-      child: CustomPaint(
-        painter: _SparklinePainter(
-          color: hasFever ? RColors.clay500 : RColors.sand300),
-        size: const Size(double.infinity, 24),
-      ),
-    );
-  }
-}
-
-class _SparklinePainter extends CustomPainter {
-  final Color color;
-  const _SparklinePainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final points = [
-      Offset(0, h * 0.75),
-      Offset(w * 0.15, h * 0.72),
-      Offset(w * 0.3, h * 0.68),
-      Offset(w * 0.45, h * 0.6),
-      Offset(w * 0.6, h * 0.45),
-      Offset(w * 0.75, h * 0.32),
-      Offset(w * 0.9, h * 0.18),
-      Offset(w, h * 0.1),
-    ];
-    final path = Path()..moveTo(points[0].dx, points[0].dy);
-    for (int i = 1; i < points.length; i++) {
-      path.lineTo(points[i].dx, points[i].dy);
-    }
-    canvas.drawPath(path, Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.8
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round);
-    // Dot at last point
-    canvas.drawCircle(points.last, 2.4, Paint()..color = color);
-  }
-
-  @override
-  bool shouldRepaint(_SparklinePainter old) => old.color != color;
-}
 
 // ── Dashed circle (mood recap "today" empty state) ──────────────────────────
 

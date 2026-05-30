@@ -538,6 +538,105 @@ class _PrepReportScreenState extends State<PrepReportScreen> {
           ));
         }
 
+        // Section 7 — Cardiovascular readiness
+        final vitals = UserSession().vitals;
+        if (vitals.isNotEmpty) {
+          w.add(pw.SizedBox(height: 8));
+          w.add(_pdfSection('7 — CARDIOVASCULAR READINESS', cTeal, cSand200));
+
+          final latest = vitals.last;
+          final cardioRows = <List<String>>[];
+          if (latest.temperatureCelsius != null) {
+            final f = latest.tempFlag;
+            cardioRows.add([
+              'Temperature',
+              '${latest.temperatureCelsius!.toStringAsFixed(1)} °C',
+              f == VitalFlag.high ? 'HIGH' : f == VitalFlag.moderate ? 'MODERATE' : 'STABLE',
+            ]);
+          }
+          if (latest.systolicBp != null && latest.diastolicBp != null) {
+            final f = latest.bpFlag;
+            cardioRows.add([
+              'Blood pressure',
+              '${latest.systolicBp}/${latest.diastolicBp} mmHg',
+              f == VitalFlag.high ? 'HIGH' : f == VitalFlag.moderate ? 'MODERATE' : 'STABLE',
+            ]);
+          }
+          if (latest.heartRateBpm != null) {
+            final f = latest.hrFlag;
+            cardioRows.add([
+              'Heart rate',
+              '${latest.heartRateBpm} bpm',
+              f == VitalFlag.high ? 'HIGH' : f == VitalFlag.moderate ? 'MODERATE' : 'STABLE',
+            ]);
+          }
+          if (latest.spo2Pct != null) {
+            final f = latest.spo2Flag;
+            cardioRows.add([
+              'SpO₂',
+              '${latest.spo2Pct}%',
+              f == VitalFlag.high ? 'HIGH' : f == VitalFlag.moderate ? 'MODERATE' : 'STABLE',
+            ]);
+          }
+          if (latest.glucoseMmol != null) {
+            final f = latest.glucoseFlag;
+            cardioRows.add([
+              'Blood glucose',
+              '${latest.glucoseMmol!.toStringAsFixed(1)} mmol/L',
+              f == VitalFlag.high ? 'HIGH' : f == VitalFlag.moderate ? 'MODERATE' : 'STABLE',
+            ]);
+          }
+          if (latest.weightKg != null) {
+            cardioRows.add(['Weight', '${latest.weightKg!.toStringAsFixed(1)} kg', 'STABLE']);
+          }
+
+          for (final row in cardioRows) {
+            final statusColor = row[2] == 'HIGH' ? cClay
+                : row[2] == 'MODERATE' ? cSaffron
+                : cSage;
+            final statusBg = row[2] == 'HIGH' ? cClay100
+                : row[2] == 'MODERATE' ? cSaffron100
+                : cSage100;
+            w.add(pw.Container(
+              margin: const pw.EdgeInsets.only(bottom: 5),
+              padding: const pw.EdgeInsets.fromLTRB(10, 7, 10, 7),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: cSand200, width: 0.5),
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+              ),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text(row[0],
+                      style: pw.TextStyle(fontSize: 10, color: cSand700)),
+                  pw.Row(children: [
+                    pw.Text(row[1],
+                        style: pw.TextStyle(
+                            fontSize: 11,
+                            fontWeight: pw.FontWeight.bold,
+                            color: cSand900)),
+                    pw.SizedBox(width: 8),
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 2),
+                      decoration: pw.BoxDecoration(
+                          color: statusBg,
+                          borderRadius: const pw.BorderRadius.all(
+                              pw.Radius.circular(3))),
+                      child: pw.Text(row[2],
+                          style: pw.TextStyle(
+                              fontSize: 8,
+                              color: statusColor,
+                              fontWeight: pw.FontWeight.bold)),
+                    ),
+                  ]),
+                ],
+              ),
+            ));
+          }
+          w.add(pw.SizedBox(height: 4));
+        }
+
         // Bilingual note
         w.add(pw.SizedBox(height: 8));
         w.add(pw.Container(

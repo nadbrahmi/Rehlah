@@ -160,6 +160,41 @@ class SupabaseService {
     } catch (_) {}
   }
 
+  static Future<void> saveVital(
+      String patientId, VitalRecord record) async {
+    if (!isAvailable) return;
+    try {
+      await _client.from('vitals').insert({
+        'patient_id':     patientId,
+        'weight_kg':      record.weightKg,
+        'systolic_bp':    record.systolicBp,
+        'diastolic_bp':   record.diastolicBp,
+        'heart_rate_bpm': record.heartRateBpm,
+        'temperature_c':  record.temperatureCelsius,
+        'spo2_pct':       record.spo2Pct,
+        'glucose_mmol':   record.glucoseMmol,
+        'cycle_day':      record.cycleDay,
+        'phase':          record.phase,
+      });
+    } catch (_) {}
+  }
+
+  static Future<List<Map<String, dynamic>>> getVitals(
+      String patientId) async {
+    if (!isAvailable) return [];
+    try {
+      final response = await _client
+          .from('vitals')
+          .select()
+          .eq('patient_id', patientId)
+          .order('created_at', ascending: false)
+          .limit(30);
+      return List<Map<String, dynamic>>.from(response as List);
+    } catch (_) {
+      return [];
+    }
+  }
+
   // ── Session population ───────────────────────────────────────────────────────
 
   /// Fetches all patient data from Supabase, populates UserSession, and
@@ -171,11 +206,16 @@ class SupabaseService {
     final apts     = await getAppointments(patientId);
     final labs     = await getLabs(patientId);
     final checkins = await getCheckinHistory(patientId);
+    final vitals   = await getVitals(patientId);
 
     _populateSession(data, meds, apts, labs);
     UserSession().initCheckinHistoryFromData(checkins);
     UserSession().initCheckInHistoryTyped(checkins);
-    await UserSession().loadVitalsFromPrefs();
+    if (vitals.isNotEmpty) {
+      UserSession().initVitalsFromData(vitals); // also saves cache
+    } else {
+      await UserSession().loadVitalsFromPrefs();
+    }
     await UserSession().loadCycleDataFromPrefs();
 
     // Cache for offline recovery — fire-and-forget, never blocks

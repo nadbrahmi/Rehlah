@@ -507,7 +507,9 @@ class _CareHubScreenState extends State<CareHubScreen> {
     final now = DateTime.now();
     if (latest.recordedAt.day == now.day) {
       final temp = latest.temperatureCelsius;
-      return 'Max ${temp.toStringAsFixed(1)}° · logged today';
+      if (temp != null) return '${temp.toStringAsFixed(1)}°C · logged today';
+      if (latest.heartRateBpm != null) return '${latest.heartRateBpm} bpm · logged today';
+      return 'Reading logged today';
     }
     return 'No reading logged today';
   }
