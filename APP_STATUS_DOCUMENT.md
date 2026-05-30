@@ -1,6 +1,6 @@
 # Rehlah · رحلة — App Status Document
-**Version:** 1.9  
-**Last Updated:** 2026-05-26  
+**Version:** 2.0  
+**Last Updated:** 2026-05-30  
 **Branch:** main
 
 ---
@@ -9,7 +9,7 @@
 
 | # | Screen | Route | Status | Notes |
 |---|--------|-------|--------|-------|
-| 1 | Home | `/` | ✅ Complete | Hero pill shadow, phase card % badge, dashed-circle today dot, 2×2 quick tiles, NadirCard, ScanxietyCard, MonitoringWellnessCard, MicroEducationCard, CycleAndScanCard (monitoring only) |
+| 1 | Home | `/` | ✅ Complete | Hero pill shadow, phase card % badge, dashed-circle today dot, 2×2 quick tiles, NadirCard, ScanxietyCard, MonitoringWellnessCard, MicroEducationCard, CycleAndScanCard (monitoring only); HIGH vitals alert banner when any today vital exceeds threshold |
 | 2 | Check-in (Emoji) | `/checkin` | ✅ Complete | Mood selector + symptom chips; phase-aware symptom sets via ProtocolResolver |
 | 3 | Check-in (Sliders) | `/checkin/sliders` | ✅ Complete | 0–10 sliders for 5 symptoms (alias of `/checkin`) |
 | 4 | Check-in Success | `/checkin/success` | ✅ Complete | 4s auto-return countdown; all widgets inlined (no rehlah_widgets.dart dependency) |
@@ -20,16 +20,17 @@
 | 9 | Lab Results | `/care/labs` | ✅ Complete | Hero status + AI summary + metric cards |
 | 10 | Lab History | `/care/labs/history` | ✅ Complete | Chronological list; "+" button pops back to labs |
 | 11 | Lab Add Form | `/care/labs/add` | ✅ Complete | Redirects to `/care/labs`; add is done via bottom sheet on that screen |
-| 12 | Medications | `/care/medications` | ✅ Complete | Vertical-line timeline layout; dot ring shadows; tappable card to mark taken; long-press to edit |
+| 12 | Medications | `/care/medications` | ✅ Complete | Vertical-line timeline layout; dot ring shadows; tappable card to mark taken; long-press to edit; taken state persists across app restarts via SharedPreferences |
 | 13 | Appointments | `/care/appointments` | ✅ Complete | Countdown hero + upcoming/past list |
-| 14 | Prep Report | `/care/appointments/prep` | ✅ Demo-ready | Full 6-section bilingual clinical report: Protocol Context, Symptom Summary, Threshold Alerts, Medication Adherence, Lab Correlation, Talking Points; session-matched patient (Nadia/Layla/Amira); instant render, no API call; color-coded alert cards, adherence bars, lab status badges, EN+AR talking points with action rows; **Share / Print PDF** — system print dialog (save as PDF) + OS share sheet via `pdf` + `printing` packages |
+| 14 | Prep Report | `/care/appointments/prep` | ✅ Demo-ready | Full 7-section bilingual clinical report: Protocol Context, Symptom Summary, Threshold Alerts, Medication Adherence, Lab Correlation, Talking Points, **Cardiovascular Readiness** (from today's vitals with flag badges); session-matched patient; instant render; color-coded alert cards, adherence bars, lab status badges, EN+AR talking points; Share / Print PDF |
 | 15 | Connect | `/connect` | ✅ Complete | 4 tabs: Feed / Mentors / Coaches / Stories |
 | 16 | Profile | `/profile` | ✅ Complete | Completion bar + personal/treatment info |
 | 17 | Privacy | `/profile/privacy` | ✅ Complete | Data controls |
 | — | Welcome | `/welcome` | ✅ Complete | Invite code entry; GoRouter redirect → `/` if session already active |
 | — | Onboarding | `/onboarding` | ✅ Complete | Demo walkthrough |
 | — | Caregiver Home | `/caregiver` | ✅ Complete | Caregiver view |
-| — | Vitals | `/vitals` | ✅ Complete | Temperature + pulse + SpO₂ logging |
+| — | Vitals | `/vitals` | ✅ Complete | 6-vital inline-card form (weight, BP, HR, temp, SpO₂, glucose); featured temperature card (color-coded sage→saffron→clay); three-tier flag system (normal / moderate / high) per vital; Supabase persistence + SharedPreferences cache; "History & trends →" link |
+| — | Vitals History | `/vitals/history` | ✅ Complete | Per-vital trend charts (CustomPainter, bezier-smooth lines); gradient fill; dashed threshold lines; min/avg/max/readings stats row per chart; dual-line BP chart; full readings list |
 | — | Chemo Cycle Tracker | `/care/cycle-tracker` | ✅ Complete | Treatment cycle calendar: cycle days (saffron), nadir (clay), appointment dots (sky); phase banner (cycle N · day D); "Next cycle begins" row; shown for active chemo patients only |
 | — | Period & Scan Tracker | `/monitoring/cycle-tracker` | ✅ Complete | Full redesign: period tracker tab (phase banner, calendar with period/ovulation/fertile/predicted days, stats row, history, log button) + scan planner tab (optimal window calendar for 6 months); shown for monitoring patients only |
 
@@ -56,13 +57,14 @@
 | `/my-health/expect` | `MyHealthExpectScreen` | ShellRoute |
 | `/monitoring/cycle-tracker` | `CycleTrackerScreen` | Monitoring patients only |
 | `/vitals` | `VitalsScreen` | — |
+| `/vitals/history` | `VitalsHistoryScreen` | — |
 | `/connect` | `ConnectScreen` | ShellRoute |
 | `/profile` | `ProfileScreen` | ShellRoute |
 | `/profile/privacy` | `PrivacyScreen` | — |
 | `/onboarding` | `OnboardingScreen` | — |
 | `/caregiver` | `CaregiverHomeScreen` | — |
 
-**Navigation audit (2026-05-23):** All 23 defined routes have valid handlers. All `context.go()` / `context.push()` call sites point to defined routes. No broken links.
+**Navigation audit (2026-05-23):** All defined routes have valid handlers. All `context.go()` / `context.push()` call sites point to defined routes. No broken links.
 
 ---
 
@@ -72,12 +74,13 @@
 |---------|--------|--------|
 | Patient profile | Supabase `patients` table | ✅ Live — fetched on invite activation and on every app restart |
 | Medications | Supabase `medications` table | ✅ Live — fetched via `getMedications()`, cached offline |
+| Medication taken state | SharedPreferences `rehlah_meds_state` | ✅ Live — persisted immediately on mark-taken; day-rollover handled; adherence count persisted for Supabase users only |
 | Appointments | Supabase `appointments` table | ✅ Live — fetched via `getAppointments()`, cached offline |
 | Lab results | Supabase `labs` + `lab_metrics` tables | ✅ Live — join query via `getLabs()`, cached offline |
+| Vitals | Supabase `vitals` table + SharedPreferences `rehlah_vitals` | ✅ Live — saved via `saveVital()` on each entry; 30 most recent fetched on session restore; falls back to local cache if Supabase empty |
 | Check-in history | Supabase `checkins` table | ⚠️ Write-only — saved via `saveCheckin()`, not yet reloaded into session |
 | AI Chat | Anthropic API | ✅ Live — uses `ANTHROPIC_API_KEY` from `.env` |
 | Offline session | SharedPreferences (4 keys) | ✅ Live — full patient + meds + apts + labs cached after every successful fetch |
-| Vitals | Local (`UserSession._vitals`) | 🟡 In-memory only — not persisted or synced |
 | Cycle tracker (chemo) | `UserSession` (protocol, cycle, dayInCycle, cycleStartDate) | 🟡 In-memory; cycleStartDate from Supabase if present |
 | Cycle tracker (period) | `UserSession` (menstrualStatus, lastPeriodDate, cycleLength) | 🟡 In-memory; no Supabase persistence yet |
 
@@ -88,7 +91,7 @@
 ### First activation (new patient, invite code)
 1. Patient enters invite code on `/welcome`
 2. `validateInviteCode()` → Supabase lookup → returns patient row
-3. `SupabaseService.applyPatientToSession(data)` → fetches meds, apts, labs → calls `_populateSession()` → writes 4-key offline cache
+3. `SupabaseService.applyPatientToSession(data)` → fetches meds, apts, labs, vitals → calls `_populateSession()` → writes offline cache → calls `loadMedsStateFromPrefs()` + `loadVitalsFromPrefs()`
 4. `patient_id` saved to SharedPreferences key `rehlah_patient_id`
 5. `activatePatient()` sets `invite_status = 'active'` (fire-and-forget)
 6. GoRouter navigates to `/`
@@ -96,18 +99,19 @@
 ### Subsequent launches — online
 1. `main()` reads `rehlah_patient_id` from SharedPreferences
 2. `getPatientById(savedId)` → fresh row from Supabase
-3. `applyPatientToSession(data)` → fetches all clinical data → updates offline cache
+3. `applyPatientToSession(data)` → fetches all clinical data + vitals → updates offline cache → restores taken state + vitals from prefs
 4. GoRouter redirect fires: `/welcome` → `/`
 
 ### Subsequent launches — offline
 1. `main()` reads `rehlah_patient_id` — present
 2. `getPatientById()` returns null (no network)
-3. `applyPatientFromCache()` → reads 4 SharedPreferences keys → calls `_populateSession()`
+3. `applyPatientFromCache()` → reads SharedPreferences keys → calls `_populateSession()` → restores vitals + taken state from prefs
 4. GoRouter redirect fires: `/welcome` → `/`
 
 ### Demo mode (no Supabase credentials)
 - `Env.hasSupabase` is false → all Supabase blocks skipped
 - `UserSession` populated with `MockData` on first screen access
+- `initDefaultMedications()` calls `loadMedsStateFromPrefs()` so demo users also retain today's taken state
 - All screens function with mock data
 
 ---
@@ -136,6 +140,8 @@
 | `_DashedCircle` | home_screen.dart | Dashed-border circle for cycle day dot |
 | `_DashedCirclePainter` | home_screen.dart | CustomPainter using dart:math arc segments |
 | `_RingPainter` | medications_screen.dart | CustomPainter for saffron arc on adherence hero ring |
+| `_ChartCard` | vitals_history_screen.dart | Per-vital chart card with stats row |
+| `_LinePainter` | vitals_history_screen.dart | CustomPainter: bezier-smooth lines, gradient fill, dashed thresholds, flag-colored dots |
 | `ShellScreen` | shell_screen.dart | Bottom nav shell wrapping ShellRoute children |
 
 ---
@@ -146,8 +152,13 @@
 - ✅ Invite code activation in Flutter app
 - ✅ Patient data (name, diagnosis, cycle, protocol) loaded from Supabase
 - ✅ Medications loaded from Supabase; timeline layout with mark-taken tap
+- ✅ Medication taken state persists across browser refreshes (SharedPreferences `rehlah_meds_state`; day-rollover resets at midnight)
 - ✅ Appointments loaded from Supabase
 - ✅ Lab results loaded from Supabase (with nested metrics via join)
+- ✅ Vitals saved to Supabase `vitals` table on every recording; 6 clinical vitals with three-tier alert flags
+- ✅ Vitals history screen with per-vital trend charts (bezier-smooth, gradient fill, dashed thresholds)
+- ✅ HIGH vitals alert banner on home screen when today's worst flag is high
+- ✅ Prep report includes Section 7 Cardiovascular Readiness pulled from today's vitals
 - ✅ Session persists across app restarts (online path)
 - ✅ Session restores from offline cache when network unavailable
 - ✅ GoRouter skips welcome screen on relaunch when session is active
@@ -158,9 +169,9 @@
 - ✅ Period & scan tracker with calendar, stats, history, settings, and scan planner
 - ✅ All navigation links verified — no broken routes
 - ✅ All screens render without errors
-- ✅ Prep report exports full 6-section clinical PDF (print + share)
-- ✅ Flutter web build (v1.7) deployed to GitHub Pages at `/Rehlah/app/`
-- ✅ Web form → app end-to-end flow verified: DB defaults handle `invite_status` and `invite_expires_at` automatically; no web form changes needed
+- ✅ Prep report exports full 7-section bilingual clinical PDF (print + share)
+- ✅ Flutter web build (v2.0) deployed to GitHub Pages at `/Rehlah/app/`
+- ✅ Web form → app end-to-end flow verified: DB defaults handle `invite_status` and `invite_expires_at` automatically
 - ✅ Blank-screen root causes resolved: `.nojekyll`, local CanvasKit (`canvasKitBaseUrl`), and committed `docs/app/assets/env`
 
 ---
@@ -170,9 +181,9 @@
 | Issue | Severity | Notes |
 |-------|----------|-------|
 | Check-in history not reloaded into session | Low | `UserSession.saveCheckIn()` updates in-memory history only; `SupabaseService.saveCheckin()` not called from check-in screen |
-| Vitals not persisted | Low | VitalRecord stored in-memory only; lost on app restart |
 | Cycle tracker data not persisted | Low | Period entries, menstrualStatus, cycleLength in-memory only |
 | Migration 002 not auto-applied | Medium | `supabase/migrations/002_labs_schema.sql` must be run manually; labs show mock data until applied |
+| Migration 004 not auto-applied | Medium | `supabase/migrations/004_vitals_schema.sql` must be run manually in Supabase SQL editor before vitals save to DB |
 | PDF share on web build | Info | `printing` package share sheet is no-op on web — print dialog works; share requires native mobile build |
 | No Supabase auth (email/password) | Low | App uses invite codes only; no password reset or account management |
 | Windows VS toolchain warning | Info | "Unable to find suitable Visual Studio toolchain" — iOS/Android unaffected |
@@ -189,7 +200,7 @@
 | go_router | ^13.2.0 | Active |
 | supabase_flutter | ^2.x | Active |
 | flutter_dotenv | ^5.x | Active |
-| shared_preferences | ^2.x | Active — patient_id + offline cache |
+| shared_preferences | ^2.x | Active — patient_id, offline cache, vitals cache, meds taken state |
 | http | ^1.x | Active — Anthropic API calls |
 | intl | ^0.x | Active — date formatting across all screens |
 | pdf | ^3.10.8 | Active — PDF generation for prep report |
@@ -205,9 +216,10 @@
 | `patients` | 001 | id, name, diagnosis, protocol_id, cycle_number, total_cycles, cycle_start_date, invite_code, invite_status, invite_expires_at | Core patient record |
 | `medications` | 001 | id, patient_id, name, dose, frequency, active | `active=true` filter applied |
 | `appointments` | 001 | id, patient_id, title, date_time, location, notes | Ordered by date_time |
-| `checkins` | 001 | id, patient_id, mood, fatigue, pain, nausea, fever, mood_score, notes, created_at | Write-only from app |
+| `checkins` | 001 / 003 | id, patient_id, mood, fatigue, pain, nausea, fever, mood_score, notes, created_at | Write-only from app; 003 fixes schema |
 | `labs` | 002 | id, patient_id, panel_name, date, ai_summary, created_at | Ordered by date DESC |
 | `lab_metrics` | 002 | id, lab_id, name, value, unit, normal_min, normal_max, previous_value | Fetched via join on labs |
+| `vitals` | 004 | id, patient_id, weight_kg, systolic_bp, diastolic_bp, heart_rate_bpm, temperature_c, spo2_pct, glucose_mmol, cycle_day, phase, created_at | All fields nullable; RLS enabled; 30-record read limit |
 
 ---
 
@@ -216,10 +228,10 @@
 | Target | URL | Status |
 |--------|-----|--------|
 | Marketing landing page | `nadbrahmi.github.io/Rehlah/` | ✅ Live |
-| Flutter web app | `nadbrahmi.github.io/Rehlah/app/` | ✅ Live — v1.7 build, blank-screen fixes deployed 2026-05-25 |
+| Flutter web app | `nadbrahmi.github.io/Rehlah/app/` | ✅ Live — v2.0 build deployed 2026-05-30 |
 | Care team portal | `nadbrahmi.github.io/Rehlah/care-team/` | ✅ Live |
 | Patient onboarding form | `nadbrahmi.github.io/Rehlah/care-team/onboarding/` | ✅ Live — writes to Supabase `whafhfcbkilsnnfezxeu` |
-| Supabase project | `whafhfcbkilsnnfezxeu.supabase.co` | ✅ Live — migrations 001 applied |
+| Supabase project | `whafhfcbkilsnnfezxeu.supabase.co` | ✅ Live — migrations 001, 003 applied; 002 and 004 pending manual apply |
 
 ### Web deployment infrastructure
 | File | Purpose |
@@ -233,9 +245,10 @@
 ## 12. Open Decisions & TODOs
 
 - [ ] Apply migration 002 to production Supabase project (labs table)
+- [ ] Apply migration 004 to production Supabase project (vitals table — required for vitals to persist to DB)
 - [ ] Wire `SupabaseService.saveCheckin()` from check-in screen — currently only updates in-memory history
 - [ ] Add `checkins` fetch to session restore (display check-in history on home or profile)
-- [ ] Persist vitals and cycle tracker data (Supabase or SharedPreferences)
+- [ ] Persist cycle tracker data (period entries, menstrualStatus, cycleLength — Supabase or SharedPreferences)
 - [ ] Arabic localization — strings bilingual in check-in + prep report; home/profile still EN only
 - [ ] Push notifications for appointment reminders
 - [ ] Caregiver flow — `CaregiverHomeScreen` exists but session/data not wired
@@ -249,10 +262,10 @@
 
 | Metric | Count |
 |--------|-------|
-| Total screens | 17 numbered + 6 utility screens |
-| Defined routes | 23 |
-| Backend tables | 6 |
-| SQL migrations | 2 |
+| Total screens | 17 numbered + 7 utility screens |
+| Defined routes | 24 |
+| Backend tables | 7 |
+| SQL migrations | 4 |
 | Actively used packages | 9 |
 | Persistence layers | 2 (Supabase + SharedPreferences) |
 | AI integrations | 1 (Anthropic Messages API) |
