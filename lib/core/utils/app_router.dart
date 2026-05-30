@@ -19,6 +19,7 @@ import '../../features/monitoring/presentation/screens/cycle_tracker_screen.dart
 import '../../features/care/hub/presentation/screens/chemo_cycle_tracker_screen.dart';
 import '../../features/caregiver/presentation/screens/caregiver_home_screen.dart';
 import '../../features/vitals/presentation/screens/vitals_screen.dart';
+import '../../features/vitals/presentation/screens/vitals_history_screen.dart';
 import 'shell_screen.dart';
 import 'user_session.dart';
 
@@ -50,6 +51,7 @@ final appRouter = GoRouter(
     GoRoute(path: '/care/cycle-tracker',       builder: (c, s) => const ChemoCycleTrackerScreen()),
     GoRoute(path: '/caregiver', builder: (c, s) => const CaregiverHomeScreen()),
     GoRoute(path: '/vitals',          builder: (c, s) => const VitalsScreen()),
+    GoRoute(path: '/vitals/history',  builder: (c, s) => const VitalsHistoryScreen()),
     GoRoute(path: '/profile/privacy', builder: (c, s) => const PrivacyScreen()),
     ShellRoute(
       builder: (context, state, child) => ShellScreen(child: child),

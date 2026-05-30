@@ -228,7 +228,18 @@ class _VitalsScreenState extends State<VitalsScreen> {
               // ── History ────────────────────────────────────────────────
               if (vitals.isNotEmpty) ...[
                 const SizedBox(height: 28),
-                Text('RECENT READINGS', style: RText.eyebrow),
+                Row(children: [
+                  Text('RECENT READINGS', style: RText.eyebrow),
+                  const Spacer(),
+                  GestureDetector(
+                    onTap: () => context.push('/vitals/history'),
+                    child: Text('History & trends →',
+                      style: RText.small.copyWith(
+                        color: RColors.teal700,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 11)),
+                  ),
+                ]),
                 const SizedBox(height: 8),
                 _buildHistory(vitals),
               ],
