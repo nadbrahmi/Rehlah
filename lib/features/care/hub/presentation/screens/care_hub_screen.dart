@@ -129,11 +129,11 @@ class _CareHubScreenState extends State<CareHubScreen> {
                 icon: Icons.book_outlined,
                 title: 'Journal',
                 subtitle: _session.checkedInToday
-                    ? 'Checked in today'
+                    ? 'Checked in today · ${_session.moodEmoji} ${_session.moodLabel}'
                     : 'Last entry ${_lastCheckinAgo()}',
                 trailing: const Icon(Icons.chevron_right_rounded,
                     color: RColors.sand300, size: 20),
-                onTap: () => context.push('/checkin'),
+                onTap: () => context.push('/care/checkin-history'),
               ),
               _sectionHead('Understand'),
               const SizedBox(height: 8),

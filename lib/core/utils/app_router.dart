@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../features/welcome/presentation/screens/welcome_screen.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
@@ -9,9 +8,8 @@ import '../../features/ai_chat/presentation/screens/ai_chat_screen.dart';
 import '../../features/my_health/presentation/screens/my_health_journey_screen.dart';
 import '../../features/my_health/presentation/screens/my_health_expect_screen.dart';
 import '../../features/care/hub/presentation/screens/care_hub_screen.dart';
+import '../../features/care/hub/presentation/screens/checkin_history_screen.dart';
 import '../../features/care/labs/presentation/screens/lab_results_screen.dart';
-import '../../features/care/labs/presentation/screens/lab_history_screen.dart';
-import '../../features/care/labs/presentation/screens/lab_add_screen.dart';
 import '../../features/care/medications/presentation/screens/medications_screen.dart';
 import '../../features/care/appointments/presentation/screens/appointments_screen.dart';
 import '../../features/care/appointments/presentation/screens/prep_report_screen.dart';
@@ -44,6 +42,7 @@ final appRouter = GoRouter(
     GoRoute(path: '/care/labs',         builder: (c, s) => const LabResultsScreen()),
     GoRoute(path: '/care/labs/history', builder: (c, s) => const LabHistoryScreen()),
     GoRoute(path: '/care/labs/add',     builder: (c, s) => const AddLabScreen()),
+    GoRoute(path: '/care/checkin-history', builder: (c, s) => const CheckInHistoryScreen()),
     GoRoute(path: '/care/medications',  builder: (c, s) => const MedicationsScreen()),
     GoRoute(path: '/care/appointments',      builder: (c, s) => const AppointmentsScreen()),
     GoRoute(path: '/care/appointments/prep', builder: (c, s) => const PrepReportScreen()),
